@@ -4,6 +4,24 @@
 
 A Next.js 16 application built with React 19, TypeScript, and Tailwind CSS 4.
 
+## Component Structure
+
+Components are organized by feature and purpose:
+
+```
+app/components/
+├── login/          # Login-related UI components
+├── dashboard/      # Dashboard-related UI components
+└── ui-kit/         # Shared/reusable UI components
+```
+
+### Guidelines
+
+- **Feature-based organization**: Place components in folders by feature (e.g., `login/`, `dashboard/`)
+- **UI Kit components**: Store reusable components (buttons, inputs, etc.) in `ui-kit/`
+- **Imports**: Use relative paths (e.g., `../ui-kit/Button`) when importing between folders
+- **Consistency**: All feature components should use UI kit components for consistency
+
 ## Environment Requirements
 
 - **Node.js**: >= 20.9.0 (use `nvm use` to auto-switch via `.nvmrc`)
