@@ -19,8 +19,8 @@ export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-black px-4 py-8 flex items-center justify-center">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-900 dark:to-black px-4 py-8">
+      <div className="w-full max-w-sm mx-auto mt-20">
         <div className="bg-white dark:bg-zinc-800 rounded-xl shadow-lg p-6 sm:p-8 border border-zinc-200 dark:border-zinc-700">
           {/* Header */}
           <div className="text-center mb-6">
