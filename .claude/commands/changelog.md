@@ -1,3 +1,7 @@
+---
+description: Analyze current branch changes and update CHANGELOG.md with a new entry
+---
+
 # Changelog Generator
 
 Analyze the current branch changes and update CHANGELOG.md with a new entry.
