@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import LoginForm from "./components/LoginForm";
-import Dashboard from "./components/Dashboard";
+import LoginForm from "./components/login/LoginForm";
+import Dashboard from "./components/dashboard/Dashboard";
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);

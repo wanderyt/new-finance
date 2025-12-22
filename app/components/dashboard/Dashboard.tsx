@@ -1,5 +1,7 @@
 "use client";
 
+import Button from "../ui-kit/Button";
+
 interface DashboardProps {
   username: string;
   onLogout: () => void;
@@ -14,12 +16,9 @@ export default function Dashboard({ username, onLogout }: DashboardProps) {
           <h1 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-50 truncate">
             Welcome, {username}!
           </h1>
-          <button
-            onClick={onLogout}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50 text-sm font-medium rounded-lg hover:bg-zinc-300 dark:hover:bg-zinc-600 active:bg-zinc-400 dark:active:bg-zinc-500 transition-colors touch-manipulation"
-          >
+          <Button onClick={onLogout} variant="ghost" size="sm">
             Logout
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -86,12 +85,12 @@ export default function Dashboard({ username, onLogout }: DashboardProps) {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
-          <button className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-500 dark:hover:bg-blue-600 dark:active:bg-blue-700 text-white font-medium py-3 rounded-lg transition-colors touch-manipulation">
+          <Button variant="primary" size="lg">
             Send Money
-          </button>
-          <button className="bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 active:bg-zinc-100 dark:active:bg-zinc-600 text-zinc-900 dark:text-zinc-50 font-medium py-3 rounded-lg border border-zinc-200 dark:border-zinc-700 transition-colors touch-manipulation">
+          </Button>
+          <Button variant="secondary" size="lg">
             Add Funds
-          </button>
+          </Button>
         </div>
       </main>
     </div>
