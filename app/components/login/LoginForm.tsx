@@ -3,21 +3,20 @@
 import { useState, FormEvent } from "react";
 import Input from "../ui-kit/Input";
 import Button from "../ui-kit/Button";
+import { useAppDispatch } from "@/app/lib/redux/hooks";
+import { login } from "@/app/lib/redux/features/auth/authSlice";
 
-interface LoginFormProps {
-  onLoginSuccess: (username: string) => void;
-}
-
-export default function LoginForm({ onLoginSuccess }: LoginFormProps) {
+export default function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const dispatch = useAppDispatch();
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // TODO: Implement actual authentication logic
-    // For now, just call the success callback
+    // For now, just dispatch the login action
     console.log("Login attempt:", { username, password });
-    onLoginSuccess(username);
+    dispatch(login(username));
   };
 
   return (

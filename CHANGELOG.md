@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-12-22
+
+### Added
+- Redux Toolkit state management for authentication
+- Typed Redux hooks (useAppDispatch, useAppSelector, useAppStore)
+- Redux Provider with Next.js 16 App Router integration
+- Auth slice with login/logout reducers and selectors
+- Comprehensive authentication flow documentation
+- Redux implementation plan documentation
+- Dependencies: @reduxjs/toolkit (^2.11.2), react-redux (^9.2.0)
+
+### Changed
+- LoginForm now dispatches Redux actions instead of callback props
+- Dashboard uses Redux selectors for state access
+- Removed prop drilling between page.tsx and child components
+- Centralized authentication state in Redux store
+
+### Technical
+- Feature-based Redux organization (app/lib/redux/features/)
+- Full TypeScript support with RootState and AppDispatch types
+- Redux DevTools integration enabled in development
+- useRef pattern for store instance in Next.js App Router
+
 ## [0.2.0] - 2025-12-22
 
 ### Added
