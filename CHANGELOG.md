@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-12-23
+
+### Added
+- SQLite database integration with Drizzle ORM for type-safe queries
+- Database schema design with users table (userId, username, password)
+- Drizzle ORM client with singleton pattern for Next.js dev mode
+- better-sqlite3 driver for fast synchronous SQLite operations
+- Prisma schema and migrations for database table creation
+- Seed script for demo user (username: "demo", password: "demo123")
+- Comprehensive database design documentation (docs/database-setup.md)
+- Database query examples with Drizzle ORM patterns
+- Type inference for User and NewUser types from schema
+- .gitignore rules for database files and migrations
+
+### Changed
+- Authentication now queries real SQLite database instead of mock users
+- Login API route uses Drizzle query: `db.select().from(users).where(eq(users.username, username))`
+- Verify API route queries database by userId for session validation
+- Node.js requirement upgraded to 20.19.6 for Drizzle compatibility
+- Authentication flow documentation updated for database integration
+- Database file location: `db/finance.db` (gitignored)
+
+### Technical
+- Drizzle ORM 0.45.1 with better-sqlite3 12.5.0
+- Type-safe database queries with compile-time validation
+- Singleton connection pattern prevents multiple DB connections
+- Database client exported from `app/lib/db/prisma.ts`
+- Schema definitions in `app/lib/db/schema.ts`
+- Future-ready for bcrypt password hashing and additional tables
+
 ## [0.4.0] - 2025-12-22
 
 ### Added
