@@ -2,15 +2,27 @@
 
 import Button from "../ui-kit/Button";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
-import { selectCurrentUser } from "@/app/lib/redux/features/auth/authSlice";
-import { logout } from "@/app/lib/redux/features/auth/authSlice";
+import {
+  selectCurrentUser,
+  selectAuthStatus,
+  logoutAsync
+} from "@/app/lib/redux/features/auth/authSlice";
 
 export default function Dashboard() {
   const username = useAppSelector(selectCurrentUser) || "User";
+  const authStatus = useAppSelector(selectAuthStatus);
   const dispatch = useAppDispatch();
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const isLoading = authStatus === "loading";
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutAsync()).unwrap();
+      // Success - Redux state will update and trigger navigation
+    } catch (error) {
+      console.error("Logout failed:", error);
+      // Even if API fails, local state is cleared
+    }
   };
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
@@ -20,8 +32,13 @@ export default function Dashboard() {
           <h1 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-50 truncate">
             Welcome, {username}!
           </h1>
-          <Button onClick={handleLogout} variant="ghost" size="sm">
-            Logout
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            size="sm"
+            disabled={isLoading}
+          >
+            {isLoading ? "Logging out..." : "Logout"}
           </Button>
         </div>
       </header>
