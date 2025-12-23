@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-12-22
+
+### Added
+- Complete authentication API implementation with three endpoints:
+  - POST /api/auth/login - Validates credentials and sets HttpOnly session cookie
+  - GET /api/auth/verify - Validates session from cookie server-side
+  - POST /api/auth/logout - Clears authentication cookie
+- Mock user database with three test users (demo, john_doe, jane_smith)
+- Session token utilities using Base64 encoding (easy migration to JWT)
+- Cookie management with proper security flags (HttpOnly, Secure, SameSite)
+- Redux async thunks for login, session verification, and logout
+- Global loading component with configurable sizes and full-screen mode
+- AuthProvider component for automatic session verification on app load
+- Full-screen loading UI during session verification ("Verifying session...")
+- isVerifying state in Redux to track initial session verification
+- Error handling and loading states in LoginForm and Dashboard
+- Demo credentials info box in login form
+- Axios dependency for improved HTTP request handling
+
+### Changed
+- LoginForm now uses loginAsync thunk instead of synchronous login action
+- Dashboard logout uses logoutAsync thunk with proper API integration
+- AuthProvider always calls verify API (HttpOnly cookies can't be read by JS)
+- Updated metadata in layout with proper title and description
+- Enhanced authentication flow documentation with implementation status
+
+### Fixed
+- Session persistence on page refresh now works correctly
+- HttpOnly cookies properly set on NextResponse objects in API routes
+- Cookie verification works without client-side cookie access
+
+### Technical
+- Authentication cookies set with 7-day expiration
+- Base64-encoded session tokens (mock implementation, production-ready for JWT)
+- Plain text password validation (mock implementation, production-ready for bcrypt)
+- Server-side cookie validation in verify endpoint
+- TypeScript interfaces for all API requests and responses
+- Clear migration path to production authentication documented
+
 ## [0.3.0] - 2025-12-22
 
 ### Added
