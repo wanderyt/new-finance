@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  findUserByUsername,
-  toUserData,
-  validatePassword,
-} from "@/app/lib/auth/mockUsers";
+import { db } from "@/app/lib/db/prisma";
+import { users } from "@/app/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { createSessionToken } from "@/app/lib/auth/session";
 import {
   LoginRequest,
@@ -28,8 +26,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user
-    const user = findUserByUsername(username);
+    // Find user in database using Drizzle (type-safe)
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+
     if (!user) {
       return NextResponse.json(
         {
@@ -40,8 +43,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password
-    const isValidPassword = validatePassword(password, user.password);
+    // Verify password (plain text comparison for testing only)
+    const isValidPassword = password === user.password;
     if (!isValidPassword) {
       return NextResponse.json(
         {
@@ -53,7 +56,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate session token
-    const userData = toUserData(user);
+    const userData = {
+      id: user.userId.toString(),
+      username: user.username,
+      email: `${user.username}@demo.local`, // Placeholder email for testing
+    };
     const token = createSessionToken(userData);
 
     // Create response with user data
