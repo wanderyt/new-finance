@@ -1,5 +1,112 @@
 # Authentication Flow Documentation
 
+## TODO List
+
+Implementation tasks for the authentication flow:
+
+1. [x] **Add Login API** - Implement `POST /api/auth/login` route handler
+   - Validate credentials
+   - Generate session token
+   - Set `fin_plat` cookie
+   - Return user data
+
+2. [x] **Add Verify API** - Implement `GET /api/auth/verify` route handler
+   - Validate session token from cookie
+   - Return user data if valid
+   - Return 401 if invalid/expired
+
+3. [x] **Client-side Cookie Check** - Check for `fin_plat` cookie on app initialization
+   - Detect cookie presence in browser
+   - Trigger verification flow if cookie exists
+
+4. [x] **Verify Session on Load** - Use verify API to validate cookie
+   - Call `/api/auth/verify` with cookie credentials
+   - Update Redux state if verification passes
+
+5. [x] **Navigate to Dashboard** - If verify passes, auto-login user
+   - Dispatch Redux login action
+   - Render Dashboard UI
+   - Skip login screen
+
+6. [x] **Navigate to Login** - If verify fails (including missing cookie)
+   - Clear invalid cookie
+   - Keep unauthenticated state
+   - Show Login UI
+
+---
+
+## Implementation Status
+
+**Status:** ✅ **Implemented** (Mock Authentication)
+
+**Completed Features:**
+- ✅ API Routes (Login, Verify, Logout) with mock validation
+- ✅ Session token generation using Base64 encoding
+- ✅ Cookie management with proper security flags
+- ✅ Redux async thunks for authentication (using Axios)
+- ✅ AuthProvider component for automatic session verification
+- ✅ LoginForm integration with error handling and loading states
+- ✅ Dashboard logout integration with loading states
+- ✅ Client-side cookie detection and verification
+- ✅ TypeScript type definitions for all API requests/responses
+- ✅ Global loading component with full-screen loading UI
+- ✅ Redux state for tracking verification status (`isVerifying`)
+- ✅ Full-screen loading during initial session verification
+
+**Mock Users Available:**
+| Username | Password | Email |
+|----------|----------|-------|
+| `demo` | `password123` | demo@example.com |
+| `john_doe` | `password123` | john@example.com |
+| `jane_smith` | `password123` | jane@example.com |
+
+**Implementation Details:**
+- **Session Management:** Base64-encoded tokens (mock implementation)
+- **Password Validation:** Plain text comparison (mock implementation)
+- **HTTP Client:** Axios with `withCredentials: true`
+- **Cookie Name:** `fin_plat`
+- **Session Duration:** 7 days
+- **Security:** HttpOnly cookies, Secure flag in production, SameSite protection
+
+**File Structure:**
+```
+app/
+├── api/
+│   └── auth/
+│       ├── login/route.ts        # Login API endpoint
+│       ├── verify/route.ts       # Session verification endpoint
+│       └── logout/route.ts       # Logout endpoint
+├── lib/
+│   ├── types/
+│   │   └── api.ts               # TypeScript interfaces
+│   ├── auth/
+│   │   ├── mockUsers.ts         # Mock user database
+│   │   └── session.ts           # Session token utilities
+│   └── redux/
+│       └── features/auth/
+│           ├── authSlice.ts     # Redux async thunks + isVerifying state
+│           └── authTypes.ts     # Updated with isVerifying field
+├── components/
+│   ├── providers/
+│   │   └── AuthProvider.tsx    # Session verification provider with loading
+│   ├── ui-kit/
+│   │   └── Loading.tsx          # Reusable loading component
+│   ├── login/
+│   │   └── LoginForm.tsx        # Updated with async login
+│   └── dashboard/
+│       └── Dashboard.tsx        # Updated with async logout
+└── layout.tsx                    # Includes AuthProvider
+```
+
+**Migration Path to Production:**
+When ready for production authentication:
+1. Replace Base64 tokens with JWT (install `jsonwebtoken`)
+2. Replace plain text passwords with bcrypt hashing (install `bcryptjs`)
+3. Replace mock users with database queries (Prisma, Drizzle, etc.)
+4. All API routes and client code remain unchanged
+
+---
+
 ## Overview
 
 This document outlines the cookie-based authentication system for the new-finance application. The system uses session cookies for persistent authentication with login and verify API routes.
