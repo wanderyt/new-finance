@@ -37,10 +37,10 @@ Implementation tasks for the authentication flow:
 
 ## Implementation Status
 
-**Status:** ✅ **Implemented** (Mock Authentication)
+**Status:** ✅ **Implemented with SQLite Database** (Updated: 2025-12-23)
 
 **Completed Features:**
-- ✅ API Routes (Login, Verify, Logout) with mock validation
+- ✅ API Routes (Login, Verify, Logout) with **SQLite database validation**
 - ✅ Session token generation using Base64 encoding
 - ✅ Cookie management with proper security flags
 - ✅ Redux async thunks for authentication (using Axios)
@@ -52,17 +52,24 @@ Implementation tasks for the authentication flow:
 - ✅ Global loading component with full-screen loading UI
 - ✅ Redux state for tracking verification status (`isVerifying`)
 - ✅ Full-screen loading during initial session verification
+- ✅ **Drizzle ORM integration with better-sqlite3**
+- ✅ **Database queries in login and verify endpoints**
 
-**Mock Users Available:**
+**Database Implementation:**
+- **ORM:** Drizzle ORM with better-sqlite3
+- **Database:** SQLite file at `db/finance.db`
+- **Schema:** Type-safe user schema with auto-increment ID
+- **Demo User:** username: `demo`, password: `demo123` (plain text for testing)
+
+**Available Users (in database):**
 | Username | Password | Email |
 |----------|----------|-------|
-| `demo` | `password123` | demo@example.com |
-| `john_doe` | `password123` | john@example.com |
-| `jane_smith` | `password123` | jane@example.com |
+| `demo` | `demo123` | demo@demo.local |
 
 **Implementation Details:**
-- **Session Management:** Base64-encoded tokens (mock implementation)
-- **Password Validation:** Plain text comparison (mock implementation)
+- **Session Management:** Base64-encoded tokens (user data + timestamp)
+- **Password Validation:** Plain text comparison (will migrate to bcrypt)
+- **Database Queries:** Drizzle ORM with type-safe queries
 - **HTTP Client:** Axios with `withCredentials: true`
 - **Cookie Name:** `fin_plat`
 - **Session Duration:** 7 days
@@ -73,14 +80,16 @@ Implementation tasks for the authentication flow:
 app/
 ├── api/
 │   └── auth/
-│       ├── login/route.ts        # Login API endpoint
-│       ├── verify/route.ts       # Session verification endpoint
+│       ├── login/route.ts        # ✅ Login API with Drizzle queries
+│       ├── verify/route.ts       # ✅ Verify API with Drizzle queries
 │       └── logout/route.ts       # Logout endpoint
 ├── lib/
+│   ├── db/
+│   │   ├── prisma.ts            # ✅ Drizzle client singleton
+│   │   └── schema.ts            # ✅ Drizzle schema definitions (users table)
 │   ├── types/
 │   │   └── api.ts               # TypeScript interfaces
 │   ├── auth/
-│   │   ├── mockUsers.ts         # Mock user database
 │   │   └── session.ts           # Session token utilities
 │   └── redux/
 │       └── features/auth/
@@ -96,6 +105,13 @@ app/
 │   └── dashboard/
 │       └── Dashboard.tsx        # Updated with async logout
 └── layout.tsx                    # Includes AuthProvider
+
+db/
+└── finance.db                    # ✅ SQLite database file
+
+prisma/
+├── schema.prisma                 # Prisma schema (used for migrations)
+└── seed.ts                       # ✅ Seed demo user script
 ```
 
 **Migration Path to Production:**
