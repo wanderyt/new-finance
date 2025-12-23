@@ -1,13 +1,17 @@
 "use client";
 
 import Button from "../ui-kit/Button";
+import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
+import { selectCurrentUser } from "@/app/lib/redux/features/auth/authSlice";
+import { logout } from "@/app/lib/redux/features/auth/authSlice";
 
-interface DashboardProps {
-  username: string;
-  onLogout: () => void;
-}
+export default function Dashboard() {
+  const username = useAppSelector(selectCurrentUser) || "User";
+  const dispatch = useAppDispatch();
 
-export default function Dashboard({ username, onLogout }: DashboardProps) {
+  const handleLogout = () => {
+    dispatch(logout());
+  };
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
       {/* Header with logout */}
@@ -16,7 +20,7 @@ export default function Dashboard({ username, onLogout }: DashboardProps) {
           <h1 className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-zinc-50 truncate">
             Welcome, {username}!
           </h1>
-          <Button onClick={onLogout} variant="ghost" size="sm">
+          <Button onClick={handleLogout} variant="ghost" size="sm">
             Logout
           </Button>
         </div>

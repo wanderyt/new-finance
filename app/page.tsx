@@ -1,23 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import LoginForm from "./components/login/LoginForm";
 import Dashboard from "./components/dashboard/Dashboard";
+import { useAppSelector } from "./lib/redux/hooks";
+import { selectIsAuthenticated } from "./lib/redux/features/auth/authSlice";
 
 export default function Home() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
-
-  const handleLoginSuccess = (username: string) => {
-    setIsAuthenticated(true);
-    setCurrentUser(username);
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentUser(null);
-  };
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
   return (
     <AnimatePresence mode="wait">
@@ -29,7 +19,7 @@ export default function Home() {
           exit={{ opacity: 0, x: -100 }}
           transition={{ duration: 0.3 }}
         >
-          <LoginForm onLoginSuccess={handleLoginSuccess} />
+          <LoginForm />
         </motion.div>
       ) : (
         <motion.div
@@ -39,7 +29,7 @@ export default function Home() {
           exit={{ opacity: 0, x: -100 }}
           transition={{ duration: 0.3 }}
         >
-          <Dashboard username={currentUser || "User"} onLogout={handleLogout} />
+          <Dashboard />
         </motion.div>
       )}
     </AnimatePresence>
