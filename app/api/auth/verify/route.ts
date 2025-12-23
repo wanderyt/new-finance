@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAuthCookie, verifySessionToken } from "@/app/lib/auth/session";
-import { findUserById, toUserData } from "@/app/lib/auth/mockUsers";
+import { db } from "@/app/lib/db/prisma";
+import { users } from "@/app/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { VerifyResponse, ErrorResponse } from "@/app/lib/types/api";
 
 export async function GET() {
@@ -31,8 +33,12 @@ export async function GET() {
       );
     }
 
-    // Get user from database
-    const user = findUserById(payload.userId);
+    // Get user from database using Drizzle (type-safe)
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.userId, parseInt(payload.userId)))
+      .limit(1);
 
     if (!user) {
       return NextResponse.json(
@@ -45,10 +51,16 @@ export async function GET() {
     }
 
     // Return user data
+    const userData = {
+      id: user.userId.toString(),
+      username: user.username,
+      email: `${user.username}@demo.local`, // Placeholder email for testing
+    };
+
     return NextResponse.json(
       {
         success: true,
-        user: toUserData(user),
+        user: userData,
       } as VerifyResponse,
       { status: 200 }
     );
