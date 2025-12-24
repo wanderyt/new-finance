@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-12-23
+
+### Added
+- ExpenseTile component for reusable expense item display with:
+  - Left-right flex layout with category hierarchy (Category › Subcategory)
+  - Merchant name, location, and scheduled badge for recurring expenses
+  - Currency amount display with red coloring for expenses
+  - Custom tooltip showing USD/CNY exchange rates on info icon hover
+  - Full dark mode support and hover states
+- Dashboard hero section with background image overlay:
+  - 370px hero section with background image (fin-l.jpg)
+  - Semi-transparent stats cards (Total Balance, Total Expense) positioned at bottom-left
+  - Logout icon button in top-left corner
+  - Dark overlay (30% opacity) for image contrast
+- Prominent "记一笔" (Add Expense) button with:
+  - Orange gradient styling (from-orange-500 to-orange-600)
+  - Wide layout with letter-spacing for emphasis
+  - Positioned between hero and expense list with negative margin overlap
+- Comprehensive expense list with 20 mock items for scroll testing
+- Design reference files (fin-l.jpg background, original-dashboard.png)
+- Comprehensive dashboard UI design documentation (docs/dashboard-ui-design.md) with 448 lines covering:
+  - Component structure and props interfaces
+  - Design patterns and color palette
+  - Layout changes and visual structure
+  - Accessibility features and responsive design
+  - Future enhancements roadmap
+
+### Changed
+- Dashboard component completely restructured for expense tracking focus:
+  - Removed welcome card and search bar (search to be implemented later)
+  - Removed Quick Actions buttons section
+  - Replaced Recent Activity with structured Expenses list using ExpenseTile
+  - Stats section maintained but repositioned within hero overlay
+  - Full-width layout with white background for seamless visual flow
+- Expense data structure enhanced with:
+  - Category hierarchy (category/subcategory)
+  - Merchant and location tracking
+  - Scheduled/recurring expense flag
+  - Currency specification
+  - Exchange rate information (USD/CNY)
+
+### Technical
+- Client-side tooltip implementation using React useState (no external libraries)
+- Inline styles for background image positioning and overlay effects
+- Z-index layering for proper stacking context (logout, stats, overlay)
+- Overflow handling adjusted to prevent tooltip clipping
+- All components maintain existing zinc color palette and dark mode support
+
 ## [0.5.0] - 2025-12-23
 
 ### Added
