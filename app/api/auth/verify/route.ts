@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAuthCookie, verifySessionToken } from "@/app/lib/auth/session";
-import { db } from "@/app/lib/db/prisma";
+import { db } from "@/app/lib/db/drizzle";
 import { users } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { VerifyResponse, ErrorResponse } from "@/app/lib/types/api";

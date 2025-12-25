@@ -216,7 +216,7 @@ This document defines the complete database requirements and design for the new-
 app/
 ├── lib/
 │   ├── db/
-│   │   ├── prisma.ts             # ✅ IMPLEMENTED: Drizzle client singleton (legacy filename)
+│   │   ├── drizzle.ts            # ✅ IMPLEMENTED: Drizzle client singleton
 │   │   └── schema.ts             # ✅ IMPLEMENTED: Drizzle schema definitions
 │   ├── services/                 # Future: Service layer (TBD)
 │   │   ├── user.service.ts       # User CRUD operations
@@ -244,7 +244,7 @@ docs/
 ```
 
 **Implementation Notes**:
-- `app/lib/db/prisma.ts` is the Drizzle client (legacy filename retained for now)
+- `app/lib/db/drizzle.ts` is the Drizzle client singleton
 - Database connection uses better-sqlite3 with Drizzle ORM wrapper
 - Schema defined using Drizzle ORM syntax (not raw SQL yet)
 - Only `users` table implemented so far (authentication)
@@ -253,7 +253,7 @@ docs/
 
 ### Database Connection Pattern
 
-**✅ Current Implementation** (`app/lib/db/prisma.ts`):
+**✅ Current Implementation** (`app/lib/db/drizzle.ts`):
 
 ```typescript
 import Database from 'better-sqlite3'
@@ -830,7 +830,7 @@ CREATE INDEX idx_fin_tags_tag ON fin_tags(tag_id);
 ```typescript
 // Login - Find User by Username
 // app/api/auth/login/route.ts
-import { db } from "@/app/lib/db/prisma";
+import { db } from "@/app/lib/db/drizzle";
 import { users } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
 
