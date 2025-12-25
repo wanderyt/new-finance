@@ -1,10 +1,10 @@
 # Database Setup - SQLite Integration
 
 > **Status**: Design Document - **UPDATED with New Schema**
-> **Last Updated**: 2025-12-23
+> **Last Updated**: 2025-12-25
 > **Target Deployment**: Self-hosted VPS
 
-## 🔄 Recent Updates (2025-12-23)
+## 🔄 Recent Updates (2025-12-25)
 
 ### ✅ Implementation Status: **Drizzle ORM Active**
 
@@ -24,7 +24,11 @@ The database schema has been significantly updated with the following key change
 4. **✅ Receipt Deduplication**: Added SHA256 hash for preventing duplicate uploads
 5. **✅ Simplified Tables**: Removed sessions, memos tables; simplified persons table
 6. **✅ Merchant Field**: New dedicated field in `fin` table (separated from comments)
-7. **✅ Strategic Indexing**: Enhanced indexes for common query patterns
+7. **✅ Income/Expense Tracking**: Added `fin.type` field to distinguish expense vs income transactions
+8. **✅ Category Applicability**: Added `categories.applies_to` field for type-specific categories
+9. **✅ Strategic Indexing**: Enhanced indexes for common query patterns including type-based filtering
+10. **✅ Data Validation**: Comprehensive CHECK constraints for data integrity
+11. **✅ Cascade Behavior**: Explicit ON DELETE CASCADE/SET NULL for referential integrity
 
 ### Schema Changes Summary
 
@@ -36,11 +40,17 @@ The database schema has been significantly updated with the following key change
 | `expense_assignees` | `persons` (simplified) | Fewer fields |
 | `sessions`, `memos` tables | Removed | Not needed yet |
 | No merchant field | `merchant TEXT` in `fin` | Better data quality |
+| No type field | `type TEXT` in `fin` | Expense/income tracking |
+| No applies_to field | `applies_to TEXT` in `categories` | Category applicability |
+| Missing CHECK constraints | Comprehensive CHECK constraints | Data validation |
+| Implicit CASCADE | Explicit ON DELETE CASCADE/SET NULL | Clear referential integrity |
 
 ### Migration Impact
 - Old `FIN.amount` (DECIMAL) → `fin.original_amount_cents` (multiply by 100)
 - Old `FIN.tags` (comma-separated) → parse into `tags` + `fin_tags` tables
 - Old `FIN.comment` → split into `merchant` + `comment` fields
+- **Add `fin.type` field** → default to 'expense' for old expense records
+- **Add `categories.applies_to` field** → default to 'expense' for old categories
 - Old `MEMO` table → **not migrated** (not in new schema)
 - **Authentication**: `sessions` table removed - will use simplified token-based or JWT auth
 
@@ -359,21 +369,30 @@ CREATE TABLE categories (
   user_id INTEGER NOT NULL,
   category TEXT NOT NULL,
   subcategory TEXT NOT NULL,
+  applies_to TEXT NOT NULL DEFAULT 'expense',
   is_common INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (user_id, category, subcategory),
-  FOREIGN KEY (user_id) REFERENCES users(user_id)
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  CHECK (applies_to IN ('expense','income','both')),
+  CHECK (is_common IN (0,1))
 );
+
+CREATE INDEX idx_categories_user_applies ON categories(user_id, applies_to);
 ```
 
 **Fields**:
 - `user_id` - User who owns this category
 - `category` - Main category name (e.g., "Food", "Transport")
 - `subcategory` - Subcategory name (e.g., "Groceries", "Gas")
+- `applies_to` - **NEW**: Transaction type applicability: 'expense', 'income', or 'both'
 - `is_common` - Boolean flag (0/1): whether category is shared across users
 
 **Design Decisions**:
 - **Composite Primary Key**: (user_id, category, subcategory) - prevents duplicates
 - **No auto-increment ID**: Categories identified by natural key
+- **Type-specific categories**: `applies_to` field allows filtering categories by transaction type
+- **Data validation**: CHECK constraints ensure valid values for `applies_to` and `is_common`
+- **Performance**: Index on (user_id, applies_to) for fast category filtering
 - Migrated directly from old CATEGORY table structure
 
 ---
@@ -387,10 +406,12 @@ CREATE TABLE fx_snapshots (
   fx_id INTEGER PRIMARY KEY,
   captured_at TEXT NOT NULL,          -- ISO 8601: 2025-12-23T12:00:00Z
   provider TEXT,                      -- e.g., "exchangerate.host" / "openexchangerates"
-  base_currency TEXT NOT NULL,        -- Usually "CAD" (base currency)
+  base_currency TEXT NOT NULL DEFAULT 'CAD',
+  cad_to_usd REAL NOT NULL,          -- CAD → USD conversion rate
   cad_to_cny REAL NOT NULL,          -- CAD → CNY conversion rate
-  cad_to_usd REAL NOT NULL           -- CAD → USD conversion rate
-  -- cad_to_cad is always 1.0, no need to store
+  CHECK (base_currency = 'CAD'),
+  CHECK (cad_to_usd > 0),
+  CHECK (cad_to_cny > 0)
 );
 
 CREATE INDEX idx_fx_captured_at ON fx_snapshots(captured_at);
@@ -400,15 +421,16 @@ CREATE INDEX idx_fx_captured_at ON fx_snapshots(captured_at);
 - `fx_id` - Auto-increment primary key
 - `captured_at` - ISO 8601 timestamp when rate was captured
 - `provider` - API provider name (for audit trail)
-- `base_currency` - Base currency (typically "CAD")
-- `cad_to_cny` - Exchange rate from CAD to CNY
+- `base_currency` - Base currency (fixed to "CAD")
 - `cad_to_usd` - Exchange rate from CAD to USD
+- `cad_to_cny` - Exchange rate from CAD to CNY
 
 **Design Decisions**:
 - **Snapshot-based**: Store complete rate set at a point in time
-- **CAD as base**: All rates relative to CAD for consistency
+- **CAD as base**: All rates relative to CAD for consistency (enforced by CHECK constraint)
 - **Indexed by timestamp**: Fast lookup for historical rates
 - **No CAD→CAD rate**: Always 1.0, not stored
+- **Data validation**: CHECK constraints ensure positive exchange rates and correct base currency
 
 **Usage**:
 - Fetch current rates when creating transactions
@@ -426,15 +448,17 @@ CREATE TABLE fin (
   fin_id TEXT PRIMARY KEY,            -- Preserved from old FIN.id
   user_id INTEGER NOT NULL,
 
+  type TEXT NOT NULL DEFAULT 'expense',  -- 'expense' or 'income' (future: 'transfer')
+
   date TEXT NOT NULL,                 -- Transaction date (ISO 8601 or YYYY-MM-DD)
   merchant TEXT,                      -- NEW: Merchant/vendor name
+  comment TEXT,                       -- Old field, gradually migrate to merchant
   place TEXT,                         -- Location/venue/mall
   city TEXT,
 
   category TEXT,
   subcategory TEXT,
   details TEXT,
-  comment TEXT,                       -- Old field, gradually migrate to merchant
 
   -- Original amount (user input)
   original_currency TEXT NOT NULL,    -- 'CAD', 'USD', or 'CNY'
@@ -453,11 +477,21 @@ CREATE TABLE fin (
   is_scheduled INTEGER NOT NULL DEFAULT 0,
   schedule_id TEXT,
 
-  FOREIGN KEY (user_id) REFERENCES users(user_id),
-  FOREIGN KEY (fx_id) REFERENCES fx_snapshots(fx_id)
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (fx_id) REFERENCES fx_snapshots(fx_id) ON DELETE SET NULL,
+
+  CHECK (type IN ('expense','income')),
+  CHECK (original_currency IN ('CAD','USD','CNY')),
+  CHECK (original_amount_cents >= 0),
+  CHECK (amount_cad_cents >= 0),
+  CHECK (amount_usd_cents >= 0),
+  CHECK (amount_cny_cents >= 0),
+  CHECK (amount_base_cad_cents >= 0),
+  CHECK (is_scheduled IN (0,1))
 );
 
 CREATE INDEX idx_fin_user_date ON fin(user_id, date);
+CREATE INDEX idx_fin_user_type_date ON fin(user_id, type, date);
 CREATE INDEX idx_fin_user_cat  ON fin(user_id, category, subcategory);
 CREATE INDEX idx_fin_user_merchant ON fin(user_id, merchant);
 CREATE INDEX idx_fin_user_fx   ON fin(user_id, fx_id);
@@ -466,12 +500,13 @@ CREATE INDEX idx_fin_user_fx   ON fin(user_id, fx_id);
 **Fields**:
 - `fin_id` - Text primary key (preserved from old schema)
 - `user_id` - Transaction owner
+- `type` - **NEW**: Transaction type: 'expense' or 'income' (future: 'transfer')
 - `date` - Transaction date (ISO 8601 format)
 - `merchant` - **NEW**: Merchant/vendor name (replaces usage of comment)
+- `comment` - Legacy field (will gradually migrate to merchant)
 - `place`, `city` - Location details
 - `category`, `subcategory` - Transaction categorization
 - `details` - Additional notes
-- `comment` - Legacy field (will gradually migrate to merchant)
 - `original_currency` - Currency user entered (CAD/USD/CNY)
 - `original_amount_cents` - Amount in original currency (stored as cents)
 - `fx_id` - Foreign key to FX snapshot (nullable)
@@ -480,16 +515,20 @@ CREATE INDEX idx_fin_user_fx   ON fin(user_id, fx_id);
 - `is_scheduled`, `schedule_id` - Scheduling support (preserved)
 
 **Design Decisions**:
+- **Expense vs Income tracking**: `type` field enables unified table for both transaction types
 - **Cents-based storage**: All amounts stored as INTEGER cents (no floating point errors)
 - **Redundant currency amounts**: Pre-calculated for fast queries (no runtime conversion)
 - **FX snapshot link**: Enables historical rate traceability
 - **Merchant field**: Separates vendor name from comments
-- **Strategic indexes**: Fast queries by user+date, user+category, user+merchant
+- **Strategic indexes**: Fast queries by user+date, user+type+date, user+category, user+merchant
+- **Data validation**: CHECK constraints ensure valid types, currencies, and positive amounts
+- **Cascade deletes**: User deletion cascades to transactions; FX deletion sets NULL
 
 **Migration Notes**:
 - Old `FIN.id` → `fin.fin_id`
 - Old `FIN.amount` (DECIMAL) → convert to cents: `amount * 100`
 - Old `FIN.comment` → can split into `merchant` and `comment`
+- **Add `type` field** (default to 'expense' for old expense data)
 - Add `original_currency` (default to 'CAD' for old data)
 - Calculate converted amounts during migration
 
@@ -507,7 +546,9 @@ CREATE TABLE persons (
   is_default INTEGER NOT NULL DEFAULT 0,
   is_active INTEGER NOT NULL DEFAULT 1,
   UNIQUE(user_id, name),
-  FOREIGN KEY (user_id) REFERENCES users(user_id)
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  CHECK (is_default IN (0,1)),
+  CHECK (is_active IN (0,1))
 );
 
 CREATE INDEX idx_persons_user ON persons(user_id);
@@ -517,14 +558,16 @@ CREATE INDEX idx_persons_user ON persons(user_id);
 - `person_id` - Auto-increment primary key
 - `user_id` - Account owner
 - `name` - Person's name (e.g., "Dad", "Mom", "Child 1")
-- `is_default` - Boolean: default person for new items
-- `is_active` - Boolean: whether person is active (soft delete)
+- `is_default` - Boolean (0/1): default person for new items
+- `is_active` - Boolean (0/1): whether person is active (soft delete)
 
 **Design Decisions**:
 - **Simplified design**: Removed relationship, color, sort_order fields
 - **Unique constraint**: (user_id, name) prevents duplicate names per user
 - **Default person**: One person can be marked as default for quick entry
 - **Soft delete**: Use is_active instead of deleting records
+- **Data validation**: CHECK constraints ensure valid boolean values
+- **Cascade delete**: When user is deleted, all their persons are removed
 
 ---
 
@@ -550,8 +593,11 @@ CREATE TABLE fin_items (
   subcategory TEXT,
   notes TEXT,
 
-  FOREIGN KEY (fin_id) REFERENCES fin(fin_id),
-  FOREIGN KEY (person_id) REFERENCES persons(person_id)
+  FOREIGN KEY (fin_id) REFERENCES fin(fin_id) ON DELETE CASCADE,
+  FOREIGN KEY (person_id) REFERENCES persons(person_id) ON DELETE SET NULL,
+
+  CHECK (original_amount_cents >= 0),
+  CHECK (unit_price_cents IS NULL OR unit_price_cents >= 0)
 );
 
 CREATE INDEX idx_items_fin ON fin_items(fin_id);
@@ -577,6 +623,8 @@ CREATE INDEX idx_items_person ON fin_items(person_id);
 - **Unit tracking**: Supports weight-based pricing (groceries, gas)
 - **Currency handling**: Items use parent transaction's original currency
 - **Nullable person**: Business layer can fill in default person
+- **Data validation**: CHECK constraints ensure non-negative amounts
+- **Cascade behavior**: Transaction deletion removes all items; person deletion preserves items
 
 **Use Cases**:
 - Grocery receipt: Multiple items, different people
@@ -599,13 +647,13 @@ CREATE TABLE receipts (
   sha256 TEXT,                         -- SHA256 hash for deduplication
   uploaded_at TEXT NOT NULL,
 
-  FOREIGN KEY (user_id) REFERENCES users(user_id),
-  FOREIGN KEY (fin_id) REFERENCES fin(fin_id)
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (fin_id) REFERENCES fin(fin_id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_receipts_user ON receipts(user_id);
 CREATE INDEX idx_receipts_fin  ON receipts(fin_id);
-CREATE UNIQUE INDEX idx_receipts_sha ON receipts(sha256);
+CREATE UNIQUE INDEX idx_receipts_sha256 ON receipts(sha256);
 ```
 
 **Fields**:
@@ -622,6 +670,7 @@ CREATE UNIQUE INDEX idx_receipts_sha ON receipts(sha256);
 - **Lazy linking**: Can upload receipt before creating transaction
 - **Simplified from original**: Removed AI processing fields (can add later)
 - **File system storage**: Store files locally on VPS
+- **Cascade behavior**: User deletion removes receipts; transaction deletion preserves receipts
 
 **Removed Fields** (can add back later if needed):
 - `processing_status`, `extracted_text`, `extracted_data`, `ai_model`, `processed_at`
@@ -638,15 +687,17 @@ CREATE TABLE tags (
   user_id INTEGER NOT NULL,
   name TEXT NOT NULL,
   UNIQUE(user_id, name),
-  FOREIGN KEY (user_id) REFERENCES users(user_id)
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
+
+CREATE INDEX idx_tags_user ON tags(user_id);
 
 CREATE TABLE fin_tags (
   fin_id TEXT NOT NULL,
   tag_id INTEGER NOT NULL,
   PRIMARY KEY (fin_id, tag_id),
-  FOREIGN KEY (fin_id) REFERENCES fin(fin_id),
-  FOREIGN KEY (tag_id) REFERENCES tags(tag_id)
+  FOREIGN KEY (fin_id) REFERENCES fin(fin_id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_fin_tags_tag ON fin_tags(tag_id);
@@ -670,6 +721,7 @@ CREATE INDEX idx_fin_tags_tag ON fin_tags(tag_id);
 - **Multiple tags per transaction**: One transaction can have many tags
 - **Reusable tags**: Same tag can be applied to many transactions
 - **Indexed by tag**: Fast queries like "all transactions with tag X"
+- **Cascade deletes**: User deletion removes tags; transaction or tag deletion removes links
 
 **Migration from Old Schema**:
 - Old: `FIN.tags` VARCHAR(500) - probably comma-separated or JSON
@@ -901,24 +953,28 @@ const rate = await db.query.fxSnapshots.findFirst({
 ### Index Strategy
 
 **Indexes Created**:
+- `idx_categories_user_applies` - Fast category filtering by type
+- `idx_fx_captured_at` - Fast historical rate lookup
 - `idx_fin_user_date` - Fast user + date range queries
+- `idx_fin_user_type_date` - Fast user + type + date range queries
 - `idx_fin_user_cat` - Fast category filtering
 - `idx_fin_user_merchant` - Fast merchant filtering
 - `idx_fin_user_fx` - Fast FX snapshot lookups
+- `idx_persons_user` - Fast person listing
 - `idx_items_fin` - Fast line item retrieval
 - `idx_items_person` - Fast person-based queries
 - `idx_receipts_user` - Fast user receipt listing
 - `idx_receipts_fin` - Fast transaction receipt lookup
-- `idx_receipts_sha` - Deduplication (UNIQUE)
+- `idx_receipts_sha256` - Deduplication (UNIQUE)
+- `idx_tags_user` - Fast user tag listing
 - `idx_fin_tags_tag` - Fast tag-based queries
-- `idx_fx_captured_at` - Fast historical rate lookup
-- `idx_persons_user` - Fast person listing
 
 **Index Benefits**:
 - ✅ Query response time: <10ms for most queries
 - ✅ Efficient date range scans
-- ✅ Fast lookups by composite keys (user + category, user + merchant)
+- ✅ Fast lookups by composite keys (user + type + date, user + category, user + merchant)
 - ✅ Optimized JOIN performance
+- ✅ Fast filtering by transaction type (expense vs income)
 
 ---
 
