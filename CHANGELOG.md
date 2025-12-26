@@ -5,6 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-12-25
+
+### Added
+- **Complete Database Schema**: Implemented full 10-table database schema with Drizzle ORM
+  - `users`: User authentication and profiles
+  - `categories`: Expense/income categorization with `applies_to` field
+  - `fx_snapshots`: Exchange rate snapshots (CAD base currency)
+  - `schedule_rules`: Recurring transaction patterns (NEW - interval, unit, anchor_date)
+  - `fin`: Main transactions with type field ('expense'|'income'), schedule fields, merchant tracking
+  - `persons`: Family member expense assignment
+  - `fin_items`: Transaction line items with quantity and unit pricing
+  - `receipts`: Receipt file metadata with SHA256 deduplication
+  - `tags`: Flexible tagging system
+  - `fin_tags`: Many-to-many transaction tags
+- **Database Migration**: Initial migration (0000_cloudy_vision.sql) with CHECK constraints
+  - Composite primary keys and foreign key CASCADE behavior
+  - Partial unique index for schedule deduplication
+  - 20 indexes for query optimization
+  - Comprehensive CHECK constraints for data validation
+- **Authentication System**: JWT-based authentication with Drizzle queries
+  - Login, logout, and session verification API routes
+  - Token-based session management with httpOnly cookies
+  - Mock users for testing during development
+- **Redux State Management**: Complete Redux setup with RTK
+  - Auth slice with async thunks for login/logout/verify
+  - TypeScript types for authentication state
+  - Redux hooks and provider
+- **Database Documentation**: Comprehensive guides added
+  - DATABASE.md: Quick reference for Drizzle commands
+  - docs/database-setup.md: Complete schema design (1211 lines)
+  - docs/authentication-flow.md: Authentication patterns (949 lines)
+- **Database Scripts**: Drizzle-based seeding and migration scripts
+  - scripts/seed.ts: Demo user seeding
+  - drizzle.config.ts: Drizzle Kit configuration
+
+### Changed
+- **Database Migration**: Migrated from Prisma to Drizzle ORM (100%)
+  - Removed all Prisma dependencies (@prisma/client, prisma)
+  - Renamed prisma.ts → drizzle.ts for clarity
+  - Updated API routes to use Drizzle queries
+- **Schema Enhancements**: Updated fin table structure
+  - Added `type` field: 'expense' | 'income'
+  - Added schedule fields: `scheduled_on`, `schedule_rule_id`
+  - Added `merchant` field for better data quality
+  - Multi-currency support: CAD/USD/CNY with cents-based storage
+- **Documentation**: Updated database-setup.md with schedule_rules table
+  - Renumbered tables 4→5, 5→6, etc. to accommodate schedule_rules
+  - Added scheduling workflow and patterns
+  - Added new indexes: idx_fin_user_type_date, idx_fin_user_rule_scheduled_on
+
+### Technical
+- Type-safe schema definitions with exported TypeScript types
+- Drizzle inferred types for select/insert operations
+- better-sqlite3 driver for optimal performance
+- Drizzle Studio support for visual database management
+- Environment setup with Node.js >=20.9.0 requirement
+
 ## [0.6.0] - 2025-12-23
 
 ### Added
