@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2025-12-25
+
+### Added
+- **UI Master Agent**: Custom Claude Code agent configuration for frontend development
+  - Configured tech stack versions (React 19+, Next.js 16+, TypeScript 5+, Tailwind CSS 4)
+  - Node.js >= 20.9.0 and Yarn 4.5.3 (Berry) requirements documented
+  - Project component structure guidelines (app/components/ organization)
+  - Feature-based organization for dashboard/, login/, providers/ folders
+  - UI kit component guidelines for shared/reusable components
+  - Core principles for clean, simple, maintainable code
+  - TypeScript best practices and React/Next.js patterns
+
+### Technical
+- Agent configuration: .claude/agents/ui-master.md
+- Agent model: Sonnet with specialized frontend development expertise
+- Component organization enforces feature-based structure with ui-kit/ for shared components
+
 ## [0.7.0] - 2025-12-25
 
 ### Added
