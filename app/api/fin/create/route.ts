@@ -90,7 +90,7 @@ export const POST = withAuth(async (request, user) => {
     // Generate unique ID
     const finId = generateFinId();
 
-    // Convert currency amounts
+    // Convert currency amounts and create FX snapshot
     const currencyAmounts = await convertCurrency(
       body.originalCurrency,
       body.originalAmountCents
@@ -113,8 +113,11 @@ export const POST = withAuth(async (request, user) => {
       details: body.details || null,
       originalCurrency: body.originalCurrency,
       originalAmountCents: body.originalAmountCents,
-      fxId: null, // TODO: Link to fx_snapshots when FX API is integrated
-      ...currencyAmounts,
+      fxId: currencyAmounts.fxId, // Link to FX snapshot
+      amountCadCents: currencyAmounts.amountCadCents,
+      amountUsdCents: currencyAmounts.amountUsdCents,
+      amountCnyCents: currencyAmounts.amountCnyCents,
+      amountBaseCadCents: currencyAmounts.amountBaseCadCents,
       isScheduled: body.isScheduled || false,
     });
 

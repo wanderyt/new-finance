@@ -104,9 +104,11 @@ export const PATCH = withAuth(async (request, user) => {
           ? body.originalAmountCents
           : existing.originalAmountCents;
 
+      // Use existing FX snapshot for consistent historical rates
       const currencyAmounts = await convertCurrency(
         newCurrency as "CAD" | "USD" | "CNY",
-        newAmount
+        newAmount,
+        existing.fxId // Reuse the original FX snapshot
       );
 
       updates.originalCurrency = newCurrency;
@@ -115,7 +117,7 @@ export const PATCH = withAuth(async (request, user) => {
       updates.amountUsdCents = currencyAmounts.amountUsdCents;
       updates.amountCnyCents = currencyAmounts.amountCnyCents;
       updates.amountBaseCadCents = currencyAmounts.amountBaseCadCents;
-      // fxId remains null (TODO: link to fx_snapshots table in future)
+      // fxId remains unchanged - keeps historical rate consistency
     }
 
     // Check if there are any updates

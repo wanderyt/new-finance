@@ -5,6 +5,10 @@
  * Free, open-source API with no API key required and no rate limits.
  */
 
+import { db } from "@/app/lib/db/drizzle";
+import { fxSnapshots } from "@/app/lib/db/schema";
+import { eq } from "drizzle-orm";
+
 interface FrankfurterResponse {
   amount: number;
   base: string;
@@ -14,7 +18,7 @@ interface FrankfurterResponse {
   };
 }
 
-interface ExchangeRates {
+export interface ExchangeRates {
   cadToUsd: number;
   cadToCny: number;
   date: string;
@@ -117,4 +121,52 @@ export async function convertCurrencyWithRates(
   }
 
   return convertedAmount;
+}
+
+/**
+ * Create an FX snapshot record in the database
+ * This captures the exchange rates at the time of transaction creation
+ *
+ * @param rates - Exchange rates object
+ * @returns The fxId of the created snapshot
+ */
+export async function createFxSnapshot(rates?: ExchangeRates): Promise<number> {
+  // Fetch rates if not provided
+  const fxRates = rates || await fetchExchangeRates();
+
+  // Insert FX snapshot
+  const result = await db.insert(fxSnapshots).values({
+    capturedAt: new Date().toISOString(),
+    provider: fxRates.provider,
+    baseCurrency: "CAD",
+    cadToUsd: fxRates.cadToUsd,
+    cadToCny: fxRates.cadToCny,
+  }).returning({ fxId: fxSnapshots.fxId });
+
+  return result[0].fxId;
+}
+
+/**
+ * Get FX snapshot by ID
+ *
+ * @param fxId - FX snapshot ID
+ * @returns Exchange rates from the snapshot
+ */
+export async function getFxSnapshotById(fxId: number): Promise<ExchangeRates | null> {
+  const [snapshot] = await db
+    .select()
+    .from(fxSnapshots)
+    .where(eq(fxSnapshots.fxId, fxId))
+    .limit(1);
+
+  if (!snapshot) {
+    return null;
+  }
+
+  return {
+    cadToUsd: snapshot.cadToUsd,
+    cadToCny: snapshot.cadToCny,
+    date: snapshot.capturedAt.split('T')[0], // Extract date part
+    provider: snapshot.provider || "Unknown",
+  };
 }
