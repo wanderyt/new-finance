@@ -1,17 +1,37 @@
 "use client";
 
+import { useEffect } from "react";
 import ExpenseTile from "./ExpenseTile";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   selectAuthStatus,
   logoutAsync
 } from "@/app/lib/redux/features/auth/authSlice";
+import {
+  fetchFinListAsync,
+  selectFinItems,
+  selectFinListStatus,
+  selectFinListError,
+} from "@/app/lib/redux/features/fin/finSlice";
+import { FinData } from "@/app/lib/types/api";
 
 export default function Dashboard() {
   const authStatus = useAppSelector(selectAuthStatus);
+  const finItems = useAppSelector(selectFinItems);
+  const listStatus = useAppSelector(selectFinListStatus);
+  const listError = useAppSelector(selectFinListError);
   const dispatch = useAppDispatch();
 
-  const isLoading = authStatus === "loading";
+  const isLoading = authStatus === "loading" || listStatus === "loading";
+
+  // Fetch fin list on component mount
+  useEffect(() => {
+    dispatch(fetchFinListAsync({
+      limit: 20,
+      type: "all",
+      dateTo: new Date().toISOString(),
+    }));
+  }, [dispatch]);
 
   const handleLogout = async () => {
     try {
@@ -26,6 +46,29 @@ export default function Dashboard() {
   const handleAddExpense = () => {
     console.log("Add expense clicked - will open bottom sheet");
   };
+
+  // Format amount with sign and symbol
+  function formatAmount(type: string, amountCents: number, currency: string): string {
+    const sign = type === "expense" ? "-" : "+";
+    const amount = (amountCents / 100).toFixed(2);
+
+    const currencySymbol = {
+      CAD: "$",
+      USD: "$",
+      CNY: "¥"
+    }[currency] || "";
+
+    return `${sign}${currencySymbol}${amount}`;
+  }
+
+  // Format exchange info for tooltip
+  function formatExchangeInfo(item: FinData) {
+    return {
+      usd: `$${(item.amountUsdCents / 100).toFixed(2)}`,
+      cny: `¥${(item.amountCnyCents / 100).toFixed(2)}`,
+    };
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col">
       {/* Hero Section with Background Image */}
@@ -78,220 +121,43 @@ export default function Dashboard() {
       <div className="flex-1 overflow-visible -mt-2.5">
         <div className="bg-white dark:bg-zinc-900 shadow-lg h-full flex flex-col">
           <div className="overflow-y-auto flex-1">
-            {[
-              {
-                category: "Food & Dining",
-                subcategory: "Groceries",
-                merchant: "Whole Foods",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$127.50",
-                currency: "USD",
-                exchangeInfo: { usd: "$127.50", cny: "¥920.00" }
-              },
-              {
-                category: "Utilities",
-                subcategory: "Electricity",
-                merchant: "PG&E",
-                place: "San Francisco, CA",
-                isScheduled: true,
-                amount: "-$85.20",
-                currency: "USD",
-                exchangeInfo: { usd: "$85.20", cny: "¥614.64" }
-              },
-              {
-                category: "Transportation",
-                subcategory: "Gas",
-                merchant: "Chevron",
-                place: "Oakland, CA",
-                isScheduled: false,
-                amount: "-$45.00",
-                currency: "USD",
-                exchangeInfo: { usd: "$45.00", cny: "¥324.90" }
-              },
-              {
-                category: "Food & Dining",
-                subcategory: "Restaurant",
-                merchant: "Tartine Bakery",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$68.90",
-                currency: "USD",
-                exchangeInfo: { usd: "$68.90", cny: "¥497.00" }
-              },
-              {
-                category: "Food & Dining",
-                subcategory: "Coffee Shop",
-                merchant: "Blue Bottle Coffee",
-                place: "Berkeley, CA",
-                isScheduled: false,
-                amount: "-$12.50",
-                currency: "USD",
-                exchangeInfo: { usd: "$12.50", cny: "¥90.25" }
-              },
-              {
-                category: "Healthcare",
-                subcategory: "Pharmacy",
-                merchant: "Walgreens",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$34.25",
-                currency: "USD",
-                exchangeInfo: { usd: "$34.25", cny: "¥247.21" }
-              },
-              {
-                category: "Entertainment",
-                subcategory: "Movie Theater",
-                merchant: "AMC Metreon",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$28.50",
-                currency: "USD",
-                exchangeInfo: { usd: "$28.50", cny: "¥205.74" }
-              },
-              {
-                category: "Shopping",
-                subcategory: "Clothing",
-                merchant: "Uniqlo",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$89.99",
-                currency: "USD",
-                exchangeInfo: { usd: "$89.99", cny: "¥649.73" }
-              },
-              {
-                category: "Food & Dining",
-                subcategory: "Fast Food",
-                merchant: "Chipotle",
-                place: "Oakland, CA",
-                isScheduled: false,
-                amount: "-$15.75",
-                currency: "USD",
-                exchangeInfo: { usd: "$15.75", cny: "¥113.72" }
-              },
-              {
-                category: "Transportation",
-                subcategory: "Public Transit",
-                merchant: "BART",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$22.40",
-                currency: "USD",
-                exchangeInfo: { usd: "$22.40", cny: "¥161.73" }
-              },
-              {
-                category: "Utilities",
-                subcategory: "Internet",
-                merchant: "Comcast",
-                place: "San Francisco, CA",
-                isScheduled: true,
-                amount: "-$79.99",
-                currency: "USD",
-                exchangeInfo: { usd: "$79.99", cny: "¥577.53" }
-              },
-              {
-                category: "Healthcare",
-                subcategory: "Dental",
-                merchant: "Dr. Smith Dentistry",
-                place: "Berkeley, CA",
-                isScheduled: false,
-                amount: "-$150.00",
-                currency: "USD",
-                exchangeInfo: { usd: "$150.00", cny: "¥1,083.00" }
-              },
-              {
-                category: "Food & Dining",
-                subcategory: "Groceries",
-                merchant: "Trader Joe's",
-                place: "Berkeley, CA",
-                isScheduled: false,
-                amount: "-$63.42",
-                currency: "USD",
-                exchangeInfo: { usd: "$63.42", cny: "¥457.89" }
-              },
-              {
-                category: "Shopping",
-                subcategory: "Electronics",
-                merchant: "Best Buy",
-                place: "Emeryville, CA",
-                isScheduled: false,
-                amount: "-$299.99",
-                currency: "USD",
-                exchangeInfo: { usd: "$299.99", cny: "¥2,165.93" }
-              },
-              {
-                category: "Entertainment",
-                subcategory: "Streaming Service",
-                merchant: "Netflix",
-                place: "Online",
-                isScheduled: true,
-                amount: "-$15.49",
-                currency: "USD",
-                exchangeInfo: { usd: "$15.49", cny: "¥111.84" }
-              },
-              {
-                category: "Food & Dining",
-                subcategory: "Restaurant",
-                merchant: "Chez Panisse",
-                place: "Berkeley, CA",
-                isScheduled: false,
-                amount: "-$185.00",
-                currency: "USD",
-                exchangeInfo: { usd: "$185.00", cny: "¥1,335.70" }
-              },
-              {
-                category: "Transportation",
-                subcategory: "Ride Share",
-                merchant: "Uber",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$32.15",
-                currency: "USD",
-                exchangeInfo: { usd: "$32.15", cny: "¥232.12" }
-              },
-              {
-                category: "Shopping",
-                subcategory: "Home Goods",
-                merchant: "Target",
-                place: "Oakland, CA",
-                isScheduled: false,
-                amount: "-$74.28",
-                currency: "USD",
-                exchangeInfo: { usd: "$74.28", cny: "¥536.20" }
-              },
-              {
-                category: "Food & Dining",
-                subcategory: "Coffee Shop",
-                merchant: "Philz Coffee",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$8.75",
-                currency: "USD",
-                exchangeInfo: { usd: "$8.75", cny: "¥63.18" }
-              },
-              {
-                category: "Entertainment",
-                subcategory: "Concert",
-                merchant: "The Fillmore",
-                place: "San Francisco, CA",
-                isScheduled: false,
-                amount: "-$65.00",
-                currency: "USD",
-                exchangeInfo: { usd: "$65.00", cny: "¥469.30" }
-              },
-            ].map((expense, index) => (
-              <ExpenseTile
-                key={index}
-                category={expense.category}
-                subcategory={expense.subcategory}
-                merchant={expense.merchant}
-                place={expense.place}
-                isScheduled={expense.isScheduled}
-                amount={expense.amount}
-                currency={expense.currency}
-                exchangeInfo={expense.exchangeInfo}
-              />
-            ))}
+            {/* Loading state */}
+            {listStatus === "loading" && (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-zinc-500">Loading transactions...</div>
+              </div>
+            )}
+
+            {/* Error state */}
+            {listStatus === "failed" && listError && (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-red-500">Error: {listError}</div>
+              </div>
+            )}
+
+            {/* Empty state */}
+            {listStatus === "succeeded" && finItems.length === 0 && (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-zinc-500">No transactions found</div>
+              </div>
+            )}
+
+            {/* Success state with data */}
+            {listStatus === "succeeded" && finItems.length > 0 && (
+              finItems.map((item) => (
+                <ExpenseTile
+                  key={item.finId}
+                  category={item.category || "Uncategorized"}
+                  subcategory={item.subcategory || undefined}
+                  merchant={item.merchant || "Unknown"}
+                  place={item.place || item.city || "Unknown"}
+                  isScheduled={item.isScheduled}
+                  amount={formatAmount(item.type, item.originalAmountCents, item.originalCurrency)}
+                  currency={item.originalCurrency}
+                  exchangeInfo={formatExchangeInfo(item)}
+                />
+              ))
+            )}
           </div>
         </div>
       </div>
