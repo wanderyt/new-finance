@@ -1,34 +1,34 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { db } from "@/app/lib/db";
+import { NextResponse } from "next/server";
+import { db } from "@/app/lib/db/drizzle";
 import { fin, finItems, finTags } from "@/app/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { authOptions } from "@/app/lib/auth";
+import {
+  withAuth,
+  badRequestResponse,
+  serverErrorResponse,
+} from "@/app/lib/middleware/auth";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const session = await getServerSession(authOptions);
+    // Extract finId from URL pathname
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split("/");
+    const finId = pathSegments[pathSegments.length - 1];
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!finId) {
+      return badRequestResponse("Transaction ID is required");
     }
-
-    const userId = parseInt(session.user.id);
-    const finId = params.id;
 
     // Fetch fin by ID
     const userFins = await db
       .select()
       .from(fin)
-      .where(and(eq(fin.finId, finId), eq(fin.userId, userId)))
+      .where(and(eq(fin.finId, finId), eq(fin.userId, user.userId)))
       .limit(1);
 
     if (userFins.length === 0) {
       return NextResponse.json(
-        { error: "Transaction not found" },
+        { success: false, error: "Transaction not found" },
         { status: 404 }
       );
     }
@@ -55,37 +55,31 @@ export async function GET(
     });
   } catch (error) {
     console.error("Failed to fetch fin:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch transaction" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to fetch transaction");
   }
-}
+});
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export const DELETE = withAuth(async (request, user) => {
   try {
-    const session = await getServerSession(authOptions);
+    // Extract finId from URL pathname
+    const url = new URL(request.url);
+    const pathSegments = url.pathname.split("/");
+    const finId = pathSegments[pathSegments.length - 1];
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!finId) {
+      return badRequestResponse("Transaction ID is required");
     }
-
-    const userId = parseInt(session.user.id);
-    const finId = params.id;
 
     // Verify ownership
     const userFins = await db
       .select()
       .from(fin)
-      .where(and(eq(fin.finId, finId), eq(fin.userId, userId)))
+      .where(and(eq(fin.finId, finId), eq(fin.userId, user.userId)))
       .limit(1);
 
     if (userFins.length === 0) {
       return NextResponse.json(
-        { error: "Transaction not found" },
+        { success: false, error: "Transaction not found" },
         { status: 404 }
       );
     }
@@ -99,9 +93,6 @@ export async function DELETE(
     });
   } catch (error) {
     console.error("Failed to delete fin:", error);
-    return NextResponse.json(
-      { error: "Failed to delete transaction" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to delete transaction");
   }
-}
+});

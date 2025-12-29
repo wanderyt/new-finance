@@ -1,31 +1,22 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/lib/auth";
+import { NextResponse } from "next/server";
+import {
+  withAuth,
+  badRequestResponse,
+  serverErrorResponse,
+} from "@/app/lib/middleware/auth";
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const formData = await request.formData();
     const file = formData.get("receipt") as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: "No receipt file provided" },
-        { status: 400 }
-      );
+      return badRequestResponse("No receipt file provided");
     }
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      return NextResponse.json(
-        { error: "File must be an image" },
-        { status: 400 }
-      );
+      return badRequestResponse("File must be an image");
     }
 
     // TODO: Implement OpenAI Vision API integration
@@ -63,12 +54,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(mockResponse);
   } catch (error) {
     console.error("Failed to analyze receipt:", error);
-    return NextResponse.json(
-      { error: "Failed to analyze receipt" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to analyze receipt");
   }
-}
+});
 
 /*
 TODO: Implement OpenAI Vision integration

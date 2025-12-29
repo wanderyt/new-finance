@@ -1,25 +1,16 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { db } from "@/app/lib/db";
+import { db } from "@/app/lib/db/drizzle";
 import { categories } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { authOptions } from "@/app/lib/auth";
+import { withAuth, serverErrorResponse } from "@/app/lib/middleware/auth";
 
-export async function GET() {
+export const GET = withAuth(async (request, user) => {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = parseInt(session.user.id);
-
     // Fetch all categories for the user
     const userCategories = await db
       .select()
       .from(categories)
-      .where(eq(categories.userId, userId));
+      .where(eq(categories.userId, user.userId));
 
     return NextResponse.json({
       success: true,
@@ -27,9 +18,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("Failed to fetch categories:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch categories" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to fetch categories");
   }
-}
+});

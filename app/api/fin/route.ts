@@ -1,19 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { db } from "@/app/lib/db";
+import { NextResponse } from "next/server";
+import { db } from "@/app/lib/db/drizzle";
 import { fin } from "@/app/lib/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
-import { authOptions } from "@/app/lib/auth";
+import { withAuth, serverErrorResponse } from "@/app/lib/middleware/auth";
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const userId = parseInt(session.user.id);
     const { searchParams } = new URL(request.url);
 
     // Get query parameters
@@ -22,7 +14,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
 
     // Build query conditions
-    const conditions = [eq(fin.userId, userId)];
+    const conditions = [eq(fin.userId, user.userId)];
 
     if (type) {
       conditions.push(eq(fin.type, type));
@@ -49,9 +41,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("Failed to fetch fins:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch transactions" },
-      { status: 500 }
-    );
+    return serverErrorResponse("Failed to fetch transactions");
   }
-}
+});
