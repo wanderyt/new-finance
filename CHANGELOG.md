@@ -5,6 +5,51 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2025-12-29
+
+### Added
+- **Fin List API**: GET endpoint for retrieving financial transaction lists
+  - GET `/api/fin/list` - List fin records with pagination and filtering
+  - Pagination support with limit (1-100, default 20) and offset parameters
+  - Optional type filter (expense/income/all) for transaction types
+  - Date range filtering (dateFrom/dateTo) with default dateTo=now
+  - Returns paginated response with total count and hasMore flag
+  - Uses existing database indexes for optimized query performance
+  - Filters by authenticated user's userId automatically
+  - Orders results by date descending (most recent first)
+- **Redux Fin State Management**: Complete Redux slice for fin list data
+  - `fetchFinListAsync` async thunk for API calls with error handling
+  - State management for items, pagination metadata, and filters
+  - Loading/error/success state handling
+  - Selectors for accessing fin items, pagination, status, and errors
+  - Registered fin reducer in Redux store
+- **Dashboard Real Data Integration**: Replaced mock data with live API
+  - Automatic data fetch on component mount via useEffect
+  - `formatAmount` helper for currency display with +/- signs
+  - `formatExchangeInfo` helper for USD/CNY tooltip data
+  - Loading state UI ("Loading transactions...")
+  - Error state UI with error message display
+  - Empty state UI ("No transactions found")
+  - Success state with real transaction rendering
+  - Maps API response to ExpenseTile component props
+- **API Type Definitions**: TypeScript interfaces for fin list
+  - `ListFinQueryParams` - URL query parameters interface
+  - `PaginationMeta` - Pagination metadata structure
+  - `ListFinResponse` - API response with data and pagination
+
+### Changed
+- Dashboard component now uses Redux for state management instead of hardcoded mock data
+- Removed 20 hardcoded mock expense items (215 lines of mock data)
+- Loading state now includes both auth and fin list statuses
+
+### Technical
+- Query parameter validation with proper error responses (400/500)
+- Drizzle ORM queries with `and()`, `eq()`, `gte()`, `lte()`, `desc()` operators
+- Database indexes leveraged: `idx_fin_user_date`, `idx_fin_user_type_date`
+- Axios HTTP client for API calls with credentials
+- Redux Toolkit async thunks with rejectValue type
+- Cents-based currency calculations (e.g., $10.50 = 1050 cents)
+
 ## [0.8.0] - 2025-12-29
 
 ### Added
