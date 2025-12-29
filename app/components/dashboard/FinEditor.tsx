@@ -125,12 +125,8 @@ const FinEditor = ({
     }
   };
 
-  const title = existingFin
-    ? `Edit ${type === "expense" ? "Expense" : "Income"}`
-    : `New ${type === "expense" ? "Expense" : "Income"}`;
-
   return (
-    <BottomSheet isOpen={isOpen} onClose={handleClose} title={title}>
+    <BottomSheet isOpen={isOpen} onClose={handleClose}>
       <FinEditorForm
         type={type}
         existingFin={existingFin}

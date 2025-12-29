@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from "framer-motion";
 interface BottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
   children: React.ReactNode;
   className?: string;
 }
@@ -14,7 +13,6 @@ interface BottomSheetProps {
 export default function BottomSheet({
   isOpen,
   onClose,
-  title,
   children,
   className = "",
 }: BottomSheetProps) {
@@ -79,36 +77,8 @@ export default function BottomSheet({
                 <div className="w-12 h-1 bg-zinc-300 dark:bg-zinc-600 rounded-full" />
               </div>
 
-              {/* Header */}
-              {title && (
-                <div className="flex items-center justify-between px-6 py-3 border-b border-zinc-200 dark:border-zinc-700">
-                  <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50">
-                    {title}
-                  </h2>
-                  <button
-                    onClick={onClose}
-                    className="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                    aria-label="Close"
-                  >
-                    <svg
-                      className="w-5 h-5 text-zinc-600 dark:text-zinc-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-
               {/* Content */}
-              <div className="flex-1 overflow-y-auto px-6 py-4">
+              <div className="flex-1 overflow-y-auto px-6 py-4 pb-6">
                 {children}
               </div>
             </div>
