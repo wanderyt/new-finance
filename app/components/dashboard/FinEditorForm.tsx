@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, FormEvent, useMemo } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import Button from "../ui-kit/Button";
 import SearchableSelect from "../ui-kit/SearchableSelect";
+import Dropdown from "../ui-kit/Dropdown";
 import TagInput from "./TagInput";
 import ReceiptUpload from "./ReceiptUpload";
 import LineItemEditor, { LineItem } from "./LineItemEditor";
 import { CreateFinRequest, UpdateFinRequest, FinData } from "@/app/lib/types/api";
-import { useAppSelector } from "@/app/lib/redux/hooks";
-import { selectAllFins } from "@/app/lib/redux/features/fin/finSlice";
 
 interface FinEditorFormProps {
   type: "expense" | "income";
@@ -27,9 +26,6 @@ const FinEditorForm = ({
   onDelete,
   isSubmitting = false,
 }: FinEditorFormProps) => {
-  // Get all fins from Redux for autocomplete
-  const allFins = useAppSelector(selectAllFins);
-
   // Form state
   const [date, setDate] = useState(
     existingFin?.date
@@ -56,44 +52,40 @@ const FinEditorForm = ({
   const [isAnalyzingReceipt, setIsAnalyzingReceipt] = useState(false);
   const [categories, setCategories] = useState<Array<{ category: string; subcategory: string; appliesTo: string }>>([]);
 
-  // Extract unique merchants, places, and cities for autocomplete
-  const merchantOptions = useMemo(() => {
-    const uniqueMerchants = Array.from(
-      new Set(allFins.map((fin) => fin.merchant).filter((m): m is string => !!m))
-    ).sort();
-    return [
-      { value: "", label: "" },
-      ...uniqueMerchants.map((m) => ({ value: m, label: m })),
-    ];
-  }, [allFins]);
+  // Autocomplete data
+  const [merchantOptions, setMerchantOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
+  const [placeOptions, setPlaceOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
+  const [cityOptions, setCityOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
 
-  const placeOptions = useMemo(() => {
-    const uniquePlaces = Array.from(
-      new Set(allFins.map((fin) => fin.place).filter((p): p is string => !!p))
-    ).sort();
-    return [
-      { value: "", label: "" },
-      ...uniquePlaces.map((p) => ({ value: p, label: p })),
-    ];
-  }, [allFins]);
-
-  const cityOptions = useMemo(() => {
-    const uniqueCities = Array.from(
-      new Set(allFins.map((fin) => fin.city).filter((c): c is string => !!c))
-    ).sort();
-    return [
-      { value: "", label: "" },
-      ...uniqueCities.map((c) => ({ value: c, label: c })),
-    ];
-  }, [allFins]);
-
-  // Fetch categories on mount
-  useState(() => {
+  // Fetch categories and autocomplete data on mount
+  useEffect(() => {
+    // Fetch categories
     fetch("/api/categories")
       .then((res) => res.json())
       .then((data) => setCategories(data.categories || []))
       .catch(console.error);
-  });
+
+    // Fetch autocomplete data
+    fetch("/api/fin/autocomplete")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setMerchantOptions([
+            { value: "", label: "" },
+            ...data.data.merchants.map((m: string) => ({ value: m, label: m })),
+          ]);
+          setPlaceOptions([
+            { value: "", label: "" },
+            ...data.data.places.map((p: string) => ({ value: p, label: p })),
+          ]);
+          setCityOptions([
+            { value: "", label: "" },
+            ...data.data.cities.map((c: string) => ({ value: c, label: c })),
+          ]);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   // Form validation
   const isValid = () => {
@@ -220,6 +212,7 @@ const FinEditorForm = ({
   ];
 
   const frequencyOptions = [
+    { value: "", label: "Once" },
     { value: "daily", label: "Daily" },
     { value: "weekly", label: "Weekly" },
     { value: "biweekly", label: "Biweekly" },
@@ -254,25 +247,20 @@ const FinEditorForm = ({
           />
         </div>
         {!existingFin && (
-          <select
+          <Dropdown
             value={isScheduled ? frequency : ""}
-            onChange={(e) => {
-              if (e.target.value) {
+            onChange={(val) => {
+              if (val) {
                 setIsScheduled(true);
-                setFrequency(e.target.value as typeof frequency);
+                setFrequency(val as typeof frequency);
               } else {
                 setIsScheduled(false);
               }
             }}
-            className="w-32 px-3 py-2.5 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
-          >
-            <option value="">Once</option>
-            {frequencyOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            options={frequencyOptions}
+            placeholder="Once"
+            className="w-32"
+          />
         )}
       </div>
 
