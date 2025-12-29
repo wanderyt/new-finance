@@ -91,7 +91,7 @@ export const POST = withAuth(async (request, user) => {
     const finId = generateFinId();
 
     // Convert currency amounts
-    const currencyAmounts = convertCurrency(
+    const currencyAmounts = await convertCurrency(
       body.originalCurrency,
       body.originalAmountCents
     );

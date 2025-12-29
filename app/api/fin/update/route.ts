@@ -104,7 +104,7 @@ export const PATCH = withAuth(async (request, user) => {
           ? body.originalAmountCents
           : existing.originalAmountCents;
 
-      const currencyAmounts = convertCurrency(
+      const currencyAmounts = await convertCurrency(
         newCurrency as "CAD" | "USD" | "CNY",
         newAmount
       );
@@ -115,7 +115,7 @@ export const PATCH = withAuth(async (request, user) => {
       updates.amountUsdCents = currencyAmounts.amountUsdCents;
       updates.amountCnyCents = currencyAmounts.amountCnyCents;
       updates.amountBaseCadCents = currencyAmounts.amountBaseCadCents;
-      // fxId remains null (TODO: update when FX API is integrated)
+      // fxId remains null (TODO: link to fx_snapshots table in future)
     }
 
     // Check if there are any updates
