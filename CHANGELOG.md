@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-12-29
+
+### Added
+- **Fin Transaction APIs**: Complete create and update endpoints for financial transactions
+  - POST `/api/fin/create` - Create expense/income transactions with multi-currency support
+  - PATCH `/api/fin/update` - Update transaction fields with ownership validation
+  - Cookie-based authentication using `withAuth` middleware pattern
+  - Support for both scheduled and one-time transactions
+  - ISO 8601 date validation with UTC timezone requirement
+- **FX Snapshot System**: Historical exchange rate tracking
+  - `createFxSnapshot()` - Creates snapshot record in database
+  - `getFxSnapshotById()` - Retrieves historical rates by fxId
+  - Create API stores fxId on transaction for rate tracking
+  - Update API reuses original fxId for historical consistency
+  - Prevents exchange rate drift when updating transaction amounts
+- **Real-time FX API Integration**: Frankfurter API for live exchange rates
+  - `fetchExchangeRates()` - Fetches CAD→USD and CAD→CNY rates
+  - `convertCurrencyWithRates()` - Converts amounts using live rates
+  - 1-hour caching via Next.js revalidation
+  - Fallback to mock rates on API failure
+  - Free, open-source API with no key required
+- **Authentication Middleware**: Reusable `withAuth` HOF pattern
+  - Wraps route handlers with automatic auth validation
+  - Returns authenticated user object (userId, username)
+  - Consistent error responses (401 Unauthorized)
+  - Helper functions for 400/500 error responses
+- **Currency Utilities**: Multi-currency conversion with FX snapshot support
+  - `convertCurrency()` - Converts to all three currencies (CAD/USD/CNY)
+  - Accepts optional fxId parameter for historical rates
+  - Returns fxId for new snapshots
+  - Cents-based calculations to avoid floating-point errors
+- **ID Generation Utility**: Timestamp-based unique IDs
+  - `generateFinId()` - Generates `fin_${timestamp}_${random}` format
+  - Chronological ordering with random suffix for uniqueness
+- **Database Sync Scripts**: Multi-branch development support
+  - `yarn db:sync-to-main` - Copy database to main branch
+  - `yarn db:sync-from-main` - Copy database from main branch
+  - Enables worktree-based feature branch development
+- **API Type Definitions**: Complete TypeScript interfaces
+  - `CreateFinRequest` / `CreateFinResponse`
+  - `UpdateFinRequest` / `UpdateFinResponse`
+  - `FinData` - Full transaction response data
+  - `ErrorResponse` - Standardized error format
+- **Comprehensive Documentation**: API implementation guide (903 lines)
+  - docs/api-implementation-fin-create-update.md
+  - Architecture overview and design decisions
+  - API specifications with curl examples
+  - Validation rules and error handling
+  - Testing guide and future enhancements
+
+### Changed
+- **Create PR Workflow**: Enhanced with uncommitted changes handling
+  - Added step 2 to check and commit uncommitted changes
+  - Groups related changes logically before version bump
+  - Renumbered subsequent steps (3-11)
+  - Clarified step 8 as "version bump and changelog" commit
+- **Permissions**: Added curl permission to settings.local.json for API calls
+
+### Technical
+- Authentication: Cookie-based with Base64 session tokens
+- Currency: CAD base with USD/CNY support (cents-based storage)
+- Date format: ISO 8601 with UTC timezone (e.g., "2025-12-29T15:30:00Z")
+- FX Provider: Frankfurter API (https://frankfurter.dev)
+- Ownership: Update API verifies userId matches authenticated user
+- Protected fields: Cannot update `isScheduled`, `scheduleRuleId`, `scheduledOn`
+- PATCH semantics: Selective updates (only provided fields)
+
 ## [0.7.1] - 2025-12-25
 
 ### Added
