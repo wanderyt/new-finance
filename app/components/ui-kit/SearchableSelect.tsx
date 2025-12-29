@@ -80,10 +80,16 @@ export default function SearchableSelect({
   const handleInputBlur = () => {
     // Delay to allow option click to register
     setTimeout(() => {
-      if (!search) {
+      if (search) {
+        // User typed custom text - accept it as the value
+        onChange(search);
+        setDisplayValue(search);
+      } else if (!search && value) {
+        // No search text, restore the original value's label
         const option = options.find((opt) => opt.value === value);
         setDisplayValue(option?.label || "");
       }
+      setIsOpen(false);
     }, 150);
   };
 

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useMemo } from "react";
 import Button from "../ui-kit/Button";
 import SearchableSelect from "../ui-kit/SearchableSelect";
 import TagInput from "./TagInput";
 import ReceiptUpload from "./ReceiptUpload";
 import LineItemEditor, { LineItem } from "./LineItemEditor";
 import { CreateFinRequest, UpdateFinRequest, FinData } from "@/app/lib/types/api";
+import { useAppSelector } from "@/app/lib/redux/hooks";
+import { selectAllFins } from "@/app/lib/redux/features/fin/finSlice";
 
 interface FinEditorFormProps {
   type: "expense" | "income";
@@ -25,6 +27,9 @@ const FinEditorForm = ({
   onDelete,
   isSubmitting = false,
 }: FinEditorFormProps) => {
+  // Get all fins from Redux for autocomplete
+  const allFins = useAppSelector(selectAllFins);
+
   // Form state
   const [date, setDate] = useState(
     existingFin?.date
@@ -50,6 +55,37 @@ const FinEditorForm = ({
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isAnalyzingReceipt, setIsAnalyzingReceipt] = useState(false);
   const [categories, setCategories] = useState<Array<{ category: string; subcategory: string; appliesTo: string }>>([]);
+
+  // Extract unique merchants, places, and cities for autocomplete
+  const merchantOptions = useMemo(() => {
+    const uniqueMerchants = Array.from(
+      new Set(allFins.map((fin) => fin.merchant).filter((m): m is string => !!m))
+    ).sort();
+    return [
+      { value: "", label: "" },
+      ...uniqueMerchants.map((m) => ({ value: m, label: m })),
+    ];
+  }, [allFins]);
+
+  const placeOptions = useMemo(() => {
+    const uniquePlaces = Array.from(
+      new Set(allFins.map((fin) => fin.place).filter((p): p is string => !!p))
+    ).sort();
+    return [
+      { value: "", label: "" },
+      ...uniquePlaces.map((p) => ({ value: p, label: p })),
+    ];
+  }, [allFins]);
+
+  const cityOptions = useMemo(() => {
+    const uniqueCities = Array.from(
+      new Set(allFins.map((fin) => fin.city).filter((c): c is string => !!c))
+    ).sort();
+    return [
+      { value: "", label: "" },
+      ...uniqueCities.map((c) => ({ value: c, label: c })),
+    ];
+  }, [allFins]);
 
   // Fetch categories on mount
   useState(() => {
@@ -241,28 +277,27 @@ const FinEditorForm = ({
       </div>
 
       {/* Merchant */}
-      <div className="relative">
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-          />
-        </svg>
-        <input
-          type="text"
-          value={merchant}
-          onChange={(e) => setMerchant(e.target.value)}
-          placeholder="Merchant name"
-          className="w-full pl-10 pr-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
-        />
-      </div>
+      <SearchableSelect
+        value={merchant}
+        onChange={setMerchant}
+        options={merchantOptions}
+        placeholder="Merchant name"
+        icon={
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            className="w-5 h-5"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+            />
+          </svg>
+        }
+      />
 
       {/* Amount and Currency */}
       <div className="flex gap-2">
@@ -341,56 +376,57 @@ const FinEditorForm = ({
 
       {/* Place and City */}
       <div className="flex gap-2">
-        <div className="flex-[2] relative">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            value={place}
-            onChange={(e) => setPlace(e.target.value)}
-            placeholder="Place"
-            className="w-full pl-10 pr-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
-          />
-        </div>
-        <div className="flex-1 relative">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-            />
-          </svg>
-          <input
-            type="text"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder="City"
-            className="w-full pl-10 pr-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
-          />
-        </div>
+        <SearchableSelect
+          value={place}
+          onChange={setPlace}
+          options={placeOptions}
+          placeholder="Place"
+          className="flex-[2]"
+          icon={
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+          }
+        />
+
+        <SearchableSelect
+          value={city}
+          onChange={setCity}
+          options={cityOptions}
+          placeholder="City"
+          className="flex-1"
+          icon={
+            <svg
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              className="w-5 h-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+          }
+        />
       </div>
 
       {/* Tags */}
