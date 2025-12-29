@@ -11,36 +11,46 @@ Automate the complete PR workflow: version bump, changelog update, commit, and P
 1. **Get the current branch name** by running `git branch --show-current`
    - If on `main` or `master`, stop and warn the user
 
-2. **Analyze changes** on this branch vs `main`:
+2. **Check for uncommitted changes**:
+   - Run `git status --porcelain` to check for any unstaged or uncommitted changes
+   - If there are uncommitted changes, commit them in reasonable, logical groups:
+     - Review the changes with `git diff` and `git diff --cached`
+     - Group related changes together (e.g., all changes for one feature)
+     - Create meaningful commit messages following conventional commit format
+     - Use `git add` selectively for each logical group
+     - Create commits with proper messages including Claude Code footer
+   - If no uncommitted changes, proceed to next step
+
+3. **Analyze changes** on this branch vs `main`:
    - Run `git log main..HEAD --oneline --no-merges`
    - Run `git diff main --stat`
    - Determine appropriate version bump (patch/minor/major)
 
-3. **Read current CHANGELOG.md** to understand format and current version
+4. **Read current CHANGELOG.md** to understand format and current version
 
-4. **Ask user for version bump type** if not obvious:
+5. **Ask user for version bump type** if not obvious:
    - Use AskUserQuestion tool to confirm patch/minor/major
    - Provide context about what changed to help them decide
 
-5. **Bump the version**:
+6. **Bump the version**:
    - Run `yarn version:patch`, `yarn version:minor`, or `yarn version:major` based on decision
    - This updates package.json
 
-6. **Update CHANGELOG.md**:
+7. **Update CHANGELOG.md**:
    - Read the updated package.json to get the new version number
    - Add new changelog entry with today's date (YYYY-MM-DD format)
    - Group changes by type (Added, Changed, Fixed, Removed)
    - Write clear, concise descriptions
 
-7. **Commit the changes**:
+8. **Commit the version bump and changelog**:
    - Add CHANGELOG.md and package.json
    - Create commit with message: `chore: prepare release v{version}`
    - Include Claude Code footer
 
-8. **Push to remote**:
+9. **Push to remote**:
    - Run `git push -u origin {branch-name}`
 
-9. **Create pull request**:
+10. **Create pull request**:
    - Use `gh pr create` with title and body
    - Title format: `chore: {brief summary of changes}`
    - Body should include:
@@ -48,7 +58,7 @@ Automate the complete PR workflow: version bump, changelog update, commit, and P
      - Test plan checklist
      - Claude Code footer
 
-10. **Report the PR URL** to the user in the chat
+11. **Report the PR URL** to the user in the chat
 
 ## Example PR Body Format
 
