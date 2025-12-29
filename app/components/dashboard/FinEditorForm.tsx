@@ -41,7 +41,7 @@ const FinEditorForm = ({
   const [category, setCategory] = useState(existingFin?.category || "");
   const [subcategory, setSubcategory] = useState(existingFin?.subcategory || "");
   const [place, setPlace] = useState(existingFin?.place || "");
-  const [city, setCity] = useState(existingFin?.city || "");
+  const [city, setCity] = useState(existingFin?.city || "Waterloo");
   const [tags, setTags] = useState<string[]>([]);
   const [isScheduled, setIsScheduled] = useState(existingFin?.isScheduled || false);
   const [frequency, setFrequency] = useState<"daily" | "weekly" | "biweekly" | "monthly" | "annually">("monthly");
@@ -228,7 +228,7 @@ const FinEditorForm = ({
                 setIsScheduled(false);
               }
             }}
-            className="px-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            className="w-32 px-3 py-2.5 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
           >
             <option value="">Once</option>
             {frequencyOptions.map((opt) => (
