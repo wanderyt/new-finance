@@ -48,3 +48,6 @@ db/*.db-*
 
 # Prisma
 prisma/migrations/*_*/
+
+# Test files
+cookies.txt
