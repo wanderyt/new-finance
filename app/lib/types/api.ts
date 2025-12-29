@@ -136,3 +136,29 @@ export interface UpdateFinResponse {
   success: true;
   data: FinData;
 }
+
+// ========== Fin List Types ==========
+
+// List Fin Query Parameters (from URL)
+export interface ListFinQueryParams {
+  limit?: string;
+  offset?: string;
+  type?: "expense" | "income" | "all";
+  dateFrom?: string; // ISO 8601 with timezone
+  dateTo?: string; // ISO 8601 with timezone
+}
+
+// Pagination metadata
+export interface PaginationMeta {
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+// List Fin Response
+export interface ListFinResponse {
+  success: true;
+  data: FinData[];
+  pagination: PaginationMeta;
+}
