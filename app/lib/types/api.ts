@@ -50,3 +50,89 @@ export interface SessionPayload {
   email: string;
   createdAt: number;
 }
+
+// ========== Fin Transaction Types ==========
+
+// Create Fin Request
+export interface CreateFinRequest {
+  // Transaction metadata
+  type?: "expense" | "income"; // default: 'expense'
+  date: string; // ISO 8601 with time in UTC (required) e.g., "2025-12-29T15:30:00Z"
+  merchant?: string;
+  comment?: string;
+  place?: string;
+  city?: string;
+
+  // Categorization
+  category?: string;
+  subcategory?: string;
+  details?: string;
+
+  // Amount (required)
+  originalCurrency: "CAD" | "USD" | "CNY";
+  originalAmountCents: number; // Amount in cents (e.g., $10.50 = 1050)
+
+  // Scheduling (optional)
+  isScheduled?: boolean; // default: false
+  scheduleRuleId?: number; // only if isScheduled = true
+  scheduledOn?: string; // ISO 8601 with time in UTC, only if isScheduled = true
+}
+
+// Update Fin Request
+export interface UpdateFinRequest {
+  finId: string; // Required to identify the record
+
+  // Fields that can be updated
+  type?: "expense" | "income";
+  date?: string; // ISO 8601 with time in UTC
+  merchant?: string;
+  comment?: string;
+  place?: string;
+  city?: string;
+
+  category?: string;
+  subcategory?: string;
+  details?: string;
+
+  originalCurrency?: "CAD" | "USD" | "CNY";
+  originalAmountCents?: number;
+
+  // CANNOT update: isScheduled, scheduleRuleId, scheduledOn, finId, userId
+}
+
+// Fin Response (client-safe)
+export interface FinData {
+  finId: string;
+  userId: number;
+  type: string;
+  date: string;
+  merchant: string | null;
+  comment: string | null;
+  place: string | null;
+  city: string | null;
+  category: string | null;
+  subcategory: string | null;
+  details: string | null;
+  originalCurrency: string;
+  originalAmountCents: number;
+  fxId: number | null;
+  amountCadCents: number;
+  amountUsdCents: number;
+  amountCnyCents: number;
+  amountBaseCadCents: number;
+  isScheduled: boolean;
+  scheduleRuleId: number | null;
+  scheduledOn: string | null;
+}
+
+// Create Fin Response
+export interface CreateFinResponse {
+  success: true;
+  data: FinData;
+}
+
+// Update Fin Response
+export interface UpdateFinResponse {
+  success: true;
+  data: FinData;
+}
