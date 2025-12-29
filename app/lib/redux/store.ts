@@ -1,10 +1,12 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./features/auth/authSlice";
+import finReducer from "./features/fin/finSlice";
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
       auth: authReducer,
+      fin: finReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
   });
