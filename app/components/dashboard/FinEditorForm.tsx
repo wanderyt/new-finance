@@ -7,7 +7,21 @@ import Dropdown from "../ui-kit/Dropdown";
 import TagInput from "./TagInput";
 import ReceiptUpload from "./ReceiptUpload";
 import LineItemEditor, { LineItem } from "./LineItemEditor";
+import ReceiptAnalysisDialog from "./ReceiptAnalysisDialog";
 import { CreateFinRequest, UpdateFinRequest, FinData } from "@/app/lib/types/api";
+
+interface ReceiptAnalysisResult {
+  lineItems: Array<{
+    name: string;
+    amount: number;
+    quantity?: number;
+    unit?: string;
+  }>;
+  totalAmount: number;
+  detectedCurrency?: string;
+  merchant?: string;
+  date?: string;
+}
 
 interface FinEditorFormProps {
   type: "expense" | "income";
@@ -51,6 +65,10 @@ const FinEditorForm = ({
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isAnalyzingReceipt, setIsAnalyzingReceipt] = useState(false);
   const [categories, setCategories] = useState<Array<{ category: string; subcategory: string; appliesTo: string }>>([]);
+
+  // Receipt analysis state
+  const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<ReceiptAnalysisResult | null>(null);
 
   // Autocomplete data
   const [merchantOptions, setMerchantOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
@@ -157,7 +175,26 @@ const FinEditorForm = ({
 
       if (response.ok) {
         const result = await response.json();
-        console.log("Receipt analysis result:", result);
+
+        // Store analysis result and show dialog
+        setAnalysisResult(result);
+        setShowAnalysisDialog(true);
+
+        // Auto-populate form fields if detected
+        if (result.merchant) setMerchant(result.merchant);
+        if (result.city) setCity(result.city);
+        if (result.date) {
+          setDate(new Date(result.date).toISOString().slice(0, 16));
+        }
+        if (result.detectedCurrency) {
+          setCurrency(result.detectedCurrency as "CAD" | "USD" | "CNY");
+        }
+        if (result.totalAmount) {
+          setAmount((result.totalAmount / 100).toFixed(2));
+        }
+      } else {
+        const error = await response.json();
+        alert(error.error || "Failed to analyze receipt. Please try again.");
       }
     } catch (error) {
       console.error("Failed to analyze receipt:", error);
@@ -509,6 +546,19 @@ const FinEditorForm = ({
           {isSubmitting ? "Saving..." : existingFin ? "Update" : "Save"}
         </Button>
       </div>
+
+      {/* Receipt Analysis Dialog */}
+      {showAnalysisDialog && analysisResult && (
+        <ReceiptAnalysisDialog
+          isOpen={showAnalysisDialog}
+          result={analysisResult}
+          onConfirm={(items) => {
+            setLineItems(items);
+            setShowAnalysisDialog(false);
+          }}
+          onCancel={() => setShowAnalysisDialog(false)}
+        />
+      )}
     </form>
   );
 };

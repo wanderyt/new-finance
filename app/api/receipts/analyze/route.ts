@@ -1,9 +1,74 @@
 import { NextResponse } from "next/server";
+import OpenAI from "openai";
 import {
   withAuth,
   badRequestResponse,
   serverErrorResponse,
 } from "@/app/lib/middleware/auth";
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+const RECEIPT_ANALYSIS_PROMPT = `
+Analyze this receipt image and extract the following information in JSON format:
+
+{
+  "merchant": "Store name",
+  "city": "City if visible on receipt",
+  "date": "ISO date string (YYYY-MM-DD)",
+  "detectedCurrency": "CAD, USD, or CNY",
+  "lineItems": [
+    {
+      "name": "Item name/description",
+      "amount": 1250,  // Total item price in cents
+      "quantity": 2,
+      "unit": "pcs"
+    }
+  ],
+  "totalAmount": 2500  // Total in cents
+}
+
+Important rules:
+- Extract ALL line items from the receipt
+- Convert all amounts to CENTS (multiply by 100)
+- For Chinese text, provide English translation of item names
+- If quantity is not specified, default to 1
+- Calculate totalAmount as sum of all line items
+- Return valid JSON only, no markdown or explanation
+`;
+
+async function analyzeReceiptWithOpenAI(base64Image: string, mimeType: string) {
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: RECEIPT_ANALYSIS_PROMPT
+          },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:${mimeType};base64,${base64Image}`
+            }
+          }
+        ]
+      }
+    ],
+    response_format: { type: "json_object" },
+    max_tokens: 2000
+  });
+
+  const content = response.choices[0].message.content;
+  if (!content) {
+    throw new Error("No response from OpenAI");
+  }
+
+  return JSON.parse(content);
+}
 
 export const POST = withAuth(async (request, user) => {
   try {
@@ -19,77 +84,32 @@ export const POST = withAuth(async (request, user) => {
       return badRequestResponse("File must be an image");
     }
 
-    // TODO: Implement OpenAI Vision API integration
-    // For now, return a mock response for testing
+    // Convert file to base64
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64Image = buffer.toString("base64");
 
-    // Mock response simulating AI analysis
-    const mockResponse = {
+    // Call OpenAI Vision API
+    const receiptData = await analyzeReceiptWithOpenAI(base64Image, file.type);
+
+    // Validate response
+    if (!receiptData.lineItems || receiptData.lineItems.length === 0) {
+      return badRequestResponse("No items found on receipt. Please try a clearer image.");
+    }
+
+    return NextResponse.json({
       success: true,
-      lineItems: [
-        {
-          name: "Sample Item 1",
-          amount: 1250, // $12.50 in cents
-          quantity: 2,
-          unit: "pcs",
-        },
-        {
-          name: "Sample Item 2",
-          amount: 850, // $8.50 in cents
-          quantity: 1,
-          unit: "pcs",
-        },
-      ],
-      totalAmount: 2100, // $21.00 in cents
-      detectedCurrency: "CAD",
-      merchant: "Sample Store",
-      date: new Date().toISOString(),
-    };
-
-    // In production, this would be:
-    // 1. Upload file to storage (S3, etc.)
-    // 2. Call OpenAI Vision API with the image
-    // 3. Parse the response to extract line items
-    // 4. Return structured data
-
-    return NextResponse.json(mockResponse);
+      ...receiptData
+    });
   } catch (error) {
     console.error("Failed to analyze receipt:", error);
+
+    // Handle OpenAI specific errors
+    if (error instanceof OpenAI.APIError) {
+      console.error("OpenAI API error:", error.status, error.message);
+      return serverErrorResponse("Failed to analyze receipt. Please try again.");
+    }
+
     return serverErrorResponse("Failed to analyze receipt");
   }
 });
-
-/*
-TODO: Implement OpenAI Vision integration
-
-Example implementation:
-
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-const response = await openai.chat.completions.create({
-  model: "gpt-4-vision-preview",
-  messages: [
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: "Analyze this receipt and extract: merchant name, date, line items (name, quantity, unit, unit price, total), and total amount. Return as JSON.",
-        },
-        {
-          type: "image_url",
-          image_url: {
-            url: `data:${file.type};base64,${buffer.toString("base64")}`,
-          },
-        },
-      ],
-    },
-  ],
-  max_tokens: 1000,
-});
-
-const result = JSON.parse(response.choices[0].message.content);
-*/
