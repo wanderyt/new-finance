@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
-import { fin } from "@/app/lib/db/schema";
+import { fin, finItems } from "@/app/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { UpdateFinRequest, UpdateFinResponse, ErrorResponse } from "@/app/lib/types/api";
 import {
@@ -130,6 +130,31 @@ export const PATCH = withAuth(async (request, user) => {
       .update(fin)
       .set(updates)
       .where(and(eq(fin.finId, body.finId), eq(fin.userId, user.userId)));
+
+    // Handle line items update if provided
+    if (body.lineItems !== undefined) {
+      // Delete existing line items
+      await db.delete(finItems).where(eq(finItems.finId, body.finId));
+
+      // Insert new line items
+      if (body.lineItems.length > 0) {
+        await db.insert(finItems).values(
+          body.lineItems.map((item, index) => ({
+            finId: body.finId,
+            lineNo: index + 1,
+            name: item.name,
+            qty: item.qty || null,
+            unit: item.unit || null,
+            unitPriceCents: item.unitPriceCents || null,
+            originalAmountCents: item.originalAmountCents,
+            personId: item.personId || null,
+            category: item.category || null,
+            subcategory: item.subcategory || null,
+            notes: item.notes || null,
+          }))
+        );
+      }
+    }
 
     // Fetch updated record
     const [updated] = await db

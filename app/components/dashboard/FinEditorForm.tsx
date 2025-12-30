@@ -225,6 +225,7 @@ const FinEditorForm = ({
         details: details || undefined,
         originalCurrency: currency,
         originalAmountCents: amountCents,
+        lineItems: lineItems.length > 0 ? lineItems : undefined,
       };
 
       await onSubmit(updateData);
@@ -241,6 +242,7 @@ const FinEditorForm = ({
         originalCurrency: currency,
         originalAmountCents: amountCents,
         isScheduled,
+        lineItems: lineItems.length > 0 ? lineItems : undefined,
       };
 
       await onSubmit(createData);

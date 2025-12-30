@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
-import { fin } from "@/app/lib/db/schema";
+import { fin, finItems } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
   CreateFinRequest,
@@ -120,6 +120,25 @@ export const POST = withAuth(async (request, user) => {
       amountBaseCadCents: currencyAmounts.amountBaseCadCents,
       isScheduled: body.isScheduled || false,
     });
+
+    // Insert line items if provided
+    if (body.lineItems && body.lineItems.length > 0) {
+      await db.insert(finItems).values(
+        body.lineItems.map((item, index) => ({
+          finId,
+          lineNo: index + 1,
+          name: item.name,
+          qty: item.qty || null,
+          unit: item.unit || null,
+          unitPriceCents: item.unitPriceCents || null,
+          originalAmountCents: item.originalAmountCents,
+          personId: item.personId || null,
+          category: item.category || null,
+          subcategory: item.subcategory || null,
+          notes: item.notes || null,
+        }))
+      );
+    }
 
     // Fetch the created record for response
     const [created] = await db

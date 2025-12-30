@@ -53,6 +53,19 @@ export interface SessionPayload {
 
 // ========== Fin Transaction Types ==========
 
+// Line Item for fin record
+export interface FinLineItem {
+  name: string;
+  originalAmountCents: number;
+  qty?: number;
+  unit?: string;
+  unitPriceCents?: number;
+  personId?: number;
+  category?: string;
+  subcategory?: string;
+  notes?: string;
+}
+
 // Create Fin Request
 export interface CreateFinRequest {
   // Transaction metadata
@@ -71,6 +84,9 @@ export interface CreateFinRequest {
   // Amount (required)
   originalCurrency: "CAD" | "USD" | "CNY";
   originalAmountCents: number; // Amount in cents (e.g., $10.50 = 1050)
+
+  // Line items (optional)
+  lineItems?: FinLineItem[];
 
   // Scheduling (optional)
   isScheduled?: boolean; // default: false
@@ -96,6 +112,9 @@ export interface UpdateFinRequest {
 
   originalCurrency?: "CAD" | "USD" | "CNY";
   originalAmountCents?: number;
+
+  // Line items (optional)
+  lineItems?: FinLineItem[];
 
   // CANNOT update: isScheduled, scheduleRuleId, scheduledOn, finId, userId
 }
