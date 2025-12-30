@@ -417,6 +417,12 @@ const FinEditorForm = ({
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onBlur={(e) => {
+              const value = parseFloat(e.target.value);
+              if (!isNaN(value)) {
+                setAmount(value.toFixed(2));
+              }
+            }}
             placeholder="0.00"
             required
             className="w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
