@@ -6,8 +6,9 @@ import SearchableSelect from "../ui-kit/SearchableSelect";
 import Dropdown from "../ui-kit/Dropdown";
 import TagInput from "./TagInput";
 import ReceiptUpload from "./ReceiptUpload";
-import LineItemEditor, { LineItem } from "./LineItemEditor";
+import { LineItem } from "./LineItemEditor";
 import ReceiptAnalysisDialog from "./ReceiptAnalysisDialog";
+import LineItemsDialog from "./LineItemsDialog";
 import { CreateFinRequest, UpdateFinRequest, FinData } from "@/app/lib/types/api";
 
 interface ReceiptAnalysisResult {
@@ -69,6 +70,9 @@ const FinEditorForm = ({
   // Receipt analysis state
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<ReceiptAnalysisResult | null>(null);
+
+  // Line items dialog state
+  const [showLineItemsDialog, setShowLineItemsDialog] = useState(false);
 
   // Autocomplete data
   const [merchantOptions, setMerchantOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
@@ -215,25 +219,6 @@ const FinEditorForm = ({
     }
   };
 
-  const handleLineItemChange = (index: number, item: LineItem) => {
-    const updated = [...lineItems];
-    updated[index] = item;
-    setLineItems(updated);
-  };
-
-  const handleLineItemRemove = (index: number) => {
-    setLineItems(lineItems.filter((_, i) => i !== index));
-  };
-
-  const handleAddLineItem = () => {
-    setLineItems([
-      ...lineItems,
-      {
-        name: "",
-        originalAmountCents: 0,
-      },
-    ]);
-  };
 
   // Filter categories by type
   const filteredCategories = categories.filter(
@@ -474,12 +459,12 @@ const FinEditorForm = ({
         </div>
         <button
           type="button"
-          onClick={handleAddLineItem}
-          className="px-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 whitespace-nowrap"
-          title="Add line items"
+          onClick={() => setShowLineItemsDialog(true)}
+          className="px-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
+          title="Manage line items"
         >
           <svg
-            className="w-5 h-5"
+            className="w-4 h-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -491,7 +476,6 @@ const FinEditorForm = ({
               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
             />
           </svg>
-          <span className="text-sm">Items</span>
         </button>
       </div>
 
@@ -527,29 +511,6 @@ const FinEditorForm = ({
           isAnalyzing={isAnalyzingReceipt}
           label=""
         />
-      )}
-
-      {/* Line Items */}
-      {lineItems.length > 0 && (
-        <div className="space-y-3 pt-2">
-          {lineItems.map((item, index) => (
-            <LineItemEditor
-              key={index}
-              item={item}
-              index={index}
-              onChange={handleLineItemChange}
-              onRemove={handleLineItemRemove}
-              persons={persons}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={handleAddLineItem}
-            className="w-full py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-          >
-            + Add Line Item
-          </button>
-        </div>
       )}
 
       {/* Action Buttons */}
@@ -599,6 +560,18 @@ const FinEditorForm = ({
           persons={persons}
         />
       )}
+
+      {/* Line Items Dialog */}
+      <LineItemsDialog
+        isOpen={showLineItemsDialog}
+        lineItems={lineItems}
+        onConfirm={(items) => {
+          setLineItems(items);
+          setShowLineItemsDialog(false);
+        }}
+        onCancel={() => setShowLineItemsDialog(false)}
+        persons={persons}
+      />
     </form>
   );
 };
