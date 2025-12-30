@@ -14,11 +14,18 @@ export const GET = withAuth(async (request, user) => {
         isDefault: persons.isDefault,
       })
       .from(persons)
-      .where(eq(persons.userId, user.userId));
+      .where(eq(persons.userId, user.userId))
+      .orderBy(persons.personId);
+
+    // Convert isDefault from 0/1 to boolean
+    const formattedPersons = userPersons.map((p) => ({
+      ...p,
+      isDefault: p.isDefault === 1,
+    }));
 
     return NextResponse.json({
       success: true,
-      persons: userPersons,
+      persons: formattedPersons,
     });
   } catch (error) {
     console.error("Failed to fetch persons:", error);
