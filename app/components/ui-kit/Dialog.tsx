@@ -101,7 +101,7 @@ export default function Dialog({
               )}
 
               {/* Content */}
-              <div className="p-6">{children}</div>
+              <div className={title ? "p-6" : "p-4"}>{children}</div>
             </motion.div>
           </div>
         </>
