@@ -9,7 +9,11 @@ import ReceiptUpload from "./ReceiptUpload";
 import { LineItem } from "./LineItemEditor";
 import ReceiptAnalysisDialog from "./ReceiptAnalysisDialog";
 import LineItemsDialog from "./LineItemsDialog";
-import { CreateFinRequest, UpdateFinRequest, FinData } from "@/app/lib/types/api";
+import {
+  CreateFinRequest,
+  UpdateFinRequest,
+  FinData,
+} from "@/app/lib/types/api";
 
 interface ReceiptAnalysisResult {
   lineItems: Array<{
@@ -41,11 +45,22 @@ const FinEditorForm = ({
   onDelete,
   isSubmitting = false,
 }: FinEditorFormProps) => {
+  // Helper function to convert UTC date to local datetime-local format
+  const toLocalDatetimeString = (utcDate: string | Date) => {
+    const date = new Date(utcDate);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   // Form state
   const [date, setDate] = useState(
     existingFin?.date
-      ? new Date(existingFin.date).toISOString().slice(0, 16)
-      : new Date().toISOString().slice(0, 16)
+      ? toLocalDatetimeString(existingFin.date)
+      : toLocalDatetimeString(new Date())
   );
   const [merchant, setMerchant] = useState(existingFin?.merchant || "");
   const [amount, setAmount] = useState(
@@ -55,30 +70,47 @@ const FinEditorForm = ({
     (existingFin?.originalCurrency as "CAD" | "USD" | "CNY") || "CAD"
   );
   const [category, setCategory] = useState(existingFin?.category || "");
-  const [subcategory, setSubcategory] = useState(existingFin?.subcategory || "");
+  const [subcategory, setSubcategory] = useState(
+    existingFin?.subcategory || ""
+  );
   const [place, setPlace] = useState(existingFin?.place || "");
   const [city, setCity] = useState(existingFin?.city || "Waterloo");
   const [tags, setTags] = useState<string[]>([]);
-  const [isScheduled, setIsScheduled] = useState(existingFin?.isScheduled || false);
-  const [frequency, setFrequency] = useState<"daily" | "weekly" | "biweekly" | "monthly" | "annually">("monthly");
+  const [isScheduled, setIsScheduled] = useState(
+    existingFin?.isScheduled || false
+  );
+  const [frequency, setFrequency] = useState<
+    "daily" | "weekly" | "biweekly" | "monthly" | "annually"
+  >("monthly");
   const [details, setDetails] = useState(existingFin?.details || "");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isAnalyzingReceipt, setIsAnalyzingReceipt] = useState(false);
-  const [categories, setCategories] = useState<Array<{ category: string; subcategory: string; appliesTo: string }>>([]);
+  const [categories, setCategories] = useState<
+    Array<{ category: string; subcategory: string; appliesTo: string }>
+  >([]);
 
   // Receipt analysis state
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<ReceiptAnalysisResult | null>(null);
+  const [analysisResult, setAnalysisResult] =
+    useState<ReceiptAnalysisResult | null>(null);
 
   // Line items dialog state
   const [showLineItemsDialog, setShowLineItemsDialog] = useState(false);
 
   // Autocomplete data
-  const [merchantOptions, setMerchantOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
-  const [placeOptions, setPlaceOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
-  const [cityOptions, setCityOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
-  const [persons, setPersons] = useState<Array<{ personId: number; name: string }>>([]);
+  const [merchantOptions, setMerchantOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([{ value: "", label: "" }]);
+  const [placeOptions, setPlaceOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([{ value: "", label: "" }]);
+  const [cityOptions, setCityOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([{ value: "", label: "" }]);
+  const [persons, setPersons] = useState<
+    Array<{ personId: number; name: string; isDefault?: boolean }>
+  >([]);
 
   // Fetch categories, autocomplete data, and persons on mount
   useEffect(() => {
@@ -101,9 +133,14 @@ const FinEditorForm = ({
             { value: "", label: "" },
             ...data.data.places.map((p: string) => ({ value: p, label: p })),
           ]);
+          // Pin common cities at the top
+          const pinnedCities = ["Waterloo", "Kitchener", "Toronto"];
+          const otherCities = data.data.cities.filter(
+            (c: string) => !pinnedCities.includes(c)
+          );
           setCityOptions([
-            { value: "", label: "" },
-            ...data.data.cities.map((c: string) => ({ value: c, label: c })),
+            ...pinnedCities.map((c) => ({ value: c, label: c })),
+            ...otherCities.map((c: string) => ({ value: c, label: c })),
           ]);
         }
       })
@@ -219,7 +256,6 @@ const FinEditorForm = ({
     }
   };
 
-
   // Filter categories by type
   const filteredCategories = categories.filter(
     (cat) => cat.appliesTo === type || cat.appliesTo === "both"
@@ -235,12 +271,12 @@ const FinEditorForm = ({
     .sort();
 
   const categoryOptions = [
-    { value: "", label: "Select category..." },
+    { value: "", label: "Category" },
     ...uniqueCategories.map((cat) => ({ value: cat, label: cat })),
   ];
 
   const subcategoryOptions = [
-    { value: "", label: "Select subcategory..." },
+    { value: "", label: "Subcategory" },
     ...subcategories.map((sub) => ({ value: sub, label: sub })),
   ];
 
@@ -276,7 +312,7 @@ const FinEditorForm = ({
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
-            className="w-full pl-10 pr-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            className="w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
           />
         </div>
         {!existingFin && (
@@ -343,7 +379,7 @@ const FinEditorForm = ({
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             required
-            className="w-full pl-10 pr-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            className="w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
           />
         </div>
         <Dropdown
@@ -359,42 +395,50 @@ const FinEditorForm = ({
         />
       </div>
 
-      {/* Category and Subcategory */}
-      <div className="grid grid-cols-2 gap-2">
-        <SearchableSelect
-          value={category}
-          onChange={(val) => {
-            setCategory(val);
-            if (val !== category) {
-              setSubcategory("");
-            }
-          }}
-          options={categoryOptions}
-          placeholder="Category"
-          icon={
-            <svg
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              className="w-5 h-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-              />
-            </svg>
-          }
-        />
+      {/* Category and Subcategory with Line Items Button */}
+      <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 flex-1">
+          <Dropdown
+            value={category}
+            onChange={(val) => {
+              setCategory(val);
+              if (val !== category) {
+                setSubcategory("");
+              }
+            }}
+            options={categoryOptions}
+            placeholder=""
+          />
 
-        <SearchableSelect
-          value={subcategory}
-          onChange={setSubcategory}
-          options={subcategoryOptions}
-          placeholder="Subcategory"
-          disabled={!category}
-        />
+          <Dropdown
+            value={subcategory}
+            onChange={setSubcategory}
+            options={subcategoryOptions}
+            placeholder=""
+            disabled={!category}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowLineItemsDialog(true)}
+          className="px-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
+          title="Manage line items"
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Place and City */}
@@ -434,50 +478,16 @@ const FinEditorForm = ({
           options={cityOptions}
           placeholder="City"
           className="flex-1"
-          icon={
-            <svg
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              className="w-5 h-5"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-              />
-            </svg>
-          }
         />
       </div>
 
-      {/* Tags and Line Items Button */}
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <TagInput tags={tags} onTagsChange={setTags} label="" placeholder="Tags (press Enter)" />
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowLineItemsDialog(true)}
-          className="px-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
-          title="Manage line items"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-            />
-          </svg>
-        </button>
-      </div>
+      {/* Tags */}
+      <TagInput
+        tags={tags}
+        onTagsChange={setTags}
+        label=""
+        placeholder="Tags (press Enter)"
+      />
 
       {/* Details */}
       <div className="relative">
