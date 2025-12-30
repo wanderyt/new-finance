@@ -51,16 +51,14 @@ const LineItemEditor = ({
 
   const handleAmountChange = (value: string) => {
     setAmountInput(value);
-    // Convert dollars to cents
-    const dollars = parseFloat(value) || 0;
-    const cents = Math.round(dollars * 100);
-    handleChange("originalAmountCents", cents);
   };
 
   const handleAmountBlur = () => {
-    // Format to 2 decimal places on blur
+    // Format to 2 decimal places and update cents on blur
     const dollars = parseFloat(amountInput) || 0;
+    const cents = Math.round(dollars * 100);
     setAmountInput(dollars.toFixed(2));
+    handleChange("originalAmountCents", cents);
   };
 
   const personOptions = persons.map((p) => ({
