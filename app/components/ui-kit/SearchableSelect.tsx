@@ -152,12 +152,6 @@ export default function SearchableSelect({
         </div>
       )}
 
-      {/* No results message */}
-      {isOpen && !disabled && search && filteredOptions.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg shadow-lg px-3 py-2.5 text-sm text-zinc-500 dark:text-zinc-400">
-          No results found
-        </div>
-      )}
     </div>
   );
 }
