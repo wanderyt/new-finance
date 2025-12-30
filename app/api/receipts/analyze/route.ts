@@ -80,7 +80,7 @@ async function analyzeReceiptWithGemini(base64Image: string, mimeType: string) {
     throw new Error("Gemini API key not configured");
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
   const result = await model.generateContent([
     RECEIPT_ANALYSIS_PROMPT,
