@@ -45,26 +45,26 @@ Important rules:
 
 async function analyzeReceiptWithOpenAI(base64Image: string, mimeType: string) {
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",  // Use mini version if you don't have access to gpt-4o
+    model: "gpt-4o-mini", // Use mini version if you don't have access to gpt-4o
     messages: [
       {
         role: "user",
         content: [
           {
             type: "text",
-            text: RECEIPT_ANALYSIS_PROMPT
+            text: RECEIPT_ANALYSIS_PROMPT,
           },
           {
             type: "image_url",
             image_url: {
-              url: `data:${mimeType};base64,${base64Image}`
-            }
-          }
-        ]
-      }
+              url: `data:${mimeType};base64,${base64Image}`,
+            },
+          },
+        ],
+      },
     ],
     response_format: { type: "json_object" },
-    max_tokens: 2000
+    max_tokens: 2000,
   });
 
   const content = response.choices[0].message.content;
@@ -80,24 +80,25 @@ async function analyzeReceiptWithGemini(base64Image: string, mimeType: string) {
     throw new Error("Gemini API key not configured");
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const result = await model.generateContent([
     RECEIPT_ANALYSIS_PROMPT,
     {
       inlineData: {
         data: base64Image,
-        mimeType
-      }
-    }
+        mimeType,
+      },
+    },
   ]);
 
   const response = await result.response;
   const text = response.text();
 
   // Extract JSON from response (Gemini might wrap it in markdown)
-  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
+  const jsonMatch =
+    text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
+  const jsonStr = jsonMatch ? jsonMatch[1] || jsonMatch[0] : text;
 
   return JSON.parse(jsonStr);
 }
@@ -129,12 +130,14 @@ export const POST = withAuth(async (request, user) => {
 
     // Validate response
     if (!receiptData.lineItems || receiptData.lineItems.length === 0) {
-      return badRequestResponse("No items found on receipt. Please try a clearer image.");
+      return badRequestResponse(
+        "No items found on receipt. Please try a clearer image."
+      );
     }
 
     return NextResponse.json({
       success: true,
-      ...receiptData
+      ...receiptData,
     });
   } catch (error) {
     console.error("Failed to analyze receipt:", error);
@@ -142,18 +145,24 @@ export const POST = withAuth(async (request, user) => {
     // Handle Gemini specific errors
     if (error instanceof Error) {
       if (error.message.includes("API key not configured")) {
-        return serverErrorResponse("Gemini API key not configured. Please check your environment variables.");
+        return serverErrorResponse(
+          "Gemini API key not configured. Please check your environment variables."
+        );
       }
       // Handle other Gemini errors
       if (error.message.includes("quota")) {
-        return serverErrorResponse("API quota exceeded. Please try again later.");
+        return serverErrorResponse(
+          "API quota exceeded. Please try again later."
+        );
       }
     }
 
     // Handle OpenAI specific errors (for fallback)
     if (error instanceof OpenAI.APIError) {
       console.error("OpenAI API error:", error.status, error.message);
-      return serverErrorResponse("Failed to analyze receipt. Please try again.");
+      return serverErrorResponse(
+        "Failed to analyze receipt. Please try again."
+      );
     }
 
     return serverErrorResponse("Failed to analyze receipt");

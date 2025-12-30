@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Input from "../ui-kit/Input";
-import Select from "../ui-kit/Select";
+import Dropdown from "../ui-kit/Dropdown";
 
 export interface LineItem {
   name: string;
@@ -107,17 +107,22 @@ const LineItemEditor = ({
           </div>
 
           {/* Person assignment */}
-          <Select
-            label="Assign to Person"
-            options={personOptions}
-            value={localItem.personId?.toString() || ""}
-            onChange={(e) =>
-              handleChange(
-                "personId",
-                e.target.value ? parseInt(e.target.value) : undefined
-              )
-            }
-          />
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+              Assign to Person
+            </label>
+            <Dropdown
+              options={personOptions}
+              value={localItem.personId?.toString() || ""}
+              onChange={(value) =>
+                handleChange(
+                  "personId",
+                  value ? parseInt(value) : undefined
+                )
+              }
+              placeholder="Unassigned"
+            />
+          </div>
 
           {/* Notes */}
           <Input

@@ -74,8 +74,9 @@ const FinEditorForm = ({
   const [merchantOptions, setMerchantOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
   const [placeOptions, setPlaceOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
   const [cityOptions, setCityOptions] = useState<Array<{ value: string; label: string }>>([{ value: "", label: "" }]);
+  const [persons, setPersons] = useState<Array<{ personId: number; name: string }>>([]);
 
-  // Fetch categories and autocomplete data on mount
+  // Fetch categories, autocomplete data, and persons on mount
   useEffect(() => {
     // Fetch categories
     fetch("/api/categories")
@@ -100,6 +101,16 @@ const FinEditorForm = ({
             { value: "", label: "" },
             ...data.data.cities.map((c: string) => ({ value: c, label: c })),
           ]);
+        }
+      })
+      .catch(console.error);
+
+    // Fetch persons
+    fetch("/api/persons")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setPersons(data.persons);
         }
       })
       .catch(console.error);
@@ -350,15 +361,17 @@ const FinEditorForm = ({
             className="w-full pl-10 pr-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
           />
         </div>
-        <select
+        <Dropdown
           value={currency}
-          onChange={(e) => setCurrency(e.target.value as "CAD" | "USD" | "CNY")}
-          className="w-24 px-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
-        >
-          <option value="CAD">CAD</option>
-          <option value="USD">USD</option>
-          <option value="CNY">CNY</option>
-        </select>
+          onChange={(val) => setCurrency(val as "CAD" | "USD" | "CNY")}
+          options={[
+            { value: "CAD", label: "CAD" },
+            { value: "USD", label: "USD" },
+            { value: "CNY", label: "CNY" },
+          ]}
+          placeholder="CAD"
+          className="w-24"
+        />
       </div>
 
       {/* Category and Subcategory */}
@@ -557,6 +570,7 @@ const FinEditorForm = ({
             setShowAnalysisDialog(false);
           }}
           onCancel={() => setShowAnalysisDialog(false)}
+          persons={persons}
         />
       )}
     </form>
