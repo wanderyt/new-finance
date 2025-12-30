@@ -74,7 +74,7 @@ const FinEditorForm = ({
     existingFin?.subcategory || ""
   );
   const [place, setPlace] = useState(existingFin?.place || "");
-  const [city, setCity] = useState(existingFin?.city || "Waterloo");
+  const [city, setCity] = useState(existingFin?.city || "");
   const [tags, setTags] = useState<string[]>([]);
   const [isScheduled, setIsScheduled] = useState(
     existingFin?.isScheduled || false

@@ -93,8 +93,8 @@ const LineItemEditor = ({
             required
           />
           <Input
-            type="text"
-            inputMode="decimal"
+            type="number"
+            step="0.01"
             value={(localItem.originalAmountCents / 100).toFixed(2)}
             onChange={(e) => handleAmountChange(e.target.value)}
             placeholder="Amount"
