@@ -22,17 +22,15 @@ export default function SearchableSelect({
   disabled = false,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [displayValue, setDisplayValue] = useState("");
+  const [inputValue, setInputValue] = useState(value);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const optionSelectedRef = useRef(false); // Track if option was just selected
 
-  // Update display value when value prop changes
+  // Sync input value with prop value when prop changes externally
   useEffect(() => {
-    const option = options.find((opt) => opt.value === value);
-    setDisplayValue(option?.label || "");
-    setSearch("");
-  }, [value, options]);
+    setInputValue(value);
+  }, [value]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -41,30 +39,34 @@ export default function SearchableSelect({
         containerRef.current &&
         !containerRef.current.contains(event.target as Node)
       ) {
+        // Accept current input value when clicking outside
+        if (inputValue.trim()) {
+          onChange(inputValue.trim());
+        }
         setIsOpen(false);
-        setSearch("");
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [inputValue, onChange]);
 
-  // Filter options based on search
+  // Filter options based on input
   const filteredOptions = options.filter((option) =>
-    option.label.toLowerCase().includes(search.toLowerCase())
+    option.label.toLowerCase().includes(inputValue.toLowerCase())
   );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-    setDisplayValue(e.target.value);
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    onChange(newValue); // Immediately update final value
     if (!isOpen) setIsOpen(true);
   };
 
   const handleOptionClick = (option: { value: string; label: string }) => {
-    onChange(option.value);
-    setDisplayValue(option.label);
-    setSearch("");
+    optionSelectedRef.current = true; // Mark that option was selected
+    setInputValue(option.label); // Set input to selected option
+    onChange(option.value); // Set final value to selected option
     setIsOpen(false);
     inputRef.current?.blur();
   };
@@ -72,23 +74,17 @@ export default function SearchableSelect({
   const handleInputFocus = () => {
     if (!disabled) {
       setIsOpen(true);
-      setSearch(displayValue);
-      setDisplayValue("");
     }
   };
 
   const handleInputBlur = () => {
     // Delay to allow option click to register
     setTimeout(() => {
-      if (search) {
-        // User typed custom text - accept it as the value
-        onChange(search);
-        setDisplayValue(search);
-      } else if (!search && value) {
-        // No search text, restore the original value's label
-        const option = options.find((opt) => opt.value === value);
-        setDisplayValue(option?.label || "");
+      // Only accept input value if an option wasn't just selected
+      if (!optionSelectedRef.current && inputValue.trim()) {
+        onChange(inputValue.trim());
       }
+      optionSelectedRef.current = false; // Reset flag
       setIsOpen(false);
     }, 150);
   };
@@ -104,7 +100,7 @@ export default function SearchableSelect({
         <input
           ref={inputRef}
           type="text"
-          value={isOpen ? search : displayValue}
+          value={inputValue}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
@@ -151,7 +147,6 @@ export default function SearchableSelect({
           ))}
         </div>
       )}
-
     </div>
   );
 }
