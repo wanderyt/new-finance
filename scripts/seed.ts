@@ -36,7 +36,7 @@ async function main() {
         {
           userId: demoUser.userId,
           name: 'David',
-          isDefault: true,
+          isDefault: false,
           isActive: true,
         },
         {
@@ -51,9 +51,15 @@ async function main() {
           isDefault: false,
           isActive: true,
         },
+        {
+          userId: demoUser.userId,
+          name: 'Family',
+          isDefault: true,
+          isActive: true,
+        },
       ]).onConflictDoNothing()
 
-      console.log('✅ Persons created (Robin, David [default], Lily, Luna)')
+      console.log('✅ Persons created (Robin, David, Lily, Luna, Family [default])')
 
       // Verify persons were created
       const persons = await db.select().from(schema.persons)

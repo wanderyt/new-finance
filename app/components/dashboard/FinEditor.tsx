@@ -108,8 +108,8 @@ const FinEditor = ({
 
       if (result.success) {
         setHasUnsavedChanges(false);
+        onSuccess?.(existingFin);
         onClose();
-        // TODO: Notify parent to refresh list
       } else {
         throw new Error(result.error || "Failed to delete transaction");
       }
