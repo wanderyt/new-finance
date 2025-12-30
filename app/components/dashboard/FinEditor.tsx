@@ -49,13 +49,17 @@ const FinEditor = ({
       const endpoint = isUpdate ? "/api/fin/update" : "/api/fin/create";
       const method = isUpdate ? "PATCH" : "POST";
 
-      const response = await fetch(endpoint, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
+      // Start both the API call and the minimum delay timer
+      const [response] = await Promise.all([
+        fetch(endpoint, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        }),
+        new Promise((resolve) => setTimeout(resolve, 300)), // Minimum 300ms loading
+      ]);
 
       if (!response.ok) {
         const error = await response.json();
@@ -95,9 +99,13 @@ const FinEditor = ({
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`/api/fin/${existingFin.finId}`, {
-        method: "DELETE",
-      });
+      // Start both the API call and the minimum delay timer
+      const [response] = await Promise.all([
+        fetch(`/api/fin/${existingFin.finId}`, {
+          method: "DELETE",
+        }),
+        new Promise((resolve) => setTimeout(resolve, 300)), // Minimum 300ms loading
+      ]);
 
       if (!response.ok) {
         const error = await response.json();
@@ -127,14 +135,28 @@ const FinEditor = ({
 
   return (
     <BottomSheet isOpen={isOpen} onClose={handleClose}>
-      <FinEditorForm
-        type={type}
-        existingFin={existingFin}
-        onSubmit={handleSubmit}
-        onCancel={handleClose}
-        onDelete={existingFin ? handleDelete : undefined}
-        isSubmitting={isSubmitting}
-      />
+      <div className="relative">
+        <FinEditorForm
+          type={type}
+          existingFin={existingFin}
+          onSubmit={handleSubmit}
+          onCancel={handleClose}
+          onDelete={existingFin ? handleDelete : undefined}
+          isSubmitting={isSubmitting}
+        />
+
+        {/* Loading Overlay */}
+        {isSubmitting && (
+          <div className="absolute inset-0 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+              <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Saving...
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </BottomSheet>
   );
 };
