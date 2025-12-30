@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { fin, finItems, finTags } from "@/app/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte } from "drizzle-orm";
 import {
   withAuth,
   badRequestResponse,
@@ -70,22 +70,36 @@ export const DELETE = withAuth(async (request, user) => {
       return badRequestResponse("Transaction ID is required");
     }
 
-    // Verify ownership
-    const userFins = await db
+    // Verify ownership and get fin record
+    const [targetFin] = await db
       .select()
       .from(fin)
       .where(and(eq(fin.finId, finId), eq(fin.userId, user.userId)))
       .limit(1);
 
-    if (userFins.length === 0) {
+    if (!targetFin) {
       return NextResponse.json(
         { success: false, error: "Transaction not found" },
         { status: 404 }
       );
     }
 
-    // Delete fin (cascade will handle finItems and finTags)
-    await db.delete(fin).where(eq(fin.finId, finId));
+    // If this is a scheduled transaction, delete all future occurrences
+    if (targetFin.isScheduled && targetFin.scheduleRuleId) {
+      const now = new Date().toISOString();
+
+      // Delete all fin records with the same schedule rule that are on or after now
+      await db.delete(fin).where(
+        and(
+          eq(fin.scheduleRuleId, targetFin.scheduleRuleId),
+          eq(fin.userId, user.userId),
+          gte(fin.date, now)
+        )
+      );
+    } else {
+      // Delete single fin (cascade will handle finItems and finTags)
+      await db.delete(fin).where(eq(fin.finId, finId));
+    }
 
     return NextResponse.json({
       success: true,

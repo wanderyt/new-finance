@@ -170,6 +170,83 @@ export const POST = withAuth(async (request, user) => {
       );
     }
 
+    // Generate recurring fin records if scheduled
+    if (body.isScheduled && scheduleRuleId && body.frequency) {
+      const frequencyMap = {
+        daily: { interval: 1, unit: "day" as const },
+        weekly: { interval: 7, unit: "day" as const },
+        biweekly: { interval: 14, unit: "day" as const },
+        monthly: { interval: 1, unit: "month" as const },
+        annually: { interval: 1, unit: "year" as const },
+      };
+
+      const { interval, unit } = frequencyMap[body.frequency];
+      const baseDate = new Date(body.date);
+      const recurringRecords = [];
+
+      // Generate records for the next 12 occurrences
+      for (let i = 1; i <= 12; i++) {
+        const nextDate = new Date(baseDate);
+
+        if (unit === "day") {
+          nextDate.setDate(baseDate.getDate() + (interval * i));
+        } else if (unit === "month") {
+          nextDate.setMonth(baseDate.getMonth() + (interval * i));
+        } else if (unit === "year") {
+          nextDate.setFullYear(baseDate.getFullYear() + (interval * i));
+        }
+
+        const nextFinId = generateFinId();
+        recurringRecords.push({
+          finId: nextFinId,
+          userId: user.userId,
+          type: body.type || "expense",
+          date: nextDate.toISOString(),
+          scheduledOn: nextDate.toISOString(),
+          scheduleRuleId: scheduleRuleId,
+          merchant: body.merchant || null,
+          comment: body.comment || null,
+          place: body.place || null,
+          city: body.city || null,
+          category: body.category || null,
+          subcategory: body.subcategory || null,
+          details: body.details || null,
+          originalCurrency: body.originalCurrency,
+          originalAmountCents: body.originalAmountCents,
+          fxId: currencyAmounts.fxId,
+          amountCadCents: currencyAmounts.amountCadCents,
+          amountUsdCents: currencyAmounts.amountUsdCents,
+          amountCnyCents: currencyAmounts.amountCnyCents,
+          amountBaseCadCents: currencyAmounts.amountBaseCadCents,
+          isScheduled: true,
+        });
+
+        // Insert line items for recurring records
+        if (body.lineItems && body.lineItems.length > 0) {
+          await db.insert(finItems).values(
+            body.lineItems.map((item, index) => ({
+              finId: nextFinId,
+              lineNo: index + 1,
+              name: item.name,
+              qty: item.qty || null,
+              unit: item.unit || null,
+              unitPriceCents: item.unitPriceCents || null,
+              originalAmountCents: item.originalAmountCents,
+              personId: item.personId || null,
+              category: item.category || null,
+              subcategory: item.subcategory || null,
+              notes: item.notes || null,
+            }))
+          );
+        }
+      }
+
+      // Insert all recurring records
+      if (recurringRecords.length > 0) {
+        await db.insert(fin).values(recurringRecords);
+      }
+    }
+
     // Fetch the created record for response
     const [created] = await db
       .select()
