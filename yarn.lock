@@ -848,6 +848,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@google/generative-ai@npm:^0.24.1":
+  version: 0.24.1
+  resolution: "@google/generative-ai@npm:0.24.1"
+  checksum: 10c0/8da77fc648b04fc2ecef53e75230e2ee67a8fd29a34b6b8874e77a7332b2a1e4b51d44dd9eb604fb063ed8ea46d293aac5b1e2a955ae2435e2582a265f2cb80d
+  languageName: node
+  linkType: hard
+
 "@humanfs/core@npm:^0.19.1":
   version: 0.19.1
   resolution: "@humanfs/core@npm:0.19.1"
@@ -4790,6 +4797,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "new-finance@workspace:."
   dependencies:
+    "@google/generative-ai": "npm:^0.24.1"
     "@reduxjs/toolkit": "npm:^2.11.2"
     "@tailwindcss/postcss": "npm:^4"
     "@types/better-sqlite3": "npm:^7.6.13"
@@ -4804,6 +4812,7 @@ __metadata:
     eslint-config-next: "npm:16.1.0"
     framer-motion: "npm:^12.23.26"
     next: "npm:16.1.0"
+    openai: "npm:^6.15.0"
     react: "npm:19.2.3"
     react-dom: "npm:19.2.3"
     react-redux: "npm:^9.2.0"
@@ -5008,6 +5017,23 @@ __metadata:
   dependencies:
     wrappy: "npm:1"
   checksum: 10c0/5d48aca287dfefabd756621c5dfce5c91a549a93e9fdb7b8246bc4c4790aa2ec17b34a260530474635147aeb631a2dcc8b32c613df0675f96041cbb8244517d0
+  languageName: node
+  linkType: hard
+
+"openai@npm:^6.15.0":
+  version: 6.15.0
+  resolution: "openai@npm:6.15.0"
+  peerDependencies:
+    ws: ^8.18.0
+    zod: ^3.25 || ^4.0
+  peerDependenciesMeta:
+    ws:
+      optional: true
+    zod:
+      optional: true
+  bin:
+    openai: bin/cli
+  checksum: 10c0/08400449dac9be2629f051045fb46b0384a1e9ba9738b72c23853a443857e3a81f237c2d306fbd287689b9c15c18790203893fc31611976617a6be474489df8e
   languageName: node
   linkType: hard
 

@@ -163,10 +163,10 @@ Implement AI-powered receipt analysis to extract line items, amounts, merchant i
 
 ## Implementation Strategy
 
-**Primary:** OpenAI GPT-4 Vision (for best accuracy)
-**Backup:** Google Gemini 1.5 Flash (implemented but not invoked, for future cost optimization)
+**Primary:** Google Gemini 1.5 Flash (for cost-effectiveness and free tier)
+**Backup:** OpenAI GPT-4 Vision (implemented as fallback, for best accuracy if needed)
 
-We'll implement both APIs but use OpenAI by default. The Gemini implementation will be ready to switch to if needed.
+We implement both APIs but use Gemini by default due to its free tier and lower cost. The OpenAI implementation is ready to switch to if higher accuracy is needed.
 
 ### Phase 1: Setup & Dependencies
 
@@ -176,12 +176,12 @@ We'll implement both APIs but use OpenAI by default. The Gemini implementation w
 
 **Steps:**
 1. Install both SDKs: `yarn add openai @google/generative-ai`
-2. Get OpenAI API key from: https://platform.openai.com/api-keys
-3. (Optional) Get Gemini API key from: https://aistudio.google.com/app/apikey
+2. Get Gemini API key from: https://aistudio.google.com/app/apikey (completely free, no payment method required)
+3. (Optional) Get OpenAI API key from: https://platform.openai.com/api-keys (for fallback)
 4. Create `.env.local` file with:
    ```
-   OPENAI_API_KEY=sk-...
-   GOOGLE_GEMINI_API_KEY=your-api-key-here  # Optional, for backup
+   GOOGLE_GEMINI_API_KEY=your-api-key-here  # Required
+   OPENAI_API_KEY=sk-...  # Optional, for fallback
    ```
 5. Add `.env*.local` to `.gitignore` (if not already)
 
@@ -191,7 +191,7 @@ We'll implement both APIs but use OpenAI by default. The Gemini implementation w
 
 **File:** `app/api/receipts/analyze/route.ts`
 
-**Implementation approach - OpenAI primary, Gemini backup:**
+**Implementation approach - Gemini primary, OpenAI backup:**
 
 ```typescript
 import OpenAI from "openai";
@@ -201,15 +201,41 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Backup: Gemini (not invoked by default)
 const genAI = process.env.GOOGLE_GEMINI_API_KEY
   ? new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY)
   : null;
 
-// Primary implementation using OpenAI
+// Primary implementation using Gemini
+async function analyzeReceiptWithGemini(base64Image: string, mimeType: string) {
+  if (!genAI) {
+    throw new Error("Gemini API key not configured");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const result = await model.generateContent([
+    RECEIPT_ANALYSIS_PROMPT,
+    {
+      inlineData: {
+        data: base64Image,
+        mimeType
+      }
+    }
+  ]);
+
+  const response = await result.response;
+  const text = response.text();
+
+  // Extract JSON from response (Gemini might wrap it in markdown)
+  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
+  const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
+  return JSON.parse(jsonStr);
+}
+
+// Backup implementation using OpenAI (for fallback if needed)
 async function analyzeReceiptWithOpenAI(base64Image: string, mimeType: string) {
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-mini",
     messages: [
       {
         role: "user",
@@ -231,34 +257,12 @@ async function analyzeReceiptWithOpenAI(base64Image: string, mimeType: string) {
     max_tokens: 2000
   });
 
-  return JSON.parse(response.choices[0].message.content!);
-}
-
-// Backup implementation using Gemini (implemented but not invoked)
-async function analyzeReceiptWithGemini(base64Image: string, mimeType: string) {
-  if (!genAI) {
-    throw new Error("Gemini API key not configured");
+  const content = response.choices[0].message.content;
+  if (!content) {
+    throw new Error("No response from OpenAI");
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-  const result = await model.generateContent([
-    RECEIPT_ANALYSIS_PROMPT,
-    {
-      inlineData: {
-        data: base64Image,
-        mimeType
-      }
-    }
-  ]);
-
-  const response = await result.response;
-  const text = response.text();
-
-  // Extract JSON from response
-  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
-  const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
-  return JSON.parse(jsonStr);
+  return JSON.parse(content);
 }
 
 export const POST = withAuth(async (request, user) => {
@@ -279,11 +283,11 @@ export const POST = withAuth(async (request, user) => {
   const buffer = Buffer.from(bytes);
   const base64Image = buffer.toString("base64");
 
-  // 3. Call OpenAI API (primary)
-  const receiptData = await analyzeReceiptWithOpenAI(base64Image, file.type);
+  // 3. Call Gemini API (primary)
+  const receiptData = await analyzeReceiptWithGemini(base64Image, file.type);
 
-  // To switch to Gemini, uncomment this line and comment out the OpenAI call:
-  // const receiptData = await analyzeReceiptWithGemini(base64Image, file.type);
+  // To switch to OpenAI, uncomment this line and comment out the Gemini call:
+  // const receiptData = await analyzeReceiptWithOpenAI(base64Image, file.type);
 
   // 4. Return structured data
   return NextResponse.json({
@@ -535,16 +539,16 @@ This keeps costs minimal while providing excellent UX.
 ## Critical Files to Modify
 
 1. `package.json` - Add both OpenAI and Google Generative AI dependencies
-2. `.env.local` (create) - API keys configuration (OpenAI required, Gemini optional)
-3. `app/api/receipts/analyze/route.ts` - Dual implementation (OpenAI primary, Gemini backup)
+2. `.env.local` (create) - API keys configuration (Gemini required, OpenAI optional)
+3. `app/api/receipts/analyze/route.ts` - Dual implementation (Gemini primary, OpenAI backup)
 4. `app/components/dashboard/FinEditorForm.tsx` - Form integration with results
 5. `.gitignore` - Ensure env files excluded
 
 ## Getting Started
 
-1. **Get OpenAI API key:** https://platform.openai.com/api-keys (requires payment method, $5 free credit for new accounts)
-2. **(Optional) Get Gemini API key:** https://aistudio.google.com/app/apikey (completely free, no payment method required)
-3. **To switch from OpenAI to Gemini:** Simply comment out the OpenAI call and uncomment the Gemini call in the route handler
+1. **Get Gemini API key:** https://aistudio.google.com/app/apikey (completely free, no payment method required)
+2. **(Optional) Get OpenAI API key:** https://platform.openai.com/api-keys (requires payment method, $5 free credit for new accounts)
+3. **To switch from Gemini to OpenAI:** Simply comment out the Gemini call and uncomment the OpenAI call in the route handler
 
 ---
 

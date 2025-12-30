@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   withAuth,
   badRequestResponse,
@@ -9,6 +10,10 @@ import {
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+const genAI = process.env.GOOGLE_GEMINI_API_KEY
+  ? new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY)
+  : null;
 
 const RECEIPT_ANALYSIS_PROMPT = `
 Analyze this receipt image and extract the following information in JSON format:
@@ -40,7 +45,7 @@ Important rules:
 
 async function analyzeReceiptWithOpenAI(base64Image: string, mimeType: string) {
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-mini",  // Use mini version if you don't have access to gpt-4o
     messages: [
       {
         role: "user",
@@ -70,6 +75,33 @@ async function analyzeReceiptWithOpenAI(base64Image: string, mimeType: string) {
   return JSON.parse(content);
 }
 
+async function analyzeReceiptWithGemini(base64Image: string, mimeType: string) {
+  if (!genAI) {
+    throw new Error("Gemini API key not configured");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  const result = await model.generateContent([
+    RECEIPT_ANALYSIS_PROMPT,
+    {
+      inlineData: {
+        data: base64Image,
+        mimeType
+      }
+    }
+  ]);
+
+  const response = await result.response;
+  const text = response.text();
+
+  // Extract JSON from response (Gemini might wrap it in markdown)
+  const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/\{[\s\S]*\}/);
+  const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text;
+
+  return JSON.parse(jsonStr);
+}
+
 export const POST = withAuth(async (request, user) => {
   try {
     const formData = await request.formData();
@@ -89,8 +121,11 @@ export const POST = withAuth(async (request, user) => {
     const buffer = Buffer.from(bytes);
     const base64Image = buffer.toString("base64");
 
-    // Call OpenAI Vision API
-    const receiptData = await analyzeReceiptWithOpenAI(base64Image, file.type);
+    // Call Gemini Vision API (primary)
+    const receiptData = await analyzeReceiptWithGemini(base64Image, file.type);
+
+    // Fallback to OpenAI if needed:
+    // const receiptData = await analyzeReceiptWithOpenAI(base64Image, file.type);
 
     // Validate response
     if (!receiptData.lineItems || receiptData.lineItems.length === 0) {
@@ -104,7 +139,18 @@ export const POST = withAuth(async (request, user) => {
   } catch (error) {
     console.error("Failed to analyze receipt:", error);
 
-    // Handle OpenAI specific errors
+    // Handle Gemini specific errors
+    if (error instanceof Error) {
+      if (error.message.includes("API key not configured")) {
+        return serverErrorResponse("Gemini API key not configured. Please check your environment variables.");
+      }
+      // Handle other Gemini errors
+      if (error.message.includes("quota")) {
+        return serverErrorResponse("API quota exceeded. Please try again later.");
+      }
+    }
+
+    // Handle OpenAI specific errors (for fallback)
     if (error instanceof OpenAI.APIError) {
       console.error("OpenAI API error:", error.status, error.message);
       return serverErrorResponse("Failed to analyze receipt. Please try again.");

@@ -10,7 +10,8 @@
       "Bash(yarn version:minor:*)",
       "Bash(git push:*)",
       "Bash(gh pr create:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(yarn add:*)"
     ]
   }
 }
