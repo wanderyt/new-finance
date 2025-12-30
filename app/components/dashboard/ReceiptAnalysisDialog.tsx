@@ -25,7 +25,7 @@ interface ReceiptAnalysisDialogProps {
   result: ReceiptAnalysisResult | null;
   onConfirm: (lineItems: LineItem[]) => void;
   onCancel: () => void;
-  persons?: Array<{ personId: number; name: string }>;
+  persons?: Array<{ personId: number; name: string; isDefault?: boolean }>;
 }
 
 const ReceiptAnalysisDialog = ({
@@ -35,13 +35,17 @@ const ReceiptAnalysisDialog = ({
   onCancel,
   persons = [],
 }: ReceiptAnalysisDialogProps) => {
-  // Convert analyzed items to editable line items
+  // Find default person
+  const defaultPerson = persons.find((p) => p.isDefault);
+
+  // Convert analyzed items to editable line items with default person
   const initialLineItems: LineItem[] =
     result?.lineItems.map((item) => ({
       name: item.name,
       originalAmountCents: item.amount,
       qty: item.quantity,
       unit: item.unit,
+      personId: defaultPerson?.personId,
     })) || [];
 
   const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems);
@@ -55,6 +59,7 @@ const ReceiptAnalysisDialog = ({
           originalAmountCents: item.amount,
           qty: item.quantity,
           unit: item.unit,
+          personId: defaultPerson?.personId,
         }))
       );
     }
@@ -76,6 +81,7 @@ const ReceiptAnalysisDialog = ({
       {
         name: "",
         originalAmountCents: 0,
+        personId: defaultPerson?.personId,
       },
     ]);
   };

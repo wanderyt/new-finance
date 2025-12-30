@@ -10,7 +10,7 @@ interface LineItemsDialogProps {
   lineItems: LineItem[];
   onConfirm: (lineItems: LineItem[]) => void;
   onCancel: () => void;
-  persons?: Array<{ personId: number; name: string }>;
+  persons?: Array<{ personId: number; name: string; isDefault?: boolean }>;
 }
 
 const LineItemsDialog = ({
@@ -40,11 +40,15 @@ const LineItemsDialog = ({
   };
 
   const handleAddLineItem = () => {
+    // Find the default person
+    const defaultPerson = persons.find((p) => p.isDefault);
+
     setLineItems([
       ...lineItems,
       {
         name: "",
         originalAmountCents: 0,
+        personId: defaultPerson?.personId,
       },
     ]);
   };
@@ -63,15 +67,10 @@ const LineItemsDialog = ({
   );
 
   return (
-    <Dialog isOpen={isOpen} onClose={onCancel} title="Manage Line Items">
-      <div className="space-y-4">
-        {/* Instructions */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Add itemized expenses and optionally assign them to specific people.
-        </p>
-
+    <Dialog isOpen={isOpen} onClose={onCancel}>
+      <div className="space-y-3">
         {/* Line Items */}
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-2">
           {lineItems.map((item, index) => (
             <LineItemEditor
               key={index}
