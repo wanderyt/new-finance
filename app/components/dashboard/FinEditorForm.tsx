@@ -198,6 +198,8 @@ const FinEditorForm = ({
     if (!date) return false;
     if (!amount || parseFloat(amount) <= 0) return false;
     if (!currency) return false;
+    if (!city || city.trim() === "") return false;
+    if (!merchant || merchant.trim() === "") return false;
     return true;
   };
 
