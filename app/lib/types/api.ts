@@ -90,7 +90,8 @@ export interface CreateFinRequest {
 
   // Scheduling (optional)
   isScheduled?: boolean; // default: false
-  scheduleRuleId?: number; // only if isScheduled = true
+  frequency?: "daily" | "weekly" | "biweekly" | "monthly" | "annually"; // required if isScheduled = true
+  scheduleRuleId?: number; // auto-generated from frequency
   scheduledOn?: string; // ISO 8601 with time in UTC, only if isScheduled = true
 }
 

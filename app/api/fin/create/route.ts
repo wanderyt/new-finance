@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
-import { fin, finItems } from "@/app/lib/db/schema";
+import { fin, finItems, scheduleRules } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
 import {
   CreateFinRequest,
@@ -74,9 +74,9 @@ export const POST = withAuth(async (request, user) => {
     }
 
     // Validate scheduling fields
-    if (body.isScheduled && !body.scheduleRuleId) {
+    if (body.isScheduled && !body.frequency) {
       return badRequestResponse(
-        'Field "scheduleRuleId" is required when isScheduled is true'
+        'Field "frequency" is required when isScheduled is true'
       );
     }
 
@@ -96,6 +96,36 @@ export const POST = withAuth(async (request, user) => {
       body.originalAmountCents
     );
 
+    // Create schedule rule if scheduled
+    let scheduleRuleId: number | null = null;
+    if (body.isScheduled && body.frequency) {
+      // Map frequency to interval and unit
+      const frequencyMap = {
+        daily: { interval: 1, unit: "day" as const },
+        weekly: { interval: 1, unit: "week" as const },
+        biweekly: { interval: 2, unit: "week" as const },
+        monthly: { interval: 1, unit: "month" as const },
+        annually: { interval: 1, unit: "year" as const },
+      };
+
+      const { interval, unit } = frequencyMap[body.frequency];
+
+      // Create schedule rule
+      const [rule] = await db
+        .insert(scheduleRules)
+        .values({
+          userId: user.userId,
+          name: `${body.frequency} - ${body.merchant || "Untitled"}`,
+          isActive: true,
+          interval,
+          unit,
+          anchorDate: body.date,
+        })
+        .returning();
+
+      scheduleRuleId = rule.scheduleRuleId;
+    }
+
     // Insert into database
     await db.insert(fin).values({
       finId,
@@ -103,7 +133,7 @@ export const POST = withAuth(async (request, user) => {
       type: body.type || "expense",
       date: body.date,
       scheduledOn: body.scheduledOn || null,
-      scheduleRuleId: body.scheduleRuleId || null,
+      scheduleRuleId: scheduleRuleId,
       merchant: body.merchant || null,
       comment: body.comment || null,
       place: body.place || null,

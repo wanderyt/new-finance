@@ -244,6 +244,7 @@ const FinEditorForm = ({
         originalCurrency: currency,
         originalAmountCents: amountCents,
         isScheduled,
+        frequency: isScheduled ? frequency : undefined,
         lineItems: lineItems.length > 0 ? lineItems : undefined,
       };
 
