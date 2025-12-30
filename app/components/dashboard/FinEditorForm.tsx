@@ -467,8 +467,33 @@ const FinEditorForm = ({
         />
       </div>
 
-      {/* Tags */}
-      <TagInput tags={tags} onTagsChange={setTags} label="" placeholder="Tags (press Enter)" />
+      {/* Tags and Line Items Button */}
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <TagInput tags={tags} onTagsChange={setTags} label="" placeholder="Tags (press Enter)" />
+        </div>
+        <button
+          type="button"
+          onClick={handleAddLineItem}
+          className="px-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2 whitespace-nowrap"
+          title="Add line items"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+            />
+          </svg>
+          <span className="text-sm">Items</span>
+        </button>
+      </div>
 
       {/* Details */}
       <div className="relative">
@@ -514,6 +539,7 @@ const FinEditorForm = ({
               index={index}
               onChange={handleLineItemChange}
               onRemove={handleLineItemRemove}
+              persons={persons}
             />
           ))}
           <button
