@@ -201,40 +201,52 @@ export const POST = withAuth(async (request, user) => {
 
         if (unit === "day") {
           nextDate = new Date(baseDate);
-          nextDate.setDate(baseDate.getDate() + (interval * i));
+          nextDate.setUTCDate(baseDate.getUTCDate() + (interval * i));
         } else if (unit === "month") {
           // Handle month-end dates properly for monthly schedules
-          const originalDay = baseDate.getDate();
-          const originalMonth = baseDate.getMonth();
-          const originalYear = baseDate.getFullYear();
+          // Use UTC methods to avoid timezone issues
+          const originalDay = baseDate.getUTCDate();
+          const originalMonth = baseDate.getUTCMonth();
+          const originalYear = baseDate.getUTCFullYear();
+          const originalHours = baseDate.getUTCHours();
+          const originalMinutes = baseDate.getUTCMinutes();
+          const originalSeconds = baseDate.getUTCSeconds();
+          const originalMilliseconds = baseDate.getUTCMilliseconds();
 
           // Calculate target month and year
           const totalMonths = originalMonth + (interval * i);
           const targetYear = originalYear + Math.floor(totalMonths / 12);
           const targetMonth = totalMonths % 12;
 
-          // Get the last day of the target month
-          const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+          // Get the last day of the target month (using UTC)
+          const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
 
           // Use the original day, or the last day of the month if original day doesn't exist
           const targetDay = Math.min(originalDay, lastDayOfTargetMonth);
 
-          // Create the date with the target year, month, and day
-          nextDate = new Date(baseDate);
-          nextDate.setFullYear(targetYear, targetMonth, targetDay);
+          // Create the date in UTC
+          nextDate = new Date(Date.UTC(
+            targetYear,
+            targetMonth,
+            targetDay,
+            originalHours,
+            originalMinutes,
+            originalSeconds,
+            originalMilliseconds
+          ));
         } else if (unit === "year") {
-          // Handle yearly schedules
-          const originalYear = baseDate.getFullYear();
+          // Handle yearly schedules (using UTC)
+          const originalYear = baseDate.getUTCFullYear();
           const targetYear = originalYear + (interval * i);
 
           nextDate = new Date(baseDate);
-          nextDate.setFullYear(targetYear);
+          nextDate.setUTCFullYear(targetYear);
 
           // Handle Feb 29 leap year case
-          if (baseDate.getMonth() === 1 && baseDate.getDate() === 29) {
+          if (baseDate.getUTCMonth() === 1 && baseDate.getUTCDate() === 29) {
             const isLeapYear = (targetYear % 4 === 0 && targetYear % 100 !== 0) || (targetYear % 400 === 0);
             if (!isLeapYear) {
-              nextDate.setDate(28);
+              nextDate.setUTCDate(28);
             }
           }
         } else {
