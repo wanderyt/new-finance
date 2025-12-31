@@ -50,10 +50,17 @@ The Fin Editor is a comprehensive financial transaction editor that supports:
 9. **Tags**: Multiple tags with many-to-many relationship
 10. **Details**: Free-text notes
 
-### Scheduled Transactions
+### Scheduled Transactions ✅ IMPLEMENTED
 - **Toggle**: Expand/collapse frequency options
 - **Frequencies**: Daily, Weekly, Biweekly, Monthly, Annually
-- **Rule-based**: Links to schedule_rules table
+- **Rule-based**: Auto-creates schedule_rules and generates future occurrences
+- **Auto-generation**:
+  - Daily/Weekly/Biweekly: 3 years of occurrences
+  - Monthly: 10 years (120 occurrences)
+  - Annually: 10 years (10 occurrences)
+- **Update/Delete Dialog**: Choose "single occurrence" or "all future occurrences"
+- **Smart Date Handling**: Properly handles month-end dates (e.g., Jan 31 → Feb 28/29)
+- **Dashboard Filtering**: Only shows transactions up to end of current month
 
 ### Receipt Analysis
 - **Upload**: Drag & drop or click to upload

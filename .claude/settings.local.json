@@ -11,7 +11,8 @@
       "Bash(git push:*)",
       "Bash(gh pr create:*)",
       "Bash(sqlite3:*)",
-      "Bash(yarn add:*)"
+      "Bash(yarn add:*)",
+      "Bash(node:*)"
     ]
   }
 }
