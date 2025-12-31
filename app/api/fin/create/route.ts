@@ -197,34 +197,48 @@ export const POST = withAuth(async (request, user) => {
 
       // Generate records for future occurrences
       for (let i = 1; i <= maxOccurrences; i++) {
-        const nextDate = new Date(baseDate);
+        let nextDate: Date;
 
         if (unit === "day") {
+          nextDate = new Date(baseDate);
           nextDate.setDate(baseDate.getDate() + (interval * i));
         } else if (unit === "month") {
-          // Handle month-end dates properly
-          const targetMonth = baseDate.getMonth() + (interval * i);
-          const targetYear = baseDate.getFullYear() + Math.floor(targetMonth / 12);
-          const adjustedMonth = ((targetMonth % 12) + 12) % 12;
-
-          nextDate.setFullYear(targetYear);
-          nextDate.setMonth(adjustedMonth);
-
-          // If the original date was at month-end, keep it at month-end
-          const lastDayOfTargetMonth = new Date(targetYear, adjustedMonth + 1, 0).getDate();
+          // Handle month-end dates properly for monthly schedules
           const originalDay = baseDate.getDate();
-          nextDate.setDate(Math.min(originalDay, lastDayOfTargetMonth));
+          const originalMonth = baseDate.getMonth();
+          const originalYear = baseDate.getFullYear();
+
+          // Calculate target month and year
+          const totalMonths = originalMonth + (interval * i);
+          const targetYear = originalYear + Math.floor(totalMonths / 12);
+          const targetMonth = totalMonths % 12;
+
+          // Get the last day of the target month
+          const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+
+          // Use the original day, or the last day of the month if original day doesn't exist
+          const targetDay = Math.min(originalDay, lastDayOfTargetMonth);
+
+          // Create the date with the target year, month, and day
+          nextDate = new Date(baseDate);
+          nextDate.setFullYear(targetYear, targetMonth, targetDay);
         } else if (unit === "year") {
-          nextDate.setFullYear(baseDate.getFullYear() + (interval * i));
+          // Handle yearly schedules
+          const originalYear = baseDate.getFullYear();
+          const targetYear = originalYear + (interval * i);
+
+          nextDate = new Date(baseDate);
+          nextDate.setFullYear(targetYear);
 
           // Handle Feb 29 leap year case
           if (baseDate.getMonth() === 1 && baseDate.getDate() === 29) {
-            const targetYear = baseDate.getFullYear() + (interval * i);
             const isLeapYear = (targetYear % 4 === 0 && targetYear % 100 !== 0) || (targetYear % 400 === 0);
             if (!isLeapYear) {
               nextDate.setDate(28);
             }
           }
+        } else {
+          nextDate = new Date(baseDate);
         }
 
         const nextFinId = generateFinId();
