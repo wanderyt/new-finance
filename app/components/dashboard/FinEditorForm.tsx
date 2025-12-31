@@ -57,11 +57,13 @@ const FinEditorForm = ({
   };
 
   // Form state
+  // For scheduled transactions, use scheduledOn; otherwise use date
   const [date, setDate] = useState(
-    existingFin?.date
-      ? toLocalDatetimeString(existingFin.date)
+    existingFin
+      ? toLocalDatetimeString(existingFin.isScheduled && existingFin.scheduledOn ? existingFin.scheduledOn : existingFin.date)
       : toLocalDatetimeString(new Date())
   );
+  const isScheduledTransaction = Boolean(existingFin?.isScheduled && existingFin?.scheduleRuleId);
   const [merchant, setMerchant] = useState(existingFin?.merchant || "");
   const [amount, setAmount] = useState(
     existingFin ? (existingFin.originalAmountCents / 100).toFixed(2) : ""
@@ -353,9 +355,17 @@ const FinEditorForm = ({
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
-            className="w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            disabled={isScheduledTransaction}
+            className={`w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all ${
+              isScheduledTransaction ? 'opacity-60 cursor-not-allowed' : ''
+            }`}
           />
         </div>
+        {isScheduledTransaction && (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 -mt-1">
+            This is a scheduled transaction. The date cannot be changed.
+          </p>
+        )}
         {!existingFin && (
           <Dropdown
             value={isScheduled ? frequency : ""}
