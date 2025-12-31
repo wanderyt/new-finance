@@ -132,7 +132,7 @@ export const POST = withAuth(async (request, user) => {
       userId: user.userId,
       type: body.type || "expense",
       date: body.date,
-      scheduledOn: body.scheduledOn || null,
+      scheduledOn: body.isScheduled ? body.date : null,
       scheduleRuleId: scheduleRuleId,
       merchant: body.merchant || null,
       comment: body.comment || null,

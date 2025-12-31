@@ -361,27 +361,21 @@ const FinEditorForm = ({
             }`}
           />
         </div>
-        {isScheduledTransaction && (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 -mt-1">
-            This is a scheduled transaction. The date cannot be changed.
-          </p>
-        )}
-        {!existingFin && (
-          <Dropdown
-            value={isScheduled ? frequency : ""}
-            onChange={(val) => {
-              if (val) {
-                setIsScheduled(true);
-                setFrequency(val as typeof frequency);
-              } else {
-                setIsScheduled(false);
-              }
-            }}
-            options={frequencyOptions}
-            placeholder="Once"
-            className="w-32"
-          />
-        )}
+        <Dropdown
+          value={isScheduled ? frequency : ""}
+          onChange={(val) => {
+            if (val) {
+              setIsScheduled(true);
+              setFrequency(val as typeof frequency);
+            } else {
+              setIsScheduled(false);
+            }
+          }}
+          options={frequencyOptions}
+          placeholder={isScheduledTransaction ? "Scheduled" : "Once"}
+          className="w-32"
+          disabled={isScheduledTransaction}
+        />
       </div>
 
       {/* Merchant */}
