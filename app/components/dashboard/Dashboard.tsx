@@ -31,9 +31,14 @@ export default function Dashboard() {
 
   const isLoading = authStatus === "loading";
 
-  // Fetch fins on mount
+  // Fetch fins on mount - only show records up to end of current month
   useEffect(() => {
-    dispatch(fetchFinsAsync());
+    // Calculate end of current month
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const endDate = endOfMonth.toISOString();
+
+    dispatch(fetchFinsAsync({ endDate }));
   }, [dispatch]);
 
   const handleLogout = async () => {
@@ -62,8 +67,12 @@ export default function Dashboard() {
   };
 
   const handleEditorSuccess = async () => {
-    // Refresh the list
-    await dispatch(fetchFinsAsync());
+    // Refresh the list - only show records up to end of current month
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    const endDate = endOfMonth.toISOString();
+
+    await dispatch(fetchFinsAsync({ endDate }));
   };
 
   const handleFilterChange = (type: "all" | "expense" | "income") => {

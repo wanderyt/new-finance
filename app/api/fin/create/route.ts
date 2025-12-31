@@ -180,20 +180,51 @@ export const POST = withAuth(async (request, user) => {
         annually: { interval: 1, unit: "year" as const },
       };
 
+      // Calculate number of occurrences based on frequency
+      // daily/weekly/biweekly: 3 years, monthly: 10 years, annually: 10 years
+      const occurrenceCount = {
+        daily: 365 * 3,       // 1095 occurrences
+        weekly: 52 * 3,       // 156 occurrences
+        biweekly: 26 * 3,     // 78 occurrences
+        monthly: 12 * 10,     // 120 occurrences
+        annually: 10,         // 10 occurrences
+      };
+
       const { interval, unit } = frequencyMap[body.frequency];
+      const maxOccurrences = occurrenceCount[body.frequency];
       const baseDate = new Date(body.date);
       const recurringRecords = [];
 
-      // Generate records for the next 12 occurrences
-      for (let i = 1; i <= 12; i++) {
+      // Generate records for future occurrences
+      for (let i = 1; i <= maxOccurrences; i++) {
         const nextDate = new Date(baseDate);
 
         if (unit === "day") {
           nextDate.setDate(baseDate.getDate() + (interval * i));
         } else if (unit === "month") {
-          nextDate.setMonth(baseDate.getMonth() + (interval * i));
+          // Handle month-end dates properly
+          const targetMonth = baseDate.getMonth() + (interval * i);
+          const targetYear = baseDate.getFullYear() + Math.floor(targetMonth / 12);
+          const adjustedMonth = ((targetMonth % 12) + 12) % 12;
+
+          nextDate.setFullYear(targetYear);
+          nextDate.setMonth(adjustedMonth);
+
+          // If the original date was at month-end, keep it at month-end
+          const lastDayOfTargetMonth = new Date(targetYear, adjustedMonth + 1, 0).getDate();
+          const originalDay = baseDate.getDate();
+          nextDate.setDate(Math.min(originalDay, lastDayOfTargetMonth));
         } else if (unit === "year") {
           nextDate.setFullYear(baseDate.getFullYear() + (interval * i));
+
+          // Handle Feb 29 leap year case
+          if (baseDate.getMonth() === 1 && baseDate.getDate() === 29) {
+            const targetYear = baseDate.getFullYear() + (interval * i);
+            const isLeapYear = (targetYear % 4 === 0 && targetYear % 100 !== 0) || (targetYear % 400 === 0);
+            if (!isLeapYear) {
+              nextDate.setDate(28);
+            }
+          }
         }
 
         const nextFinId = generateFinId();
