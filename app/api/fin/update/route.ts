@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { fin, finItems } from "@/app/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, gte } from "drizzle-orm";
 import { UpdateFinRequest, UpdateFinResponse, ErrorResponse } from "@/app/lib/types/api";
 import {
   withAuth,
@@ -29,12 +29,15 @@ function isValidDateFormat(dateString: string): boolean {
 export const PATCH = withAuth(async (request, user) => {
   try {
     // Parse request body
-    const body: UpdateFinRequest = await request.json();
+    const body: UpdateFinRequest & { scope?: "single" | "all" } = await request.json();
 
     // finId is required
     if (!body.finId) {
       return badRequestResponse('Field "finId" is required');
     }
+
+    // Extract scope parameter
+    const scope = body.scope;
 
     // Fetch existing record with ownership check
     const [existing] = await db
@@ -121,38 +124,103 @@ export const PATCH = withAuth(async (request, user) => {
     }
 
     // Check if there are any updates
-    if (Object.keys(updates).length === 0) {
+    if (Object.keys(updates).length === 0 && body.lineItems === undefined) {
       return badRequestResponse("No fields to update");
     }
 
-    // Update database
-    await db
-      .update(fin)
-      .set(updates)
-      .where(and(eq(fin.finId, body.finId), eq(fin.userId, user.userId)));
+    // Handle scheduled transactions based on scope
+    if (existing.isScheduled && existing.scheduleRuleId && scope === "all") {
+      // Update this and all future occurrences
+      // Use 00:00:00 of the target transaction's date as cutoff
+      const targetDate = new Date(existing.date);
+      targetDate.setHours(0, 0, 0, 0);
+      const cutoffDate = targetDate.toISOString();
 
-    // Handle line items update if provided
-    if (body.lineItems !== undefined) {
-      // Delete existing line items
-      await db.delete(finItems).where(eq(finItems.finId, body.finId));
+      // Update all fin records with the same schedule rule that are on or after the cutoff date
+      if (Object.keys(updates).length > 0) {
+        await db
+          .update(fin)
+          .set(updates)
+          .where(
+            and(
+              eq(fin.scheduleRuleId, existing.scheduleRuleId),
+              eq(fin.userId, user.userId),
+              gte(fin.date, cutoffDate)
+            )
+          );
+      }
 
-      // Insert new line items
-      if (body.lineItems.length > 0) {
-        await db.insert(finItems).values(
-          body.lineItems.map((item, index) => ({
-            finId: body.finId,
-            lineNo: index + 1,
-            name: item.name,
-            qty: item.qty || null,
-            unit: item.unit || null,
-            unitPriceCents: item.unitPriceCents || null,
-            originalAmountCents: item.originalAmountCents,
-            personId: item.personId || null,
-            category: item.category || null,
-            subcategory: item.subcategory || null,
-            notes: item.notes || null,
-          }))
-        );
+      // Handle line items for all future occurrences
+      if (body.lineItems !== undefined) {
+        // Get all future fin IDs
+        const futureRecords = await db
+          .select({ finId: fin.finId })
+          .from(fin)
+          .where(
+            and(
+              eq(fin.scheduleRuleId, existing.scheduleRuleId),
+              eq(fin.userId, user.userId),
+              gte(fin.date, cutoffDate)
+            )
+          );
+
+        // Update line items for each future record
+        for (const record of futureRecords) {
+          // Delete existing line items
+          await db.delete(finItems).where(eq(finItems.finId, record.finId));
+
+          // Insert new line items
+          if (body.lineItems.length > 0) {
+            await db.insert(finItems).values(
+              body.lineItems.map((item, index) => ({
+                finId: record.finId,
+                lineNo: index + 1,
+                name: item.name,
+                qty: item.qty || null,
+                unit: item.unit || null,
+                unitPriceCents: item.unitPriceCents || null,
+                originalAmountCents: item.originalAmountCents,
+                personId: item.personId || null,
+                category: item.category || null,
+                subcategory: item.subcategory || null,
+                notes: item.notes || null,
+              }))
+            );
+          }
+        }
+      }
+    } else {
+      // Update only this single occurrence (default behavior)
+      if (Object.keys(updates).length > 0) {
+        await db
+          .update(fin)
+          .set(updates)
+          .where(and(eq(fin.finId, body.finId), eq(fin.userId, user.userId)));
+      }
+
+      // Handle line items update if provided
+      if (body.lineItems !== undefined) {
+        // Delete existing line items
+        await db.delete(finItems).where(eq(finItems.finId, body.finId));
+
+        // Insert new line items
+        if (body.lineItems.length > 0) {
+          await db.insert(finItems).values(
+            body.lineItems.map((item, index) => ({
+              finId: body.finId,
+              lineNo: index + 1,
+              name: item.name,
+              qty: item.qty || null,
+              unit: item.unit || null,
+              unitPriceCents: item.unitPriceCents || null,
+              originalAmountCents: item.originalAmountCents,
+              personId: item.personId || null,
+              category: item.category || null,
+              subcategory: item.subcategory || null,
+              notes: item.notes || null,
+            }))
+          );
+        }
       }
     }
 

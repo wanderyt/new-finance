@@ -70,6 +70,9 @@ export const DELETE = withAuth(async (request, user) => {
       return badRequestResponse("Transaction ID is required");
     }
 
+    // Get scope parameter from query string
+    const scope = url.searchParams.get("scope") as "single" | "all" | null;
+
     // Verify ownership and get fin record
     const [targetFin] = await db
       .select()
@@ -84,18 +87,27 @@ export const DELETE = withAuth(async (request, user) => {
       );
     }
 
-    // If this is a scheduled transaction, delete all future occurrences
+    // Handle scheduled transactions based on scope
     if (targetFin.isScheduled && targetFin.scheduleRuleId) {
-      const now = new Date().toISOString();
+      if (scope === "single") {
+        // Delete only this specific occurrence
+        await db.delete(fin).where(eq(fin.finId, finId));
+      } else {
+        // Default to "all" - delete this and all future occurrences
+        // Use 00:00:00 of the target transaction's date as cutoff
+        const targetDate = new Date(targetFin.date);
+        targetDate.setHours(0, 0, 0, 0);
+        const cutoffDate = targetDate.toISOString();
 
-      // Delete all fin records with the same schedule rule that are on or after now
-      await db.delete(fin).where(
-        and(
-          eq(fin.scheduleRuleId, targetFin.scheduleRuleId),
-          eq(fin.userId, user.userId),
-          gte(fin.date, now)
-        )
-      );
+        // Delete all fin records with the same schedule rule that are on or after the cutoff date
+        await db.delete(fin).where(
+          and(
+            eq(fin.scheduleRuleId, targetFin.scheduleRuleId),
+            eq(fin.userId, user.userId),
+            gte(fin.date, cutoffDate)
+          )
+        );
+      }
     } else {
       // Delete single fin (cascade will handle finItems and finTags)
       await db.delete(fin).where(eq(fin.finId, finId));
