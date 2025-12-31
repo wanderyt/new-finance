@@ -50,15 +50,21 @@ Automate the complete PR workflow: version bump, changelog update, commit, and P
 9. **Push to remote**:
    - Run `git push -u origin {branch-name}`
 
-10. **Create pull request**:
-   - Use `gh pr create` with title and body
+10. **Generate PR markdown**:
+   - Create a markdown-formatted PR title and body
    - Title format: `chore: {brief summary of changes}`
    - Body should include:
      - Summary section with bullet points of changes
      - Test plan checklist
      - Claude Code footer
+   - Generate the GitHub PR creation URL in format:
+     `https://github.com/{owner}/{repo}/compare/main...{branch-name}`
 
-11. **Report the PR URL** to the user in the chat
+11. **Output the PR information** to the user:
+   - Display the PR title
+   - Display the PR body in a code block
+   - Provide the GitHub URL link to create the PR manually
+   - Instruct user to click the link, paste the body, and submit
 
 ## Example PR Body Format
 
@@ -76,9 +82,46 @@ Automate the complete PR workflow: version bump, changelog update, commit, and P
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
+## Example Output to User
+
+After completing all steps, output something like:
+
+```
+## Pull Request Ready! 🚀
+
+**Title:** `chore: add scheduled transaction features`
+
+**Body:**
+```markdown
+## Summary
+- Added schedule action dialog for update/delete scheduled transactions
+- Extended scheduled record generation timeframes
+- Fixed monthly schedule date calculation
+- Filter dashboard to show only records up to end of current month
+
+## Test plan
+- [ ] Create a monthly scheduled transaction
+- [ ] Verify dates are calculated correctly
+- [ ] Test update single vs all occurrences
+- [ ] Test delete single vs all occurrences
+- [ ] Verify dashboard only shows current month records
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+```
+
+**Create your PR here:**
+👉 https://github.com/wanderyt/new-finance-fin-editor/compare/main...fin-editor
+
+Instructions:
+1. Click the link above
+2. GitHub will auto-fill the title
+3. Copy the body from above and paste it into the PR description
+4. Click "Create pull request"
+```
+
 ## Error Handling
 
 - If on main/master branch, warn user and exit
 - If no changes detected, inform user and exit
-- If gh CLI fails, provide the GitHub URL for manual PR creation
 - If git push fails, check if branch already exists and provide guidance
+- Always output the PR information even if automated creation isn't possible

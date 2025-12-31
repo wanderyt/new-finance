@@ -53,6 +53,19 @@ export interface SessionPayload {
 
 // ========== Fin Transaction Types ==========
 
+// Line Item for fin record
+export interface FinLineItem {
+  name: string;
+  originalAmountCents: number;
+  qty?: number;
+  unit?: string;
+  unitPriceCents?: number;
+  personId?: number;
+  category?: string;
+  subcategory?: string;
+  notes?: string;
+}
+
 // Create Fin Request
 export interface CreateFinRequest {
   // Transaction metadata
@@ -72,9 +85,13 @@ export interface CreateFinRequest {
   originalCurrency: "CAD" | "USD" | "CNY";
   originalAmountCents: number; // Amount in cents (e.g., $10.50 = 1050)
 
+  // Line items (optional)
+  lineItems?: FinLineItem[];
+
   // Scheduling (optional)
   isScheduled?: boolean; // default: false
-  scheduleRuleId?: number; // only if isScheduled = true
+  frequency?: "daily" | "weekly" | "biweekly" | "monthly" | "annually"; // required if isScheduled = true
+  scheduleRuleId?: number; // auto-generated from frequency
   scheduledOn?: string; // ISO 8601 with time in UTC, only if isScheduled = true
 }
 
@@ -96,6 +113,9 @@ export interface UpdateFinRequest {
 
   originalCurrency?: "CAD" | "USD" | "CNY";
   originalAmountCents?: number;
+
+  // Line items (optional)
+  lineItems?: FinLineItem[];
 
   // CANNOT update: isScheduled, scheduleRuleId, scheduledOn, finId, userId
 }

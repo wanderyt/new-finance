@@ -5,6 +5,137 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2025-12-30
+
+### Added
+- **Complete Fin Editor UI**: Full-featured bottom sheet editor for expenses and income
+  - Mobile-first design with slide-up animation (300ms)
+  - Type-filtered category selection based on `applies_to` field
+  - Multi-currency support (CAD/USD/CNY) with automatic conversion
+  - Line items management with person assignment for split expenses
+  - Receipt upload with drag & drop support
+  - Tag management with many-to-many relationship
+  - Loading states with minimum 300ms for better UX
+  - Dark mode support throughout
+- **AI-Powered Receipt Analysis**: Automatic receipt parsing and line item extraction
+  - Primary: Google Gemini 1.5 Flash (free tier, 15 req/min)
+  - Backup: OpenAI GPT-4 Vision implementation (not invoked by default)
+  - Extracts merchant, date, currency, and line items with amounts
+  - ReceiptAnalysisDialog for reviewing and editing AI-detected items
+  - Auto-populates form fields from receipt data
+  - Supports multilingual receipts (English/Chinese)
+- **Scheduled Transactions**: Complete recurring transaction system
+  - Auto-creates schedule rules from frequency selection (daily/weekly/biweekly/monthly/annually)
+  - Generates future occurrences automatically:
+    - Daily/Weekly/Biweekly: 3 years of occurrences (1095/156/78)
+    - Monthly: 10 years (120 occurrences)
+    - Annually: 10 years (10 occurrences)
+  - ScheduleActionDialog for choosing single vs all future occurrences on update/delete
+  - Smart date handling for month-end dates (e.g., Jan 31 → Feb 28/29)
+  - UTC-based date calculations to avoid timezone issues
+  - Dashboard filtering to show only records up to end of current month
+- **Database Cleanup Script**: Maintenance utility for orphaned schedule rules
+  - `yarn db:cleanup-schedules` command to remove unused schedule rules
+  - LEFT JOIN query to find rules with no associated fin records
+  - Detailed output showing what was cleaned up
+- **UI Components**: Comprehensive component library for fin editor
+  - **BottomSheet**: Animated bottom sheet with backdrop and focus trap
+  - **Dialog**: Modal dialog with overlay for receipt analysis
+  - **Toggle**: Toggle switch for scheduled transactions
+  - **Select**: Dropdown select component
+  - **TextArea**: Multi-line text input
+  - **Tag**: Tag chip with remove button
+  - **SearchableSelect**: Mobile-friendly searchable dropdown with real-time filtering
+  - **Dropdown**: Lightweight autocomplete dropdown
+- **Form Components**: Specialized inputs for financial data
+  - **CategorySelector**: Two-level category picker with type filtering
+  - **CurrencySelector**: CAD/USD/CNY dropdown
+  - **ScheduledToggle**: Expandable frequency options (daily/weekly/biweekly/monthly/annually)
+  - **TagInput**: Multi-tag input with chip display and autocomplete
+  - **ReceiptUpload**: Drag & drop file upload with preview and analysis
+  - **LineItemEditor**: Line item form with amount, quantity, unit, person assignment
+  - **LineItemsDialog**: Dialog panel for managing transaction line items
+- **API Endpoints**: Complete CRUD operations for fin transactions
+  - GET `/api/fin` - List transactions with type/date filters
+  - GET `/api/fin/[id]` - Single transaction with line items
+  - DELETE `/api/fin/[id]` - Delete with scope parameter for scheduled transactions
+  - GET `/api/fin/autocomplete` - Autocomplete suggestions for merchant/place/city
+  - POST `/api/receipts/analyze` - AI receipt analysis with Gemini/OpenAI
+  - GET `/api/categories` - List categories with type filtering
+  - GET `/api/tags` - List user tags for autocomplete
+  - GET `/api/persons` - List persons for line item assignment
+- **Redux State Management**: Complete fin slice with async thunks
+  - `fetchFinsAsync` - List with filters (type, startDate, endDate)
+  - `fetchFinByIdAsync` - Single transaction
+  - `createFinAsync` - Create with line items and tags
+  - `updateFinAsync` - Update with scope parameter
+  - `deleteFinAsync` - Delete with scope parameter
+  - `analyzeReceiptAsync` - Receipt analysis
+  - Selectors: `selectFilteredFins`, `selectFins`, `selectCurrentFin`, `selectIsLoading`, `selectError`, `selectFilters`
+- **Database Seeding**: Enhanced seed script with expense categories
+  - 50+ expense categories with subcategories
+  - Type filtering (`applies_to`: 'expense', 'income', 'both')
+  - Family person for split expense testing
+- **Documentation**: Comprehensive feature specifications
+  - docs/fin-editor-feature.md (515 lines) - Complete feature spec with UI design
+  - docs/receipt-analysis-ai-implementation.md (561 lines) - AI implementation plan
+  - Component tree, file structure, data flow diagrams
+  - API reference with curl examples
+  - Success criteria and testing checklist
+
+### Changed
+- **Dashboard**: Major restructure for fin editor integration
+  - Dual buttons (支出/收入) with seamless appearance
+  - Filter bar (All | Expenses | Income) for transaction filtering
+  - Fetch only records up to end of current month
+  - Refresh list after editor operations
+  - Color-coded tiles (red for expenses, green for income)
+- **ExpenseTile**: Enhanced with type support
+  - Type indicator badge (Expense/Income)
+  - Color coding based on transaction type
+  - Click handler for editing transactions
+- **API Updates**: Enhanced fin create/update APIs
+  - Auto-create schedule rules from frequency selection
+  - Generate recurring occurrences on creation
+  - Handle scope parameter for scheduled updates/deletes
+  - Use target date (00:00:00) as cutoff instead of current time
+  - Update line items for all future occurrences when scope='all'
+- **Create PR Command**: Simplified workflow
+  - Generate markdown output instead of auto-creating PR via gh CLI
+  - Output PR title, body, and GitHub compare URL
+  - User manually creates PR from generated markdown
+- **Button Component**: Improved disabled state styling
+  - Prevent hover effects when disabled
+  - Better visual feedback for disabled buttons
+- **Input Validation**: Enhanced form validation
+  - Amount formatting on blur (converts to dollars.cents)
+  - City and merchant validation in fin editor
+  - Line item amount prevents cursor jump during input
+
+### Fixed
+- **Monthly Schedule Dates**: UTC-based calculation for correct month-end handling
+  - Switched from local timezone methods to UTC methods throughout
+  - Properly handles Jan 31 → Feb 28/29, preserves time components
+  - Prevents date drift due to timezone conversion issues
+- **SearchableSelect**: Improved user input and option selection handling
+  - Properly handles typing vs clicking options
+  - Better state management for search and selection
+- **Line Item Amount Input**: Prevents cursor jump during editing
+  - Only updates cents value on blur, not on keystroke
+  - Smooth editing experience without interruption
+- **Auth Middleware**: Updated fin API routes to use `withAuth` pattern
+  - Consistent authentication across all endpoints
+  - Proper ownership validation on updates/deletes
+
+### Technical
+- **Scheduling**: Auto-generation with frequency-based occurrence counts
+- **Date Handling**: UTC methods (getUTCDate, Date.UTC, setUTCFullYear) for timezone safety
+- **AI Vision**: Google Gemini 1.5 Flash primary, OpenAI GPT-4 Vision backup
+- **Database**: Orphaned schedule rule cleanup via LEFT JOIN query
+- **Form UX**: Minimum 300ms loading states for perceived responsiveness
+- **Components**: 5000+ lines of new React components and UI logic
+- **Type Safety**: Complete TypeScript interfaces for all API contracts
+
 ## [0.9.0] - 2025-12-29
 
 ### Added
