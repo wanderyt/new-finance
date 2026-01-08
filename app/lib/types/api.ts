@@ -182,3 +182,41 @@ export interface ListFinResponse {
   data: FinData[];
   pagination: PaginationMeta;
 }
+
+// ========== History/Search Filter Types ==========
+
+// Date range filter configuration
+export interface DateRangeFilter {
+  preset: "thisMonth" | "thisYear" | "custom";
+  customStart?: string; // ISO 8601
+  customEnd?: string; // ISO 8601
+}
+
+// Amount range filter
+export interface AmountRangeFilter {
+  min?: number; // In cents
+  max?: number; // In cents
+}
+
+// Search filters for history view
+export interface SearchFilters {
+  keyword?: string; // Search in merchant, category, subcategory, comment
+  type: "all" | "expense" | "income";
+  dateRange: DateRangeFilter;
+  categories?: string[]; // Array of "category:subcategory"
+  amountRange?: AmountRangeFilter;
+}
+
+// Grouped data structures for history view
+export interface DayGroup {
+  dayKey: string; // "2026-01-19"
+  date: Date;
+  fins: FinData[];
+  totalCents: number;
+}
+
+export interface MonthGroup {
+  monthKey: string; // "2026-01"
+  days: DayGroup[];
+  totalCents: number;
+}
