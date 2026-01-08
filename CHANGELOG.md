@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-01-08
+
+### Added
+- **Calculator Component**: Interactive calculator for amount inputs
+  - Calculator icon appears on right edge of transaction amount input
+  - Panel slides down below input with smooth animation
+  - Sequential calculator logic (like iOS calculator)
+  - Support for basic operations: addition (+), subtraction (-), multiplication (×), division (÷)
+  - Clear (C) and backspace (⌫) buttons for corrections
+  - Decimal point support with validation
+  - Edge case handling: division by zero shows error, max value cap at 999,999,999.99
+  - Click outside or ESC key to close calculator panel
+  - Results automatically formatted to 2 decimal places
+  - Dark mode support
+
+### Fixed
+- **SearchableSelect Empty Options**: Removed invalid empty options from merchant, place, and city dropdowns
+  - Previously showed an empty option at the top of each SearchableSelect dropdown
+  - Now only displays valid, selectable options
+
 ## [0.10.0] - 2025-12-30
 
 ### Added

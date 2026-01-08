@@ -4,6 +4,7 @@ import { useState, FormEvent, useEffect } from "react";
 import Button from "../ui-kit/Button";
 import SearchableSelect from "../ui-kit/SearchableSelect";
 import Dropdown from "../ui-kit/Dropdown";
+import CalculatorInput from "../ui-kit/CalculatorInput";
 import TagInput from "./TagInput";
 import ReceiptUpload from "./ReceiptUpload";
 import { LineItem } from "./LineItemEditor";
@@ -103,13 +104,13 @@ const FinEditorForm = ({
   // Autocomplete data
   const [merchantOptions, setMerchantOptions] = useState<
     Array<{ value: string; label: string }>
-  >([{ value: "", label: "" }]);
+  >([]);
   const [placeOptions, setPlaceOptions] = useState<
     Array<{ value: string; label: string }>
-  >([{ value: "", label: "" }]);
+  >([]);
   const [cityOptions, setCityOptions] = useState<
     Array<{ value: string; label: string }>
-  >([{ value: "", label: "" }]);
+  >([]);
   const [persons, setPersons] = useState<
     Array<{ personId: number; name: string; isDefault?: boolean }>
   >([]);
@@ -127,14 +128,12 @@ const FinEditorForm = ({
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setMerchantOptions([
-            { value: "", label: "" },
-            ...data.data.merchants.map((m: string) => ({ value: m, label: m })),
-          ]);
-          setPlaceOptions([
-            { value: "", label: "" },
-            ...data.data.places.map((p: string) => ({ value: p, label: p })),
-          ]);
+          setMerchantOptions(
+            data.data.merchants.map((m: string) => ({ value: m, label: m }))
+          );
+          setPlaceOptions(
+            data.data.places.map((p: string) => ({ value: p, label: p }))
+          );
           // Pin common cities at the top
           const pinnedCities = ["Waterloo", "Kitchener", "Toronto"];
           const otherCities = data.data.cities.filter(
@@ -403,36 +402,33 @@ const FinEditorForm = ({
 
       {/* Amount and Currency */}
       <div className="flex gap-2">
-        <div className="flex-1 relative">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <input
-            type="number"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            onBlur={(e) => {
-              const value = parseFloat(e.target.value);
-              if (!isNaN(value)) {
-                setAmount(value.toFixed(2));
-              }
-            }}
-            placeholder="0.00"
-            required
-            className="w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
-          />
-        </div>
+        <CalculatorInput
+          value={amount}
+          onChange={(val) => setAmount(val)}
+          onBlur={(e) => {
+            const value = parseFloat(e.target.value);
+            if (!isNaN(value)) {
+              setAmount(value.toFixed(2));
+            }
+          }}
+          placeholder="0.00"
+          required
+          leftIcon={
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          }
+        />
         <Dropdown
           value={currency}
           onChange={(val) => setCurrency(val as "CAD" | "USD" | "CNY")}
