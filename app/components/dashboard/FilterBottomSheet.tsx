@@ -135,13 +135,9 @@ export default function FilterBottomSheet({
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose}>
-      <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          筛选交易
-        </h2>
-
+      <div className="p-4 space-y-3 max-h-[80vh] overflow-y-auto">
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
             关键词
           </label>
           <Input
@@ -153,13 +149,13 @@ export default function FilterBottomSheet({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
             类型
           </label>
           <div className="flex gap-2">
             <button
               onClick={() => setType("all")}
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 type === "all"
                   ? "bg-blue-600 text-white"
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -169,7 +165,7 @@ export default function FilterBottomSheet({
             </button>
             <button
               onClick={() => setType("expense")}
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 type === "expense"
                   ? "bg-blue-600 text-white"
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -179,7 +175,7 @@ export default function FilterBottomSheet({
             </button>
             <button
               onClick={() => setType("income")}
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 type === "income"
                   ? "bg-blue-600 text-white"
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -191,13 +187,13 @@ export default function FilterBottomSheet({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
             日期范围
           </label>
           <select
             value={datePreset}
             onChange={(e) => setDatePreset(e.target.value as any)}
-            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+            className="w-full px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
           >
             <option value="all">全部时间</option>
             <option value="thisMonth">本月</option>
@@ -229,7 +225,7 @@ export default function FilterBottomSheet({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
             分类
           </label>
           <div className="max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg">
@@ -242,13 +238,13 @@ export default function FilterBottomSheet({
                 <div key={cat} className="border-b border-zinc-200 dark:border-zinc-700 last:border-0">
                   <button
                     onClick={() => toggleCategoryExpanded(cat)}
-                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                    className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                   >
-                    <span className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
+                    <span className="font-medium text-xs text-zinc-900 dark:text-zinc-100">
                       {cat}
                     </span>
                     <svg
-                      className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform ${
+                      className={`w-3 h-3 text-zinc-500 dark:text-zinc-400 transition-transform ${
                         isExpanded ? "rotate-90" : ""
                       }`}
                       fill="none"
@@ -264,14 +260,14 @@ export default function FilterBottomSheet({
                     </svg>
                   </button>
                   {isExpanded && (
-                    <div className="px-3 py-2 bg-zinc-50 dark:bg-zinc-900 space-y-1">
+                    <div className="px-2 py-1.5 bg-zinc-50 dark:bg-zinc-900 space-y-0.5">
                       {subcats.map((subcat) => {
                         const value = `${subcat.category}:${subcat.subcategory}`;
                         const isSelected = categories.includes(value);
                         return (
                           <label
                             key={value}
-                            className="flex items-center gap-2 pl-2 cursor-pointer"
+                            className="flex items-center gap-1.5 pl-1 cursor-pointer"
                           >
                             <input
                               type="checkbox"
@@ -279,9 +275,9 @@ export default function FilterBottomSheet({
                               onChange={() =>
                                 toggleCategory(subcat.category, subcat.subcategory)
                               }
-                              className="w-4 h-4 text-blue-600 rounded"
+                              className="w-3 h-3 text-blue-600 rounded"
                             />
-                            <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                            <span className="text-xs text-zinc-700 dark:text-zinc-300">
                               {subcat.subcategory}
                             </span>
                           </label>
@@ -293,7 +289,7 @@ export default function FilterBottomSheet({
               );
             })}
             {uniqueCategories.length === 0 && (
-              <div className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">
+              <div className="text-xs text-zinc-500 dark:text-zinc-400 text-center py-3">
                 暂无分类
               </div>
             )}
@@ -301,7 +297,7 @@ export default function FilterBottomSheet({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
             金额范围
           </label>
           <div className="flex gap-2">
