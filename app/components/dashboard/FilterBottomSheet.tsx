@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   selectHistoryFilters,
@@ -53,6 +53,7 @@ export default function FilterBottomSheet({
   const [availableCategories, setAvailableCategories] = useState<
     Array<{ category: string; subcategory: string }>
   >([]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -102,13 +103,21 @@ export default function FilterBottomSheet({
   const handleReset = () => {
     setKeyword("");
     setType("all");
-    setDatePreset("thisYear");
+    setDatePreset("all");
     setCustomStart("");
     setCustomEnd("");
     setMinAmount("");
     setMaxAmount("");
     setCategories([]);
     dispatch(resetHistoryFilters());
+  };
+
+  const toggleCategoryExpanded = (cat: string) => {
+    if (expandedCategories.includes(cat)) {
+      setExpandedCategories(expandedCategories.filter((c) => c !== cat));
+    } else {
+      setExpandedCategories([...expandedCategories, cat]);
+    }
   };
 
   const toggleCategory = (cat: string, subcat: string) => {
@@ -185,38 +194,17 @@ export default function FilterBottomSheet({
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
             日期范围
           </label>
-          <div className="flex gap-2 mb-3">
-            <button
-              onClick={() => setDatePreset("thisMonth")}
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                datePreset === "thisMonth"
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-              }`}
-            >
-              本月
-            </button>
-            <button
-              onClick={() => setDatePreset("thisYear")}
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                datePreset === "thisYear"
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-              }`}
-            >
-              今年
-            </button>
-            <button
-              onClick={() => setDatePreset("custom")}
-              className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                datePreset === "custom"
-                  ? "bg-blue-600 text-white"
-                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-              }`}
-            >
-              自定义
-            </button>
-          </div>
+          <select
+            value={datePreset}
+            onChange={(e) => setDatePreset(e.target.value as any)}
+            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+          >
+            <option value="all">全部时间</option>
+            <option value="thisMonth">本月</option>
+            <option value="thisYear">今年</option>
+            <option value="lastYear">去年</option>
+            <option value="custom">自定义</option>
+          </select>
 
           {datePreset === "custom" && (
             <div className="flex gap-2">
@@ -244,38 +232,63 @@ export default function FilterBottomSheet({
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
             分类
           </label>
-          <div className="max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 space-y-2">
+          <div className="max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg">
             {uniqueCategories.map((cat) => {
               const subcats = availableCategories.filter(
                 (c) => c.category === cat
               );
+              const isExpanded = expandedCategories.includes(cat);
               return (
-                <div key={cat} className="space-y-1">
-                  <div className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
-                    {cat}
-                  </div>
-                  {subcats.map((subcat) => {
-                    const value = `${subcat.category}:${subcat.subcategory}`;
-                    const isSelected = categories.includes(value);
-                    return (
-                      <label
-                        key={value}
-                        className="flex items-center gap-2 pl-4 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() =>
-                            toggleCategory(subcat.category, subcat.subcategory)
-                          }
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                        <span className="text-sm text-zinc-700 dark:text-zinc-300">
-                          {subcat.subcategory}
-                        </span>
-                      </label>
-                    );
-                  })}
+                <div key={cat} className="border-b border-zinc-200 dark:border-zinc-700 last:border-0">
+                  <button
+                    onClick={() => toggleCategoryExpanded(cat)}
+                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    <span className="font-medium text-sm text-zinc-900 dark:text-zinc-100">
+                      {cat}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform ${
+                        isExpanded ? "rotate-90" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+                  {isExpanded && (
+                    <div className="px-3 py-2 bg-zinc-50 dark:bg-zinc-900 space-y-1">
+                      {subcats.map((subcat) => {
+                        const value = `${subcat.category}:${subcat.subcategory}`;
+                        const isSelected = categories.includes(value);
+                        return (
+                          <label
+                            key={value}
+                            className="flex items-center gap-2 pl-2 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() =>
+                                toggleCategory(subcat.category, subcat.subcategory)
+                              }
+                              className="w-4 h-4 text-blue-600 rounded"
+                            />
+                            <span className="text-sm text-zinc-700 dark:text-zinc-300">
+                              {subcat.subcategory}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}

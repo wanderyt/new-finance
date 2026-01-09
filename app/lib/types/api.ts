@@ -187,7 +187,7 @@ export interface ListFinResponse {
 
 // Date range filter configuration
 export interface DateRangeFilter {
-  preset: "thisMonth" | "thisYear" | "custom";
+  preset: "all" | "thisMonth" | "thisYear" | "lastYear" | "custom";
   customStart?: string; // ISO 8601
   customEnd?: string; // ISO 8601
 }

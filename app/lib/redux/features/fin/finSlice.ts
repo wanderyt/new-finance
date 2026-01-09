@@ -57,7 +57,7 @@ const initialState: FinState = {
     searchFilters: {
       type: "all",
       dateRange: {
-        preset: "thisYear",
+        preset: "all",
       },
     },
 
@@ -233,6 +233,9 @@ function calculateDateRange(
   const now = new Date();
 
   switch (dateRange.preset) {
+    case "all":
+      return {};
+
     case "thisMonth": {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       return {
@@ -246,6 +249,15 @@ function calculateDateRange(
       return {
         dateFrom: startOfYear.toISOString(),
         dateTo: now.toISOString(),
+      };
+    }
+
+    case "lastYear": {
+      const startOfLastYear = new Date(now.getFullYear() - 1, 0, 1);
+      const endOfLastYear = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+      return {
+        dateFrom: startOfLastYear.toISOString(),
+        dateTo: endOfLastYear.toISOString(),
       };
     }
 
@@ -446,7 +458,7 @@ const finSlice = createSlice({
     resetHistoryFilters: (state) => {
       state.history.searchFilters = {
         type: "all",
-        dateRange: { preset: "thisYear" },
+        dateRange: { preset: "all" },
       };
     },
   },
@@ -748,7 +760,7 @@ export const selectHistoryFilterCount = createSelector(
 
     if (filters.keyword) count++;
     if (filters.type !== "all") count++;
-    if (filters.dateRange.preset !== "thisYear") count++;
+    if (filters.dateRange.preset !== "all") count++;
     if (filters.categories && filters.categories.length > 0) count++;
     if (filters.amountRange?.min || filters.amountRange?.max) count++;
 
