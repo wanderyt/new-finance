@@ -135,8 +135,8 @@ export default function FilterBottomSheet({
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose}>
-      <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-        <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+      <div className="p-4 space-y-4 max-h-[80vh] overflow-y-auto">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
           筛选交易
         </h2>
 
