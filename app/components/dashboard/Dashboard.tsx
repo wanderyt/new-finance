@@ -80,14 +80,20 @@ export default function Dashboard() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  const thisMonthExpenses = fins
+  // Filter fins to only show records up to current month
+  const finsUpToNow = fins.filter((fin) => {
+    const finDate = new Date(fin.date);
+    return finDate <= endOfMonth;
+  });
+
+  const thisMonthExpenses = finsUpToNow
     .filter((fin) => {
       const finDate = new Date(fin.date);
       return fin.type === "expense" && finDate >= startOfMonth && finDate <= endOfMonth;
     })
     .reduce((sum, fin) => sum + fin.amountCadCents, 0);
 
-  const thisMonthIncome = fins
+  const thisMonthIncome = finsUpToNow
     .filter((fin) => {
       const finDate = new Date(fin.date);
       return fin.type === "income" && finDate >= startOfMonth && finDate <= endOfMonth;
@@ -212,7 +218,7 @@ export default function Dashboard() {
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
                   </div>
-                ) : fins.length === 0 ? (
+                ) : finsUpToNow.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-zinc-500 dark:text-zinc-400">
                     <svg
                       className="w-16 h-16 mb-4"
@@ -233,7 +239,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                 ) : (
-                  fins.map((fin) => (
+                  finsUpToNow.map((fin) => (
                     <ExpenseTile key={fin.finId} fin={fin} onClick={handleEditFin} />
                   ))
                 )}
