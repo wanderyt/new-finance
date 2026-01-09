@@ -36,7 +36,24 @@ export interface FinState {
     expandedMonths: string[];
     expandedDays: string[];
   };
+
+  charts: {
+    viewMode: "month" | "year";
+    selectedMonth?: string;
+    selectedYear?: string;
+    drilldownCategory?: string;
+    selectedCategoryForList?: string;
+    selectedSubcategoryForList?: string;
+    comparisonMonth1?: string;
+    comparisonMonth2?: string;
+  };
 }
+
+// Get current month and previous month for defaults
+const now = new Date();
+const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+const previousMonth = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, "0")}`;
 
 const initialState: FinState = {
   fins: [],
@@ -63,6 +80,13 @@ const initialState: FinState = {
 
     expandedMonths: [],
     expandedDays: [],
+  },
+
+  charts: {
+    viewMode: "month",
+    selectedMonth: currentMonth,
+    comparisonMonth1: currentMonth,
+    comparisonMonth2: previousMonth,
   },
 };
 
@@ -461,6 +485,52 @@ const finSlice = createSlice({
         dateRange: { preset: "all" },
       };
     },
+
+    // Charts actions
+    setChartsViewMode: (state, action: PayloadAction<"month" | "year">) => {
+      state.charts.viewMode = action.payload;
+    },
+
+    setChartsSelectedMonth: (state, action: PayloadAction<string>) => {
+      state.charts.selectedMonth = action.payload;
+    },
+
+    setChartsSelectedYear: (state, action: PayloadAction<string>) => {
+      state.charts.selectedYear = action.payload;
+    },
+
+    setChartsDrilldownCategory: (state, action: PayloadAction<string | undefined>) => {
+      state.charts.drilldownCategory = action.payload;
+    },
+
+    setChartsCategoryForList: (
+      state,
+      action: PayloadAction<{ category?: string; subcategory?: string }>
+    ) => {
+      state.charts.selectedCategoryForList = action.payload.category;
+      state.charts.selectedSubcategoryForList = action.payload.subcategory;
+    },
+
+    setChartsComparisonMonths: (
+      state,
+      action: PayloadAction<{ month1?: string; month2?: string }>
+    ) => {
+      if (action.payload.month1 !== undefined) {
+        state.charts.comparisonMonth1 = action.payload.month1;
+      }
+      if (action.payload.month2 !== undefined) {
+        state.charts.comparisonMonth2 = action.payload.month2;
+      }
+    },
+
+    clearChartsCategorySelection: (state) => {
+      state.charts.selectedCategoryForList = undefined;
+      state.charts.selectedSubcategoryForList = undefined;
+    },
+
+    clearChartsDrilldown: (state) => {
+      state.charts.drilldownCategory = undefined;
+    },
   },
   extraReducers: (builder) => {
     // Fetch fins
@@ -624,6 +694,14 @@ export const {
   toggleDayExpanded,
   clearHistoryData,
   resetHistoryFilters,
+  setChartsViewMode,
+  setChartsSelectedMonth,
+  setChartsSelectedYear,
+  setChartsDrilldownCategory,
+  setChartsCategoryForList,
+  setChartsComparisonMonths,
+  clearChartsCategorySelection,
+  clearChartsDrilldown,
 } = finSlice.actions;
 
 // Selectors
@@ -765,6 +843,191 @@ export const selectHistoryFilterCount = createSelector(
     if (filters.amountRange?.min || filters.amountRange?.max) count++;
 
     return count;
+  }
+);
+
+// Charts selectors
+export const selectChartsViewMode = (state: RootState) => state.fin.charts.viewMode;
+export const selectChartsSelectedMonth = (state: RootState) => state.fin.charts.selectedMonth;
+export const selectChartsSelectedYear = (state: RootState) => state.fin.charts.selectedYear;
+export const selectChartsDrilldownCategory = (state: RootState) => state.fin.charts.drilldownCategory;
+export const selectChartsComparisonMonth1 = (state: RootState) => state.fin.charts.comparisonMonth1;
+export const selectChartsComparisonMonth2 = (state: RootState) => state.fin.charts.comparisonMonth2;
+
+// Get available months from fins data
+export const selectAvailableMonths = createSelector([selectFins], (fins): string[] => {
+  const months = new Set<string>();
+  fins.forEach((fin) => {
+    const date = new Date(fin.date);
+    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    months.add(month);
+  });
+  return Array.from(months).sort().reverse();
+});
+
+// Get available years from fins data
+export const selectAvailableYears = createSelector([selectFins], (fins): string[] => {
+  const years = new Set<string>();
+  fins.forEach((fin) => {
+    const date = new Date(fin.date);
+    years.add(String(date.getFullYear()));
+  });
+  return Array.from(years).sort().reverse();
+});
+
+// Filter fins for charts (by selected month/year + expenses only)
+export const selectChartsFilteredFins = createSelector(
+  [selectFins, selectChartsViewMode, selectChartsSelectedMonth, selectChartsSelectedYear],
+  (fins, viewMode, selectedMonth, selectedYear): FinData[] => {
+    return fins.filter((fin) => {
+      if (fin.type !== "expense") return false;
+
+      const finDate = new Date(fin.date);
+      if (viewMode === "month" && selectedMonth) {
+        const finMonth = `${finDate.getFullYear()}-${String(finDate.getMonth() + 1).padStart(2, "0")}`;
+        return finMonth === selectedMonth;
+      } else if (viewMode === "year" && selectedYear) {
+        return String(finDate.getFullYear()) === selectedYear;
+      }
+      return true;
+    });
+  }
+);
+
+interface CategoryData {
+  category: string;
+  subcategory?: string;
+  totalCents: number;
+  count: number;
+}
+
+// Aggregate category data for bar chart
+export const selectCategoryChartData = createSelector(
+  [selectChartsFilteredFins, selectChartsDrilldownCategory],
+  (fins, drilldownCategory): CategoryData[] => {
+    const aggregated: Record<string, { totalCents: number; count: number }> = {};
+
+    fins.forEach((fin) => {
+      const category = fin.category || "Uncategorized";
+      const subcategory = fin.subcategory;
+
+      let key: string;
+      if (drilldownCategory) {
+        // Drill-down view: show subcategories for the selected category
+        if (category !== drilldownCategory) return;
+        key = subcategory || "Uncategorized";
+      } else {
+        // Top-level view: show categories
+        key = category;
+      }
+
+      if (!aggregated[key]) {
+        aggregated[key] = { totalCents: 0, count: 0 };
+      }
+      aggregated[key].totalCents += fin.amountCadCents;
+      aggregated[key].count += 1;
+    });
+
+    // Convert to array and sort by total descending
+    return Object.entries(aggregated)
+      .map(([name, data]) => ({
+        category: drilldownCategory || name,
+        subcategory: drilldownCategory ? name : undefined,
+        totalCents: data.totalCents,
+        count: data.count,
+      }))
+      .sort((a, b) => b.totalCents - a.totalCents)
+      .slice(0, 15); // Top 15
+  }
+);
+
+// Get expense list for selected category
+export const selectCategoryExpenseList = createSelector(
+  [
+    selectChartsFilteredFins,
+    (state: RootState) => state.fin.charts.selectedCategoryForList,
+    (state: RootState) => state.fin.charts.selectedSubcategoryForList,
+  ],
+  (fins, selectedCategory, selectedSubcategory): FinData[] => {
+    if (!selectedCategory) return [];
+
+    return fins
+      .filter((fin) => {
+        const category = fin.category || "Uncategorized";
+        if (category !== selectedCategory) return false;
+
+        if (selectedSubcategory) {
+          const subcategory = fin.subcategory || "Uncategorized";
+          return subcategory === selectedSubcategory;
+        }
+
+        return true;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+);
+
+interface DayAccumulation {
+  day: number;
+  month1Total: number;
+  month2Total: number;
+}
+
+// Accumulate monthly expenses by day for comparison
+export const selectMonthComparisonData = createSelector(
+  [selectFins, selectChartsComparisonMonth1, selectChartsComparisonMonth2],
+  (fins, month1, month2): DayAccumulation[] => {
+    if (!month1 || !month2) return [];
+
+    const accumulateMonth = (month: string): Record<number, number> => {
+      const [year, monthNum] = month.split("-").map(Number);
+      const daysInMonth = new Date(year, monthNum, 0).getDate();
+      const monthFins = fins.filter((fin) => {
+        if (fin.type !== "expense") return false;
+        const finDate = new Date(fin.date);
+        const finMonth = `${finDate.getFullYear()}-${String(finDate.getMonth() + 1).padStart(2, "0")}`;
+        return finMonth === month;
+      });
+
+      // Group by day
+      const dailyTotals: Record<number, number> = {};
+      monthFins.forEach((fin) => {
+        const finDate = new Date(fin.date);
+        const day = finDate.getDate();
+        dailyTotals[day] = (dailyTotals[day] || 0) + fin.amountCadCents;
+      });
+
+      // Accumulate
+      let runningTotal = 0;
+      const accumulated: Record<number, number> = {};
+      for (let day = 1; day <= daysInMonth; day++) {
+        runningTotal += dailyTotals[day] || 0;
+        accumulated[day] = runningTotal;
+      }
+
+      return accumulated;
+    };
+
+    const month1Data = accumulateMonth(month1);
+    const month2Data = accumulateMonth(month2);
+
+    // Find max days
+    const maxDays = Math.max(
+      Object.keys(month1Data).length,
+      Object.keys(month2Data).length
+    );
+
+    // Build result array
+    const result: DayAccumulation[] = [];
+    for (let day = 1; day <= maxDays; day++) {
+      result.push({
+        day,
+        month1Total: month1Data[day] || month1Data[day - 1] || 0,
+        month2Total: month2Data[day] || month2Data[day - 1] || 0,
+      });
+    }
+
+    return result;
   }
 );
 
