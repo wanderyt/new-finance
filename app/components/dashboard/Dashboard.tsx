@@ -36,14 +36,9 @@ export default function Dashboard() {
 
   const isLoading = authStatus === "loading";
 
-  // Fetch fins on mount - only show records up to end of current month
+  // Fetch fins on mount - show all records up to today
   useEffect(() => {
-    // Calculate end of current month
-    const now = new Date();
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    const endDate = endOfMonth.toISOString();
-
-    dispatch(fetchFinsAsync({ endDate }));
+    dispatch(fetchFinsAsync());
   }, [dispatch]);
 
   const handleLogout = async () => {
@@ -72,25 +67,31 @@ export default function Dashboard() {
   };
 
   const handleEditorSuccess = async () => {
-    // Refresh the list - only show records up to end of current month
-    const now = new Date();
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    const endDate = endOfMonth.toISOString();
-
-    await dispatch(fetchFinsAsync({ endDate }));
+    // Refresh the list - show all records up to today
+    await dispatch(fetchFinsAsync());
   };
 
   const handleFilterChange = (type: "all" | "expense" | "income") => {
     dispatch(setFilters({ type }));
   };
 
-  // Calculate stats
+  // Calculate stats - only for current month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
   const thisMonthExpenses = fins
-    .filter((fin) => fin.type === "expense")
+    .filter((fin) => {
+      const finDate = new Date(fin.date);
+      return fin.type === "expense" && finDate >= startOfMonth && finDate <= endOfMonth;
+    })
     .reduce((sum, fin) => sum + fin.amountCadCents, 0);
 
   const thisMonthIncome = fins
-    .filter((fin) => fin.type === "income")
+    .filter((fin) => {
+      const finDate = new Date(fin.date);
+      return fin.type === "income" && finDate >= startOfMonth && finDate <= endOfMonth;
+    })
     .reduce((sum, fin) => sum + fin.amountCadCents, 0);
 
   const balance = thisMonthIncome - thisMonthExpenses;
