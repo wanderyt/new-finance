@@ -44,7 +44,7 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
       {/* Left Side */}
       <div className="flex-1 min-w-0">
         {/* Category > Subcategory */}
-        <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-0.5">
+        <div className="text-xs font-medium text-zinc-900 dark:text-zinc-100 mb-0.5">
           {fin.category || "Uncategorized"}
           {fin.subcategory && (
             <>
@@ -64,7 +64,7 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
         )}
 
         {/* Place & Badges */}
-        <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-500">
+        <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-500">
           {fin.place && <span>{fin.place}</span>}
           {typeBadge}
           {fin.isScheduled && (
@@ -76,20 +76,20 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
       </div>
 
       {/* Right Side */}
-      <div className="flex items-center gap-2 ml-4">
+      <div className="flex items-center gap-2 ml-3">
         {/* Info Icon with Tooltip */}
         {fin.originalCurrency !== "CAD" && (
           <div className="relative">
             <button
               type="button"
-              className="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors"
+              className="p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors"
               onMouseEnter={() => setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}
               onClick={(e) => e.stopPropagation()}
               aria-label="Exchange rate information"
             >
               <svg
-                className="w-4 h-4 text-zinc-500 dark:text-zinc-500"
+                className="w-3.5 h-3.5 text-zinc-500 dark:text-zinc-500"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -103,7 +103,7 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
               </svg>
             </button>
             {showTooltip && (
-              <div className="absolute bottom-full right-0 mb-2 px-3 py-2 bg-zinc-900 dark:bg-zinc-700 text-white text-xs rounded-lg shadow-lg whitespace-nowrap z-50">
+              <div className="absolute bottom-full right-0 mb-2 px-2 py-1.5 bg-zinc-900 dark:bg-zinc-700 text-white text-xs rounded-lg shadow-lg whitespace-nowrap z-50">
                 <div>CAD: {exchangeInfo.cad}</div>
                 <div>USD: {exchangeInfo.usd}</div>
                 <div>CNY: {exchangeInfo.cny}</div>
@@ -115,7 +115,7 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
 
         {/* Amount */}
         <div className="text-right">
-          <div className={`text-sm font-semibold ${amountColor}`}>
+          <div className={`text-xs font-semibold ${amountColor}`}>
             {displayAmount}
           </div>
           <div className="text-xs text-zinc-500 dark:text-zinc-500">

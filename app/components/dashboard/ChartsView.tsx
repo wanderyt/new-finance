@@ -34,7 +34,8 @@ interface ChartsViewProps {
 
 export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewProps) {
   const dispatch = useAppDispatch();
-  const [chartType, setChartType] = useState<"bar" | "pie">("bar");
+  const [chartType, setChartType] = useState<"bar" | "pie">("pie");
+  const [viewMode, setViewMode] = useState<"category" | "comparison">("category");
 
   // Selectors
   const categoryChartData = useAppSelector(selectCategoryChartData);
@@ -106,98 +107,122 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
         {/* Date Filter */}
         <MonthYearFilter />
 
-        {/* Category Breakdown Section */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-              分类支出
-            </label>
-            {/* Chart Type Toggle */}
-            <div className="flex gap-0.5 bg-zinc-100 dark:bg-zinc-700 p-0.5 rounded">
-              <button
-                onClick={() => setChartType("bar")}
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                  chartType === "bar"
-                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                }`}
-              >
-                柱状图
-              </button>
-              <button
-                onClick={() => setChartType("pie")}
-                className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                  chartType === "pie"
-                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                }`}
-              >
-                饼图
-              </button>
-            </div>
-          </div>
-
-          {/* Breadcrumb (if drilled down) */}
-          <CategoryBreadcrumb
-            drilldownCategory={drilldownCategory}
-            onBack={handleBreadcrumbBack}
-          />
-
-          {/* Chart */}
-          {filteredFins.length === 0 ? (
-            <div className="text-center py-6 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-              <p className="text-xs">所选时段无支出数据</p>
-            </div>
-          ) : chartType === "bar" ? (
-            <CategoryBarChart
-              data={categoryChartData}
-              drilldownCategory={drilldownCategory}
-              onCategoryClick={handleCategoryClick}
-              height={220}
-            />
-          ) : (
-            <CategoryPieChart
-              data={categoryChartData}
-              drilldownCategory={drilldownCategory}
-              onCategoryClick={handleCategoryClick}
-              height={220}
-            />
-          )}
-
-          {/* Expense List (when category selected) */}
-          {categoryExpenseList.length > 0 && onFinClick && (
-            <CategoryExpenseList
-              category={categoryExpenseList[0]?.category || "未分类"}
-              subcategory={categoryExpenseList[0]?.subcategory || undefined}
-              transactions={categoryExpenseList}
-              onFinClick={onFinClick}
-              onClear={handleClearExpenseList}
-            />
-          )}
-        </div>
-
-        {/* Month Comparison Section */}
-        <div>
-          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+        {/* View Mode Tabs */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setViewMode("category")}
+            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              viewMode === "category"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+            }`}
+          >
+            分类视图
+          </button>
+          <button
+            onClick={() => setViewMode("comparison")}
+            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              viewMode === "comparison"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+            }`}
+          >
             月度对比
-          </label>
-
-          {availableMonths.length < 2 ? (
-            <div className="text-center py-6 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-              <p className="text-xs">至少需要2个月的数据才能对比</p>
-            </div>
-          ) : (
-            <MonthComparisonLineChart
-              month1={month1}
-              month2={month2}
-              data={comparisonData}
-              availableMonths={availableMonths}
-              onMonth1Change={handleMonth1Change}
-              onMonth2Change={handleMonth2Change}
-              height={220}
-            />
-          )}
+          </button>
         </div>
+
+        {/* Category View */}
+        {viewMode === "category" && (
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                图表类型
+              </label>
+              {/* Chart Type Toggle */}
+              <div className="flex gap-0.5 bg-zinc-100 dark:bg-zinc-700 p-0.5 rounded">
+                <button
+                  onClick={() => setChartType("pie")}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                    chartType === "pie"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  }`}
+                >
+                  饼图
+                </button>
+                <button
+                  onClick={() => setChartType("bar")}
+                  className={`px-2 py-0.5 text-xs rounded transition-colors ${
+                    chartType === "bar"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  }`}
+                >
+                  柱状图
+                </button>
+              </div>
+            </div>
+
+            {/* Breadcrumb (if drilled down) */}
+            <CategoryBreadcrumb
+              drilldownCategory={drilldownCategory}
+              onBack={handleBreadcrumbBack}
+            />
+
+            {/* Chart */}
+            {filteredFins.length === 0 ? (
+              <div className="text-center py-6 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                <p className="text-xs">所选时段无支出数据</p>
+              </div>
+            ) : chartType === "pie" ? (
+              <CategoryPieChart
+                data={categoryChartData}
+                drilldownCategory={drilldownCategory}
+                onCategoryClick={handleCategoryClick}
+                height={220}
+              />
+            ) : (
+              <CategoryBarChart
+                data={categoryChartData}
+                drilldownCategory={drilldownCategory}
+                onCategoryClick={handleCategoryClick}
+                height={220}
+              />
+            )}
+
+            {/* Expense List (when category selected) */}
+            {categoryExpenseList.length > 0 && onFinClick && (
+              <CategoryExpenseList
+                category={categoryExpenseList[0]?.category || "未分类"}
+                subcategory={categoryExpenseList[0]?.subcategory || undefined}
+                transactions={categoryExpenseList}
+                onFinClick={onFinClick}
+                onClear={handleClearExpenseList}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Comparison View */}
+        {viewMode === "comparison" && (
+          <div>
+            {availableMonths.length < 2 ? (
+              <div className="text-center py-6 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                <p className="text-xs">至少需要2个月的数据才能对比</p>
+              </div>
+            ) : (
+              <MonthComparisonLineChart
+                month1={month1}
+                month2={month2}
+                data={comparisonData}
+                availableMonths={availableMonths}
+                onMonth1Change={handleMonth1Change}
+                onMonth2Change={handleMonth2Change}
+                height={280}
+              />
+            )}
+          </div>
+        )}
       </div>
     </BottomSheet>
   );
