@@ -128,16 +128,16 @@ export default function FilterBottomSheet({
     <BottomSheet isOpen={isOpen} onClose={onClose}>
       <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
         <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-          Filter Transactions
+          筛选交易
         </h2>
 
         <div>
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Keyword
+            关键词
           </label>
           <Input
             type="text"
-            placeholder="Search merchant, category, comment..."
+            placeholder="搜索商户、分类、备注..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
@@ -145,7 +145,7 @@ export default function FilterBottomSheet({
 
         <div>
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Type
+            类型
           </label>
           <div className="flex gap-2">
             <button
@@ -156,7 +156,7 @@ export default function FilterBottomSheet({
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
               }`}
             >
-              All
+              全部
             </button>
             <button
               onClick={() => setType("expense")}
@@ -166,7 +166,7 @@ export default function FilterBottomSheet({
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
               }`}
             >
-              Expenses
+              支出
             </button>
             <button
               onClick={() => setType("income")}
@@ -176,14 +176,14 @@ export default function FilterBottomSheet({
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
               }`}
             >
-              Income
+              收入
             </button>
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Date Range
+            日期范围
           </label>
           <div className="flex gap-2 mb-3">
             <button
@@ -194,7 +194,7 @@ export default function FilterBottomSheet({
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
               }`}
             >
-              This Month
+              本月
             </button>
             <button
               onClick={() => setDatePreset("thisYear")}
@@ -204,7 +204,7 @@ export default function FilterBottomSheet({
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
               }`}
             >
-              This Year
+              今年
             </button>
             <button
               onClick={() => setDatePreset("custom")}
@@ -214,7 +214,7 @@ export default function FilterBottomSheet({
                   : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
               }`}
             >
-              Custom
+              自定义
             </button>
           </div>
 
@@ -223,7 +223,7 @@ export default function FilterBottomSheet({
               <div className="flex-1">
                 <Input
                   type="date"
-                  label="Start Date"
+                  label="开始日期"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
                 />
@@ -231,7 +231,7 @@ export default function FilterBottomSheet({
               <div className="flex-1">
                 <Input
                   type="date"
-                  label="End Date"
+                  label="结束日期"
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
                 />
@@ -242,7 +242,7 @@ export default function FilterBottomSheet({
 
         <div>
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Categories
+            分类
           </label>
           <div className="max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg p-3 space-y-2">
             {uniqueCategories.map((cat) => {
@@ -281,7 +281,7 @@ export default function FilterBottomSheet({
             })}
             {uniqueCategories.length === 0 && (
               <div className="text-sm text-zinc-500 dark:text-zinc-400 text-center py-4">
-                No categories available
+                暂无分类
               </div>
             )}
           </div>
@@ -289,13 +289,13 @@ export default function FilterBottomSheet({
 
         <div>
           <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Amount Range
+            金额范围
           </label>
           <div className="flex gap-2">
             <div className="flex-1">
               <Input
                 type="number"
-                placeholder="Min"
+                placeholder="最小值"
                 value={minAmount}
                 onChange={(e) => setMinAmount(e.target.value)}
                 step="0.01"
@@ -304,7 +304,7 @@ export default function FilterBottomSheet({
             <div className="flex-1">
               <Input
                 type="number"
-                placeholder="Max"
+                placeholder="最大值"
                 value={maxAmount}
                 onChange={(e) => setMaxAmount(e.target.value)}
                 step="0.01"
@@ -315,10 +315,10 @@ export default function FilterBottomSheet({
 
         <div className="flex gap-2 pt-4 border-t border-zinc-200 dark:border-zinc-700">
           <Button onClick={handleApply} fullWidth>
-            Apply Filters
+            应用筛选
           </Button>
           <Button onClick={handleReset} variant="secondary" fullWidth>
-            Reset
+            重置
           </Button>
         </div>
       </div>

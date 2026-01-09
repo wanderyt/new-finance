@@ -232,7 +232,7 @@ export default function Dashboard() {
               </div>
             </>
           ) : (
-            <div className="flex-1 overflow-hidden px-4 py-4">
+            <div className="flex-1 overflow-hidden px-3 py-3">
               <HistoryView onFinClick={handleEditFin} />
             </div>
           )}

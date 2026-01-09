@@ -20,7 +20,7 @@ export default function TabSwitcher({
           }
         `}
       >
-        Current Month
+        当月账单
       </button>
       <button
         onClick={() => onTabChange("history")}
@@ -33,7 +33,7 @@ export default function TabSwitcher({
           }
         `}
       >
-        History
+        历史记录
       </button>
     </div>
   );

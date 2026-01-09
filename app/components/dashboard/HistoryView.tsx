@@ -71,7 +71,7 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
           onClick={() => dispatch(fetchHistoryAsync({ limit: 100, offset: 0 }))}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Retry
+          重试
         </button>
       </div>
     );
@@ -103,15 +103,15 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
         </svg>
         <p className="text-zinc-600 dark:text-zinc-400">
           {filterCount > 0
-            ? "No results match your filters. Try adjusting your criteria."
-            : "No transactions found"}
+            ? "没有符合筛选条件的记录，请调整筛选条件"
+            : "暂无交易记录"}
         </p>
         {filterCount > 0 && (
           <button
             onClick={() => setIsFilterOpen(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Adjust Filters
+            调整筛选
           </button>
         )}
       </div>
@@ -120,13 +120,13 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-2">
         <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
-          Transaction History
+          历史记录
         </h2>
         <button
           onClick={() => setIsFilterOpen(true)}
-          className="relative px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex items-center gap-1.5"
+          className="relative px-2 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors flex items-center gap-1.5"
         >
           <svg
             className="w-3.5 h-3.5"
@@ -141,7 +141,7 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
               d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
             />
           </svg>
-          <span className="text-sm">Filter</span>
+          <span className="text-sm">筛选</span>
           {filterCount > 0 && (
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] rounded-full flex items-center justify-center">
               {filterCount}
@@ -173,7 +173,7 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
 
         {!hasMore && monthGroups.length > 0 && (
           <div className="text-center py-4 text-zinc-500 dark:text-zinc-400 text-sm">
-            No more transactions
+            没有更多记录
           </div>
         )}
       </div>

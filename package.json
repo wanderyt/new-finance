@@ -18,7 +18,7 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:cleanup-schedules": "tsx scripts/cleanup-schedule-rules.ts",
     "db:sync-to-main": "cp db/finance.db ../new-finance/db/finance.db && echo 'Database synced to main branch'",
-    "db:sync-from-main": "cp ../new-finance/db/finance.db db/finance.db && echo 'Database synced from main branch'",
+    "db:sync-from-main": "mkdir -p db && cp ../new-finance/db/finance.db db/finance.db && echo 'Database synced from main branch'",
     "version:patch": "npm version patch --no-git-tag-version",
     "version:minor": "npm version minor --no-git-tag-version",
     "version:major": "npm version major --no-git-tag-version"
