@@ -25,27 +25,27 @@ export default function MonthGroup({
   const formattedTotal = (totalCents / 100).toFixed(2);
 
   return (
-    <div className="mb-4 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+    <div className="mb-2 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors"
       >
-        <div className="flex items-center gap-3">
-          <span className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             {monthLabel}
           </span>
           <div className="flex items-center gap-1">
-            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
               支出:
             </span>
-            <span className="text-sm font-semibold text-red-600 dark:text-red-400">
+            <span className="text-xs font-semibold text-red-600 dark:text-red-400">
               {formattedTotal}
             </span>
           </div>
         </div>
 
         <svg
-          className={`w-5 h-5 text-zinc-500 dark:text-zinc-400 transition-transform ${
+          className={`w-4 h-4 text-zinc-500 dark:text-zinc-400 transition-transform ${
             isExpanded ? "rotate-90" : ""
           }`}
           fill="none"
@@ -62,7 +62,7 @@ export default function MonthGroup({
       </button>
 
       {isExpanded && (
-        <div className="bg-zinc-50 dark:bg-zinc-900 p-2">
+        <div className="bg-zinc-50 dark:bg-zinc-900 p-1">
           {days.map((day) => (
             <DayGroup
               key={day.dayKey}

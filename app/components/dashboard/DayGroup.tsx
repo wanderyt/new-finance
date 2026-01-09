@@ -18,22 +18,22 @@ export default function DayGroup({ dayGroup, onFinClick }: DayGroupProps) {
   const formattedTotal = (totalCents / 100).toFixed(2);
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between px-4 py-2 bg-zinc-50 dark:bg-zinc-900">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+    <div className="mb-2">
+      <div className="flex items-center justify-between px-3 py-1 bg-zinc-50 dark:bg-zinc-900">
+        <div className="flex items-center gap-1.5">
+          <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             {dayNumber}
           </span>
-          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+          <span className="text-xs text-zinc-500 dark:text-zinc-400">
             {weekday}
           </span>
         </div>
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">
           ¥ {formattedTotal}
         </span>
       </div>
 
-      <div className="space-y-2 px-2 py-2">
+      <div className="space-y-1 px-2 py-1">
         {fins.map((fin) => (
           <ExpenseTile key={fin.finId} fin={fin} onClick={onFinClick} />
         ))}
