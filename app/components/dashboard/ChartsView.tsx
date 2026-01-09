@@ -77,7 +77,7 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose}>
-      <div className="p-3 space-y-2 max-h-[80vh] overflow-y-auto">
+      <div className="space-y-2">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
