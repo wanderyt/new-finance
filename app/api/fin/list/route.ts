@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { fin } from "@/app/lib/db/schema";
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
@@ -54,9 +54,7 @@ export const GET = withAuth(async (request, user) => {
     if (offsetParam) {
       const parsedOffset = parseInt(offsetParam, 10);
       if (isNaN(parsedOffset) || parsedOffset < 0) {
-        return badRequestResponse(
-          'Query parameter "offset" must be >= 0'
-        );
+        return badRequestResponse('Query parameter "offset" must be >= 0');
       }
       offset = parsedOffset;
     }

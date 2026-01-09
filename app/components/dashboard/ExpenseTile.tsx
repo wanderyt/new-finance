@@ -39,7 +39,7 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
   return (
     <div
       onClick={() => onClick?.(fin)}
-      className="flex items-center justify-between py-2.5 px-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-0 cursor-pointer"
+      className="flex items-center justify-between py-1.5 px-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border-b border-zinc-100 dark:border-zinc-800 last:border-0 cursor-pointer"
     >
       {/* Left Side */}
       <div className="flex-1 min-w-0">
@@ -69,7 +69,7 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
           {typeBadge}
           {fin.isScheduled && (
             <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">
-              Scheduled
+              周期
             </span>
           )}
         </div>

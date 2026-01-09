@@ -12,7 +12,8 @@
       "Bash(gh pr create:*)",
       "Bash(sqlite3:*)",
       "Bash(yarn add:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(yarn build:*)"
     ]
   }
 }
