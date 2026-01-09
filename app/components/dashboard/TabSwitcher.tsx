@@ -8,14 +8,14 @@ export default function TabSwitcher({
   onTabChange,
 }: TabSwitcherProps) {
   return (
-    <div className="flex gap-2 mb-4">
+    <div className="flex gap-1.5">
       <button
         onClick={() => onTabChange("current")}
         className={`
-          flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all
+          flex-1 px-3 py-1.5 rounded-md font-medium text-xs transition-all
           ${
             activeTab === "current"
-              ? "bg-blue-600 text-white shadow-md"
+              ? "bg-blue-600 text-white shadow-sm"
               : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
           }
         `}
@@ -25,10 +25,10 @@ export default function TabSwitcher({
       <button
         onClick={() => onTabChange("history")}
         className={`
-          flex-1 px-4 py-2 rounded-lg font-medium text-sm transition-all
+          flex-1 px-3 py-1.5 rounded-md font-medium text-xs transition-all
           ${
             activeTab === "history"
-              ? "bg-blue-600 text-white shadow-md"
+              ? "bg-blue-600 text-white shadow-sm"
               : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
           }
         `}

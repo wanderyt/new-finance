@@ -179,7 +179,7 @@ export default function Dashboard() {
       </div>
 
       {/* Tab Switcher */}
-      <div className="px-4 mt-4">
+      <div className="px-4 mt-3">
         <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
@@ -189,7 +189,7 @@ export default function Dashboard() {
           {activeTab === "current" ? (
             <>
               {/* Filter Bar for Current Month */}
-              <div className="flex justify-center gap-2 px-4 pt-4">
+              {/* <div className="flex justify-center gap-2 px-4 pt-4">
                 {(["all", "expense", "income"] as const).map((type) => (
                   <button
                     key={type}
@@ -203,10 +203,10 @@ export default function Dashboard() {
                     {type === "all" ? "All" : type === "expense" ? "Expenses" : "Income"}
                   </button>
                 ))}
-              </div>
+              </div> */}
 
               {/* Current Month List */}
-              <div className="overflow-y-auto flex-1 mt-4">
+              <div className="overflow-y-auto flex-1 mt-2">
                 {isLoadingFins ? (
                   <div className="flex items-center justify-center py-12">
                     <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
