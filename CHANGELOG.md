@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-01-09
+
+### Added
+- **History/Search Feature**: Comprehensive transaction history view with advanced filtering
+  - Tab switcher to toggle between "当前账单" (Current Bills) and "历史记录" (History)
+  - Grouped display by month (collapsible) and day with totals at each level
+  - Infinite scroll for loading historical data (100 records per batch)
+  - Filter bottom sheet with multiple filter options:
+    - Keyword search (merchant, category, subcategory, comment)
+    - Transaction type filter (all/expense/income)
+    - Date range presets: all time, this month, this year, last year, custom range
+    - Collapsible category/subcategory multi-select with checkboxes
+    - Amount range filter with min/max inputs
+  - Filter count badge showing number of active filters
+  - Client-side filtering for keyword, categories, and amount range
+  - Server-side filtering for type and date range via pagination API
+  - Empty states with helpful messages and "adjust filters" action
+  - Dark mode support throughout
+
+### Changed
+- **Chinese Localization**: Translated all UI text to Chinese
+  - Tab labels: "当前账单" (Current Bills), "历史记录" (History)
+  - Filter labels: "关键词" (Keyword), "类型" (Type), "日期范围" (Date Range), "分类" (Category), "金额范围" (Amount Range)
+  - Action buttons: "应用筛选" (Apply Filters), "重置" (Reset), "筛选" (Filter)
+  - Empty states and error messages in Chinese
+  - Scheduled transaction badge: "周期" instead of "Scheduled"
+- **Dashboard Data Strategy**: Separated data fetching from stats calculation
+  - Fetches all fin records without date restrictions for comprehensive list
+  - Filters displayed records to only show items up to end of current month
+  - Calculates balance/expenses/income stats only for current month
+  - Prevents future-dated records from appearing in current view
+- **Compact UI Design**: Tightened spacing and reduced font sizes throughout
+  - Smaller padding in history view (px-3 py-3) and filter panel (p-4 space-y-3)
+  - Reduced font sizes: labels (text-xs), buttons (text-xs), compact tabs
+  - Tighter gaps and margins for maximized screen real estate
+  - More compact ExpenseTile with reduced padding (py-1.5 px-3)
+  - Tab switcher made smaller and more compact
+
+### Fixed
+- **Dashboard Stats Display**: Simplified to plain text without background cards
+  - Left-aligned stats labels with smaller text (text-xs for labels, text-sm for values)
+  - Removed background filters and card styling for cleaner look
+  - White text with opacity on hero background image
+- **Date Range Filter**: Changed default from "this year" to "all time"
+  - More intuitive default showing all historical data
+  - Added "last year" preset option
+  - Dropdown select instead of button group for space efficiency
+- **Filter Panel UX**: Removed header title "筛选交易" to save space
+  - Made all fonts smaller and consistent with fin editor
+  - Categories now collapsible by default with expand/collapse functionality
+  - Reduced button padding and checkbox sizes for compact layout
+
+### Documentation
+- Added comprehensive technical documentation in `docs/history-search-feature.md`
+- Included design images: `design/fin-expanded-state.png`, `design/fin-folded-state.png`
+
 ## [0.11.0] - 2026-01-08
 
 ### Added
