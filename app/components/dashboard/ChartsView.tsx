@@ -77,7 +77,7 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose}>
-      <div className="p-4 space-y-3 max-h-[80vh] overflow-y-auto">
+      <div className="p-3 space-y-2 max-h-[80vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
@@ -104,9 +104,6 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
           </button>
         </div>
 
-        {/* Date Filter */}
-        <MonthYearFilter />
-
         {/* View Mode Tabs */}
         <div className="flex gap-2">
           <button
@@ -130,6 +127,9 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
             月度对比
           </button>
         </div>
+
+        {/* Date Filter */}
+        <MonthYearFilter />
 
         {/* Category View */}
         {viewMode === "category" && (
