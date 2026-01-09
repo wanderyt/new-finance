@@ -76,19 +76,19 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose}>
-      <div className="space-y-4">
+      <div className="p-4 space-y-3 max-h-[80vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
             图表分析
           </h1>
           <button
             onClick={onClose}
             className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded transition-colors"
-            aria-label="Close"
+            aria-label="关闭"
           >
             <svg
-              className="w-5 h-5 text-zinc-600 dark:text-zinc-400"
+              className="w-4 h-4 text-zinc-600 dark:text-zinc-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -107,16 +107,16 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
         <MonthYearFilter />
 
         {/* Category Breakdown Section */}
-        <section>
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
               分类支出
-            </h2>
+            </label>
             {/* Chart Type Toggle */}
-            <div className="flex gap-1 bg-zinc-100 dark:bg-zinc-700 p-0.5 rounded">
+            <div className="flex gap-0.5 bg-zinc-100 dark:bg-zinc-700 p-0.5 rounded">
               <button
                 onClick={() => setChartType("bar")}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
+                className={`px-2 py-0.5 text-xs rounded transition-colors ${
                   chartType === "bar"
                     ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
@@ -126,7 +126,7 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
               </button>
               <button
                 onClick={() => setChartType("pie")}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
+                className={`px-2 py-0.5 text-xs rounded transition-colors ${
                   chartType === "pie"
                     ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
@@ -145,46 +145,46 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
 
           {/* Chart */}
           {filteredFins.length === 0 ? (
-            <div className="text-center py-8 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-              <p className="text-xs">No expense data for selected period</p>
+            <div className="text-center py-6 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+              <p className="text-xs">所选时段无支出数据</p>
             </div>
           ) : chartType === "bar" ? (
             <CategoryBarChart
               data={categoryChartData}
               drilldownCategory={drilldownCategory}
               onCategoryClick={handleCategoryClick}
-              height={300}
+              height={220}
             />
           ) : (
             <CategoryPieChart
               data={categoryChartData}
               drilldownCategory={drilldownCategory}
               onCategoryClick={handleCategoryClick}
-              height={300}
+              height={220}
             />
           )}
 
           {/* Expense List (when category selected) */}
           {categoryExpenseList.length > 0 && onFinClick && (
             <CategoryExpenseList
-              category={categoryExpenseList[0]?.category || "Uncategorized"}
+              category={categoryExpenseList[0]?.category || "未分类"}
               subcategory={categoryExpenseList[0]?.subcategory || undefined}
               transactions={categoryExpenseList}
               onFinClick={onFinClick}
               onClear={handleClearExpenseList}
             />
           )}
-        </section>
+        </div>
 
         {/* Month Comparison Section */}
-        <section>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+        <div>
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
             月度对比
-          </h2>
+          </label>
 
           {availableMonths.length < 2 ? (
-            <div className="text-center py-8 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-              <p className="text-xs">Need at least 2 months of data for comparison</p>
+            <div className="text-center py-6 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+              <p className="text-xs">至少需要2个月的数据才能对比</p>
             </div>
           ) : (
             <MonthComparisonLineChart
@@ -194,10 +194,10 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
               availableMonths={availableMonths}
               onMonth1Change={handleMonth1Change}
               onMonth2Change={handleMonth2Change}
-              height={300}
+              height={220}
             />
           )}
-        </section>
+        </div>
       </div>
     </BottomSheet>
   );

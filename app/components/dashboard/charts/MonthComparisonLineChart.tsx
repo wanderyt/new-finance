@@ -82,23 +82,23 @@ export default function MonthComparisonLineChart({
         className="flex items-center justify-center text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700"
         style={{ height }}
       >
-        <p className="text-sm">Please select two months to compare</p>
+        <p className="text-xs">请选择两个月份进行对比</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Month Selectors */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-            Month 1
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            月份 1
           </label>
           <select
             value={month1}
             onChange={(e) => onMonth1Change(e.target.value)}
-            className="w-full px-3.5 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           >
             {availableMonths.map((month) => (
               <option key={month} value={month}>
@@ -108,13 +108,13 @@ export default function MonthComparisonLineChart({
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
-            Month 2
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+            月份 2
           </label>
           <select
             value={month2}
             onChange={(e) => onMonth2Change(e.target.value)}
-            className="w-full px-3.5 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           >
             {availableMonths.map((month) => (
               <option key={month} value={month}>
@@ -129,7 +129,7 @@ export default function MonthComparisonLineChart({
       <ResponsiveContainer width="100%" height={height}>
         <LineChart
           data={chartData}
-          margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+          margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -138,28 +138,30 @@ export default function MonthComparisonLineChart({
           <XAxis
             dataKey="day"
             className="text-xs fill-zinc-700 dark:fill-zinc-300"
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 10 }}
             label={{
-              value: "Day of Month",
+              value: "日期",
               position: "insideBottom",
-              offset: -10,
+              offset: -5,
               className: "fill-zinc-700 dark:fill-zinc-300",
+              fontSize: 10,
             }}
           />
           <YAxis
             className="text-xs fill-zinc-700 dark:fill-zinc-300"
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 10 }}
             tickFormatter={(value) => `$${value.toFixed(0)}`}
             label={{
-              value: "Accumulated Expenses ($)",
+              value: "累计支出",
               angle: -90,
               position: "insideLeft",
               className: "fill-zinc-700 dark:fill-zinc-300",
+              fontSize: 10,
             }}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend
-            wrapperStyle={{ paddingTop: "20px" }}
+            wrapperStyle={{ paddingTop: "10px", fontSize: "10px" }}
             iconType="line"
             formatter={(value) => formatMonth(value)}
           />
@@ -167,18 +169,18 @@ export default function MonthComparisonLineChart({
             type="monotone"
             dataKey={month1}
             stroke="#2563eb"
-            strokeWidth={2}
+            strokeWidth={1.5}
             dot={false}
-            activeDot={{ r: 6 }}
+            activeDot={{ r: 4 }}
             className="dark:stroke-blue-400"
           />
           <Line
             type="monotone"
             dataKey={month2}
             stroke="#f59e0b"
-            strokeWidth={2}
+            strokeWidth={1.5}
             dot={false}
-            activeDot={{ r: 6 }}
+            activeDot={{ r: 4 }}
             className="dark:stroke-amber-400"
           />
         </LineChart>

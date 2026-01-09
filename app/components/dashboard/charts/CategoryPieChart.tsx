@@ -68,15 +68,15 @@ export default function CategoryPieChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white dark:bg-zinc-800 px-3 py-2 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-700">
-          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+        <div className="bg-white dark:bg-zinc-800 px-2 py-1.5 rounded shadow-lg border border-zinc-200 dark:border-zinc-700">
+          <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
             {data.name}
           </p>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-xs text-zinc-600 dark:text-zinc-400">
             ${data.value.toFixed(2)}
           </p>
           <p className="text-xs text-zinc-500 dark:text-zinc-500">
-            {data.count} transaction{data.count !== 1 ? "s" : ""}
+            {data.count} 笔交易
           </p>
         </div>
       );
@@ -103,7 +103,7 @@ export default function CategoryPieChart({
       >
         <div className="text-center">
           <svg
-            className="w-12 h-12 mx-auto mb-2 opacity-50"
+            className="w-10 h-10 mx-auto mb-1.5 opacity-50"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -121,7 +121,7 @@ export default function CategoryPieChart({
               d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
             />
           </svg>
-          <p className="text-sm">No expense data available</p>
+          <p className="text-xs">暂无支出数据</p>
         </div>
       </div>
     );

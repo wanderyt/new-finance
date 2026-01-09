@@ -42,31 +42,39 @@ export default function MonthYearFilter() {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
+    <div>
+      <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+        日期范围
+      </label>
+
       {/* View Mode Toggle */}
-      <div className="flex gap-2">
-        <Button
-          variant={viewMode === "month" ? "primary" : "secondary"}
-          size="sm"
+      <div className="flex gap-2 mb-2">
+        <button
           onClick={() => handleViewModeChange("month")}
-          className="flex-1"
+          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            viewMode === "month"
+              ? "bg-blue-600 text-white"
+              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+          }`}
         >
-          Month
-        </Button>
-        <Button
-          variant={viewMode === "year" ? "primary" : "secondary"}
-          size="sm"
+          按月
+        </button>
+        <button
           onClick={() => handleViewModeChange("year")}
-          className="flex-1"
+          className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            viewMode === "year"
+              ? "bg-blue-600 text-white"
+              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+          }`}
         >
-          Year
-        </Button>
+          按年
+        </button>
       </div>
 
       {/* Month/Year Selector */}
       {viewMode === "month" ? (
         <Select
-          label="Select Month"
+          label=""
           value={selectedMonth || ""}
           onChange={handleMonthChange}
           options={availableMonths.map((month) => ({
@@ -76,7 +84,7 @@ export default function MonthYearFilter() {
         />
       ) : (
         <Select
-          label="Select Year"
+          label=""
           value={selectedYear || ""}
           onChange={handleYearChange}
           options={availableYears.map((year) => ({
