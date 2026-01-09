@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-01-09
+
+### Added
+- **Charts Analytics Feature**: Comprehensive data visualization for financial insights
+  - Accessible via "图表分析" (Charts) button in dashboard header, opens as bottom sheet modal
+  - **View Mode Toggle**: Tab switcher to alternate between:
+    - "分类视图" (Category View): Expense breakdown by categories and subcategories
+    - "月度对比" (Month Comparison): Compare accumulated spending across two months
+  - **Category Analysis**:
+    - Toggle between pie chart and bar chart visualizations
+    - Pie chart set as default view for better proportion visibility
+    - Interactive drill-down: Click category → view subcategories → view transaction list
+    - Breadcrumb navigation to return to top-level categories
+    - Click subcategory → displays filterable expense list using ExpenseTile component
+    - Detailed tooltips showing amount and transaction count
+    - Color-coded slices/bars using vibrant palette (15 distinct colors)
+  - **Month Comparison Line Chart**:
+    - Dual-line chart comparing accumulated daily expenses between two selected months
+    - Month selectors with dropdown menus (defaults: current month vs previous month)
+    - Cumulative running total calculation (carry-over throughout month)
+    - Handles months with different lengths (28-31 days)
+    - Interpolates flat lines when no transactions occur
+    - Distinct line colors: blue (month 1), amber (month 2)
+  - **Date Filtering**:
+    - Toggle between "Month" and "Year" view modes
+    - Month selector: Dropdown with "YYYY-MM" format
+    - Year selector: Dropdown with available years from transaction data
+    - Dynamically extracts available months/years from Redux state
+    - Sort in descending order (most recent first)
+  - **Redux State Management**:
+    - New `charts` namespace in finSlice with dedicated state
+    - Selectors for filtered transactions, aggregated data, and available date ranges
+    - Actions for view mode, drill-down, category selection, and month comparison
+  - **Compact Design**:
+    - Optimized padding and spacing for maximum content visibility
+    - Small font sizes (text-xs) throughout for consistency
+    - Tight layout matching FilterBottomSheet pattern
+    - Dark mode support with proper color contrasts
+  - **Empty States**:
+    - "所选时段无支出数据" (No expenses for selected period)
+    - "至少需要2个月的数据才能对比" (At least 2 months needed for comparison)
+    - Icon-based empty states with helpful messages
+
+### Changed
+- **ExpenseTile Font Sizes**: Reduced all text to text-xs for compact display
+  - Category/subcategory: text-sm → text-xs
+  - Amount display: text-sm → text-xs
+  - Info icon: w-4 h-4 → w-3.5 h-3.5
+  - Reduced margins and gaps (ml-4 → ml-3, gap-2 → gap-1.5)
+- **Select Component**: Reduced font sizes and padding for compact design
+  - Font: text-base → text-xs
+  - Padding: px-3.5 py-2.5 → px-3 py-1.5
+  - Label: text-sm → text-xs
+- **BottomSheet Layout**: Removed redundant inner padding layer
+  - Previously had double padding: outer (16px/24px) + inner (12px)
+  - Now relies solely on BottomSheet's built-in padding
+  - Maximizes content area without overflow issues
+
+### Documentation
+- Added comprehensive technical documentation in `docs/charts-analytics-feature.md`
+- Includes architecture details, component interfaces, and Redux state structure
+
 ## [0.12.0] - 2026-01-09
 
 ### Added
