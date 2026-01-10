@@ -98,7 +98,7 @@ const LineItemEditor = ({
           <Input
             value={localItem.name}
             onChange={(e) => handleChange("name", e.target.value)}
-            placeholder="Item name"
+            placeholder="项目名称"
             required
           />
           <div className="relative">
@@ -137,12 +137,12 @@ const LineItemEditor = ({
             onChange={(e) =>
               handleChange("qty", e.target.value ? parseFloat(e.target.value) : undefined)
             }
-            placeholder="Quantity"
+            placeholder="数量"
           />
           <Input
             value={localItem.unit || ""}
             onChange={(e) => handleChange("unit", e.target.value || undefined)}
-            placeholder="Unit"
+            placeholder="单位"
           />
           <Dropdown
             options={personOptions}
@@ -153,7 +153,7 @@ const LineItemEditor = ({
                 value ? parseInt(value) : undefined
               )
             }
-            placeholder="Person"
+            placeholder="人员"
           />
         </div>
 
@@ -161,7 +161,7 @@ const LineItemEditor = ({
         <Input
           value={localItem.notes || ""}
           onChange={(e) => handleChange("notes", e.target.value || undefined)}
-          placeholder="Notes"
+          placeholder="备注"
         />
       </div>
     </div>
