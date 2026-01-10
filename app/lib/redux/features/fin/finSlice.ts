@@ -11,6 +11,9 @@ import {
   SearchFilters,
   MonthGroup,
   DayGroup,
+  PersonData,
+  FinItemWithParent,
+  ListFinItemsResponse,
 } from "@/app/lib/types/api";
 
 export interface FinState {
@@ -46,7 +49,16 @@ export interface FinState {
     selectedSubcategoryForList?: string;
     comparisonMonth1?: string;
     comparisonMonth2?: string;
+
+    selectedPersonId?: number;
+    personItems: FinItemWithParent[];
+    personItemsLoading: boolean;
+    personItemsError: string | null;
   };
+
+  persons: PersonData[];
+  personsLoading: boolean;
+  personsError: string | null;
 }
 
 // Get current month and previous month for defaults
@@ -87,7 +99,16 @@ const initialState: FinState = {
     selectedMonth: currentMonth,
     comparisonMonth1: currentMonth,
     comparisonMonth2: previousMonth,
+
+    selectedPersonId: undefined,
+    personItems: [],
+    personItemsLoading: false,
+    personItemsError: null,
   },
+
+  persons: [],
+  personsLoading: false,
+  personsError: null,
 };
 
 // Async thunk for fetching fins list
@@ -425,6 +446,70 @@ export const applyHistoryFiltersAsync = createAsyncThunk<
   }
 });
 
+// Async thunk for fetching persons
+export const fetchPersonsAsync = createAsyncThunk<
+  PersonData[],
+  void,
+  { rejectValue: string }
+>("fin/fetchPersons", async (_, { rejectWithValue }) => {
+  try {
+    const response = await axios.get<{ success: boolean; persons: PersonData[] }>(
+      "/api/persons",
+      { withCredentials: true }
+    );
+    return response.data.persons;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(
+        error.response.data.error || "Failed to fetch persons"
+      );
+    }
+    return rejectWithValue("Network error. Please try again.");
+  }
+});
+
+// Async thunk for fetching person items for charts
+export const fetchPersonItemsForChartsAsync = createAsyncThunk<
+  FinItemWithParent[],
+  { viewMode: "month" | "year"; selectedMonth?: string; selectedYear?: string; personId?: number },
+  { rejectValue: string }
+>("fin/fetchPersonItemsForCharts", async (params, { rejectWithValue }) => {
+  try {
+    const queryParams = new URLSearchParams({ limit: "1000" });
+
+    if (params.viewMode === "month" && params.selectedMonth) {
+      const [year, month] = params.selectedMonth.split("-");
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
+      queryParams.append("dateFrom", startDate.toISOString());
+      queryParams.append("dateTo", endDate.toISOString());
+    } else if (params.viewMode === "year" && params.selectedYear) {
+      const startDate = new Date(parseInt(params.selectedYear), 0, 1);
+      const endDate = new Date(parseInt(params.selectedYear), 11, 31, 23, 59, 59);
+      queryParams.append("dateFrom", startDate.toISOString());
+      queryParams.append("dateTo", endDate.toISOString());
+    }
+
+    if (params.personId) {
+      queryParams.append("personId", params.personId.toString());
+    }
+
+    const response = await axios.get<ListFinItemsResponse>(
+      `/api/fin/items/list?${queryParams.toString()}`,
+      { withCredentials: true }
+    );
+
+    return response.data.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(
+        error.response.data.error || "Failed to fetch person items"
+      );
+    }
+    return rejectWithValue("Network error. Please try again.");
+  }
+});
+
 const finSlice = createSlice({
   name: "fin",
   initialState,
@@ -530,6 +615,15 @@ const finSlice = createSlice({
 
     clearChartsDrilldown: (state) => {
       state.charts.drilldownCategory = undefined;
+    },
+
+    setChartsSelectedPerson: (state, action: PayloadAction<number | undefined>) => {
+      state.charts.selectedPersonId = action.payload;
+    },
+
+    clearPersonItems: (state) => {
+      state.charts.personItems = [];
+      state.charts.personItemsError = null;
     },
   },
   extraReducers: (builder) => {
@@ -682,6 +776,36 @@ const finSlice = createSlice({
         state.history.isLoading = false;
         state.history.error = action.payload || "Failed to apply filters";
       });
+
+    // Fetch persons
+    builder
+      .addCase(fetchPersonsAsync.pending, (state) => {
+        state.personsLoading = true;
+        state.personsError = null;
+      })
+      .addCase(fetchPersonsAsync.fulfilled, (state, action) => {
+        state.personsLoading = false;
+        state.persons = action.payload;
+      })
+      .addCase(fetchPersonsAsync.rejected, (state, action) => {
+        state.personsLoading = false;
+        state.personsError = action.payload || "Failed to fetch persons";
+      });
+
+    // Fetch person items for charts
+    builder
+      .addCase(fetchPersonItemsForChartsAsync.pending, (state) => {
+        state.charts.personItemsLoading = true;
+        state.charts.personItemsError = null;
+      })
+      .addCase(fetchPersonItemsForChartsAsync.fulfilled, (state, action) => {
+        state.charts.personItemsLoading = false;
+        state.charts.personItems = action.payload;
+      })
+      .addCase(fetchPersonItemsForChartsAsync.rejected, (state, action) => {
+        state.charts.personItemsLoading = false;
+        state.charts.personItemsError = action.payload || "Failed to fetch person items";
+      });
   },
 });
 
@@ -702,6 +826,8 @@ export const {
   setChartsComparisonMonths,
   clearChartsCategorySelection,
   clearChartsDrilldown,
+  setChartsSelectedPerson,
+  clearPersonItems,
 } = finSlice.actions;
 
 // Selectors
@@ -1028,6 +1154,95 @@ export const selectMonthComparisonData = createSelector(
     }
 
     return result;
+  }
+);
+
+// Person selectors
+export const selectPersons = (state: RootState) => state.fin.persons;
+export const selectPersonsLoading = (state: RootState) => state.fin.personsLoading;
+export const selectChartsSelectedPersonId = (state: RootState) => state.fin.charts.selectedPersonId;
+export const selectPersonItems = (state: RootState) => state.fin.charts.personItems;
+export const selectPersonItemsLoading = (state: RootState) => state.fin.charts.personItemsLoading;
+export const selectPersonItemsError = (state: RootState) => state.fin.charts.personItemsError;
+
+interface PersonSpendingData {
+  personId: number;
+  personName: string;
+  totalCents: number;
+  itemCount: number;
+}
+
+// Aggregate person spending data for pie chart
+export const selectPersonSpendingData = createSelector(
+  [selectPersonItems, selectPersons],
+  (items, persons): PersonSpendingData[] => {
+    const aggregated: Record<number, { totalCents: number; itemCount: number }> = {};
+
+    items.forEach((item) => {
+      if (item.personId) {
+        if (!aggregated[item.personId]) {
+          aggregated[item.personId] = { totalCents: 0, itemCount: 0 };
+        }
+        aggregated[item.personId].totalCents += item.originalAmountCents;
+        aggregated[item.personId].itemCount += 1;
+      }
+    });
+
+    return Object.entries(aggregated)
+      .map(([personId, data]) => {
+        const person = persons.find(p => p.personId === parseInt(personId));
+        return {
+          personId: parseInt(personId),
+          personName: person?.name || "Unknown",
+          totalCents: data.totalCents,
+          itemCount: data.itemCount,
+        };
+      })
+      .sort((a, b) => b.totalCents - a.totalCents);
+  }
+);
+
+// Get items for selected person (for detail list)
+export const selectSelectedPersonItems = createSelector(
+  [selectPersonItems, selectChartsSelectedPersonId],
+  (items, selectedPersonId): FinItemWithParent[] => {
+    if (!selectedPersonId) return [];
+
+    return items
+      .filter(item => item.personId === selectedPersonId)
+      .sort((a, b) => new Date(b.parentDate).getTime() - new Date(a.parentDate).getTime());
+  }
+);
+
+interface PersonCategoryData {
+  category: string;
+  totalCents: number;
+  itemCount: number;
+}
+
+// Aggregate selected person's spending by category (for category pie chart)
+export const selectPersonCategoryData = createSelector(
+  [selectSelectedPersonItems],
+  (items): PersonCategoryData[] => {
+    const aggregated: Record<string, { totalCents: number; itemCount: number }> = {};
+
+    items.forEach((item) => {
+      const category = item.category || item.parentCategory || "Uncategorized";
+
+      if (!aggregated[category]) {
+        aggregated[category] = { totalCents: 0, itemCount: 0 };
+      }
+      aggregated[category].totalCents += item.originalAmountCents;
+      aggregated[category].itemCount += 1;
+    });
+
+    return Object.entries(aggregated)
+      .map(([category, data]) => ({
+        category,
+        totalCents: data.totalCents,
+        itemCount: data.itemCount,
+      }))
+      .sort((a, b) => b.totalCents - a.totalCents);
   }
 );
 
