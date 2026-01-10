@@ -98,7 +98,7 @@ const LineItemEditor = ({
           <Input
             value={localItem.name}
             onChange={(e) => handleChange("name", e.target.value)}
-            placeholder="Item name"
+            placeholder="项目名称"
             required
           />
           <div className="relative">
@@ -123,7 +123,7 @@ const LineItemEditor = ({
               onBlur={handleAmountBlur}
               placeholder="0.00"
               required
-              className="w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+              className="w-full pl-10 pr-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
             />
           </div>
         </div>
@@ -137,12 +137,12 @@ const LineItemEditor = ({
             onChange={(e) =>
               handleChange("qty", e.target.value ? parseFloat(e.target.value) : undefined)
             }
-            placeholder="Quantity"
+            placeholder="数量"
           />
           <Input
             value={localItem.unit || ""}
             onChange={(e) => handleChange("unit", e.target.value || undefined)}
-            placeholder="Unit"
+            placeholder="单位"
           />
           <Dropdown
             options={personOptions}
@@ -153,7 +153,7 @@ const LineItemEditor = ({
                 value ? parseInt(value) : undefined
               )
             }
-            placeholder="Person"
+            placeholder="人员"
           />
         </div>
 
@@ -161,7 +161,7 @@ const LineItemEditor = ({
         <Input
           value={localItem.notes || ""}
           onChange={(e) => handleChange("notes", e.target.value || undefined)}
-          placeholder="Notes"
+          placeholder="备注"
         />
       </div>
     </div>

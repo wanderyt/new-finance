@@ -56,7 +56,7 @@ export default function Dropdown({
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
-        className={`w-full px-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left flex items-center justify-between`}
+        className={`w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left flex items-center justify-between`}
       >
         <span className={!selectedOption ? "text-zinc-400 dark:text-zinc-500" : ""}>
           {displayText}
@@ -86,7 +86,7 @@ export default function Dropdown({
               key={option.value}
               type="button"
               onClick={() => handleOptionClick(option)}
-              className={`w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors ${
+              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors ${
                 option.value === value
                   ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
                   : "text-zinc-900 dark:text-zinc-50"

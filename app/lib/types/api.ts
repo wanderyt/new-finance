@@ -220,3 +220,47 @@ export interface MonthGroup {
   days: DayGroup[];
   totalCents: number;
 }
+
+// ========== Person Types ==========
+
+// Person data structure (for dropdown and analysis)
+export interface PersonData {
+  personId: number;
+  name: string;
+  isDefault: boolean;
+}
+
+// ========== Fin Items with Parent Data Types ==========
+
+// Line item with parent fin data for person analysis
+export interface FinItemWithParent {
+  // From finItems table
+  itemId: number;
+  finId: string;
+  lineNo: number | null;
+  name: string;
+  qty: number | null;
+  unit: string | null;
+  unitPriceCents: number | null;
+  originalAmountCents: number;
+  personId: number | null;
+  category: string | null;
+  subcategory: string | null;
+  notes: string | null;
+
+  // From parent fin record
+  parentFinId: string;
+  parentDate: string;
+  parentMerchant: string | null;
+  parentCity: string | null;
+  parentType: string;
+  parentCategory: string | null;
+  parentSubcategory: string | null;
+}
+
+// API response type for listing fin items
+export interface ListFinItemsResponse {
+  success: true;
+  data: FinItemWithParent[];
+  pagination: PaginationMeta;
+}

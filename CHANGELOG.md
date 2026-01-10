@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-01-09
+
+### Added
+- **Person Expense Analysis**: New "个人分析" (Person Analysis) tab in charts view
+  - Backend API endpoint `/api/fin/items/list` to fetch line items joined with parent fin data
+  - Support filtering by date range and personId
+  - Interactive pie chart showing spending distribution across all persons
+  - Click person slice to drill down into individual expense details
+  - Category breakdown pie chart for selected person showing spending by category
+  - Detailed line items list with merchant and city context from parent transaction
+  - Person dropdown selector with "所有人员" (All Persons) option
+  - Redux state management with aggregation selectors for person spending data
+  - Empty states: "请先在设置中添加人员" and "所选时段无个人支出数据"
+  - Loading states with spinner animation
+  - Shares existing date filter logic with other chart views
+
+### Changed
+- **UI Standardization**: Unified font sizes to `text-xs` (11px) across all form inputs for consistent compact design
+  - Updated Input, Dropdown, SearchableSelect, and CalculatorInput components
+  - Reduced padding from `py-2` to `py-1.5` for tighter spacing
+  - Adjusted line items button icon from `w-4 h-4` to `w-3.5 h-3.5` to match smaller inputs
+  - Maintains alignment with charts interface design
+- **Localization**: Translated fin editor form content from English to Chinese
+  - All placeholders: Category/Subcategory → 分类/子分类
+  - Frequency options: Once/Daily/Weekly/Biweekly/Monthly/Annually → 一次/每日/每周/双周/每月/每年
+  - Field labels: Merchant/Place/City → 商家名称/地点/城市
+  - Tags/Details → 标签（按回车）/详细说明（可选）
+  - Action buttons: Cancel/Delete/Save/Update → 取消/删除/保存/更新
+  - Loading state: Saving... → 保存中...
+  - Line item fields: Item name/Quantity/Unit/Person/Notes → 项目名称/数量/单位/人员/备注
+  - Button title: Manage line items → 管理明细项
+
 ## [0.13.0] - 2026-01-09
 
 ### Added

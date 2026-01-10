@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   selectCategoryChartData,
@@ -16,6 +16,7 @@ import {
   clearChartsCategorySelection,
   clearChartsDrilldown,
   setChartsComparisonMonths,
+  fetchPersonsAsync,
 } from "@/app/lib/redux/features/fin/finSlice";
 import { FinData } from "@/app/lib/types/api";
 import BottomSheet from "../ui-kit/BottomSheet";
@@ -25,6 +26,7 @@ import CategoryPieChart from "./charts/CategoryPieChart";
 import CategoryBreadcrumb from "./charts/CategoryBreadcrumb";
 import CategoryExpenseList from "./charts/CategoryExpenseList";
 import MonthComparisonLineChart from "./charts/MonthComparisonLineChart";
+import PersonAnalysisView from "./charts/PersonAnalysisView";
 
 interface ChartsViewProps {
   isOpen: boolean;
@@ -35,7 +37,7 @@ interface ChartsViewProps {
 export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewProps) {
   const dispatch = useAppDispatch();
   const [chartType, setChartType] = useState<"bar" | "pie">("pie");
-  const [viewMode, setViewMode] = useState<"category" | "comparison">("category");
+  const [viewMode, setViewMode] = useState<"category" | "comparison" | "person">("category");
 
   // Selectors
   const categoryChartData = useAppSelector(selectCategoryChartData);
@@ -74,6 +76,12 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
   const handleMonth2Change = (month: string) => {
     dispatch(setChartsComparisonMonths({ month2: month }));
   };
+
+  useEffect(() => {
+    if (isOpen) {
+      dispatch(fetchPersonsAsync());
+    }
+  }, [dispatch, isOpen]);
 
   return (
     <BottomSheet isOpen={isOpen} onClose={onClose}>
@@ -125,6 +133,16 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
             }`}
           >
             月度对比
+          </button>
+          <button
+            onClick={() => setViewMode("person")}
+            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              viewMode === "person"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+            }`}
+          >
+            个人分析
           </button>
         </div>
 
@@ -223,6 +241,9 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
             )}
           </div>
         )}
+
+        {/* Person Analysis View */}
+        {viewMode === "person" && <PersonAnalysisView />}
       </div>
     </BottomSheet>
   );

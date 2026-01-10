@@ -313,22 +313,22 @@ const FinEditorForm = ({
     .sort();
 
   const categoryOptions = [
-    { value: "", label: "Category" },
+    { value: "", label: "分类" },
     ...uniqueCategories.map((cat) => ({ value: cat, label: cat })),
   ];
 
   const subcategoryOptions = [
-    { value: "", label: "Subcategory" },
+    { value: "", label: "子分类" },
     ...subcategories.map((sub) => ({ value: sub, label: sub })),
   ];
 
   const frequencyOptions = [
-    { value: "", label: "Once" },
-    { value: "daily", label: "Daily" },
-    { value: "weekly", label: "Weekly" },
-    { value: "biweekly", label: "Biweekly" },
-    { value: "monthly", label: "Monthly" },
-    { value: "annually", label: "Annually" },
+    { value: "", label: "一次" },
+    { value: "daily", label: "每日" },
+    { value: "weekly", label: "每周" },
+    { value: "biweekly", label: "双周" },
+    { value: "monthly", label: "每月" },
+    { value: "annually", label: "每年" },
   ];
 
   return (
@@ -355,7 +355,7 @@ const FinEditorForm = ({
             onChange={(e) => setDate(e.target.value)}
             required
             disabled={isScheduledTransaction}
-            className={`w-full pl-10 pr-3 py-2 text-sm rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all ${
+            className={`w-full pl-10 pr-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all ${
               isScheduledTransaction ? 'opacity-60 cursor-not-allowed' : ''
             }`}
           />
@@ -371,7 +371,7 @@ const FinEditorForm = ({
             }
           }}
           options={frequencyOptions}
-          placeholder={isScheduledTransaction ? "Scheduled" : "Once"}
+          placeholder={isScheduledTransaction ? "已排期" : "一次"}
           className="w-32"
           disabled={isScheduledTransaction}
         />
@@ -382,7 +382,7 @@ const FinEditorForm = ({
         value={merchant}
         onChange={setMerchant}
         options={merchantOptions}
-        placeholder="Merchant name"
+        placeholder="商家名称"
         icon={
           <svg
             fill="none"
@@ -469,11 +469,11 @@ const FinEditorForm = ({
         <button
           type="button"
           onClick={() => setShowLineItemsDialog(true)}
-          className="px-3 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
-          title="Manage line items"
+          className="px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
+          title="管理明细项"
         >
           <svg
-            className="w-4 h-4"
+            className="w-3.5 h-3.5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -494,7 +494,7 @@ const FinEditorForm = ({
           value={place}
           onChange={setPlace}
           options={placeOptions}
-          placeholder="Place"
+          placeholder="地点"
           className="flex-[2]"
           icon={
             <svg
@@ -523,7 +523,7 @@ const FinEditorForm = ({
           value={city}
           onChange={setCity}
           options={cityOptions}
-          placeholder="City"
+          placeholder="城市"
           className="flex-1"
         />
       </div>
@@ -533,7 +533,7 @@ const FinEditorForm = ({
         tags={tags}
         onTagsChange={setTags}
         label=""
-        placeholder="Tags (press Enter)"
+        placeholder="标签（按回车）"
       />
 
       {/* Details */}
@@ -554,9 +554,9 @@ const FinEditorForm = ({
         <textarea
           value={details}
           onChange={(e) => setDetails(e.target.value)}
-          placeholder="Details (optional)"
+          placeholder="详细说明（可选）"
           rows={2}
-          className="w-full pl-10 pr-3 py-2.5 text-base rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all resize-none"
+          className="w-full pl-10 pr-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all resize-none"
         />
       </div>
 
@@ -579,7 +579,7 @@ const FinEditorForm = ({
           disabled={isSubmitting}
           fullWidth
         >
-          Cancel
+          取消
         </Button>
 
         {existingFin && onDelete && (
@@ -590,7 +590,7 @@ const FinEditorForm = ({
             disabled={isSubmitting}
             className="!bg-red-100 dark:!bg-red-900/30 !text-red-700 dark:!text-red-300 hover:!bg-red-200 dark:hover:!bg-red-900/50"
           >
-            Delete
+            删除
           </Button>
         )}
 
@@ -600,7 +600,7 @@ const FinEditorForm = ({
           disabled={!isValid() || isSubmitting}
           fullWidth
         >
-          {isSubmitting ? "Saving..." : existingFin ? "Update" : "Save"}
+          {isSubmitting ? "保存中..." : existingFin ? "更新" : "保存"}
         </Button>
       </div>
 
