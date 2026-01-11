@@ -10,10 +10,12 @@ import ReceiptUpload from "./ReceiptUpload";
 import { LineItem } from "./LineItemEditor";
 import ReceiptAnalysisDialog from "./ReceiptAnalysisDialog";
 import LineItemsDialog from "./LineItemsDialog";
+import HistoricalDataSheet from "./HistoricalDataSheet";
 import {
   CreateFinRequest,
   UpdateFinRequest,
   FinData,
+  HistoricalDataItem,
 } from "@/app/lib/types/api";
 
 interface ReceiptAnalysisResult {
@@ -100,6 +102,10 @@ const FinEditorForm = ({
 
   // Line items dialog state
   const [showLineItemsDialog, setShowLineItemsDialog] = useState(false);
+
+  // Historical data sheet state
+  const [showHistoricalDataSheet, setShowHistoricalDataSheet] = useState(false);
+  const [selectedMerchantForHistory, setSelectedMerchantForHistory] = useState("");
 
   // Autocomplete data
   const [merchantOptions, setMerchantOptions] = useState<
@@ -298,6 +304,38 @@ const FinEditorForm = ({
     }
   };
 
+  // Handle merchant selection from dropdown
+  const handleMerchantSelected = (selectedMerchant: string) => {
+    setMerchant(selectedMerchant);
+
+    if (selectedMerchant?.trim()) {
+      setSelectedMerchantForHistory(selectedMerchant);
+      setShowHistoricalDataSheet(true);
+    }
+  };
+
+  // Handle historical data confirmation
+  const handleHistoricalDataConfirm = (selections: HistoricalDataItem[]) => {
+    selections.forEach((item) => {
+      if (item.type === "category") {
+        setCategory(item.category || "");
+        setSubcategory(item.subcategory || "");
+      } else if (item.type === "location") {
+        setPlace(item.place || "");
+        setCity(item.city || "");
+      } else if (item.type === "detail") {
+        setDetails(item.detail || "");
+      }
+    });
+
+    setShowHistoricalDataSheet(false);
+  };
+
+  // Handle historical data cancellation
+  const handleHistoricalDataCancel = () => {
+    setShowHistoricalDataSheet(false);
+  };
+
   // Filter categories by type
   const filteredCategories = categories.filter(
     (cat) => cat.appliesTo === type || cat.appliesTo === "both"
@@ -383,6 +421,7 @@ const FinEditorForm = ({
         onChange={setMerchant}
         options={merchantOptions}
         placeholder="商家名称"
+        onOptionSelected={handleMerchantSelected}
         icon={
           <svg
             fill="none"
@@ -631,6 +670,14 @@ const FinEditorForm = ({
         }}
         onCancel={() => setShowLineItemsDialog(false)}
         persons={persons}
+      />
+
+      {/* Historical Data Selection Sheet */}
+      <HistoricalDataSheet
+        isOpen={showHistoricalDataSheet}
+        merchant={selectedMerchantForHistory}
+        onConfirm={handleHistoricalDataConfirm}
+        onCancel={handleHistoricalDataCancel}
       />
     </form>
   );
