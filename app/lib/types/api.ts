@@ -264,3 +264,32 @@ export interface ListFinItemsResponse {
   data: FinItemWithParent[];
   pagination: PaginationMeta;
 }
+
+// ========== Historical Data Auto-Populate Types ==========
+
+// Historical data API response
+export interface HistoricalDataResponse {
+  success: boolean;
+  data: {
+    merchant: string;
+    categories: Array<{
+      category: string;
+      subcategory: string;
+    }>;
+    locations: Array<{
+      place: string;
+      city: string;
+    }>;
+    details: string[];
+  };
+}
+
+// Historical data item for form population
+export interface HistoricalDataItem {
+  type: "category" | "location" | "detail";
+  category?: string;
+  subcategory?: string;
+  place?: string;
+  city?: string;
+  detail?: string;
+}
