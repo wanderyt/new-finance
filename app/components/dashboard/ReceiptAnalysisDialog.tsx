@@ -10,6 +10,7 @@ export interface AnalyzedLineItem {
   amount: number; // In cents
   quantity?: number;
   unit?: string;
+  notes?: string; // Original name from receipt (before standardization)
 }
 
 interface ReceiptAnalysisResult {
@@ -45,6 +46,7 @@ const ReceiptAnalysisDialog = ({
       originalAmountCents: item.amount,
       qty: item.quantity,
       unit: item.unit,
+      notes: item.notes, // Preserve original name from standardization
       personId: defaultPerson?.personId,
     })) || [];
 
@@ -59,6 +61,7 @@ const ReceiptAnalysisDialog = ({
           originalAmountCents: item.amount,
           qty: item.quantity,
           unit: item.unit,
+          notes: item.notes, // Preserve original name from standardization
           personId: defaultPerson?.personId,
         }))
       );
