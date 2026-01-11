@@ -77,9 +77,8 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
 
       {/* Right Side */}
       <div className="flex items-center gap-2 ml-3">
-        {/* Info Icon with Tooltip */}
-        {fin.originalCurrency !== "CAD" && (
-          <div className="relative">
+        {/* Info Icon with Tooltip - Shows exchange rates for all currencies */}
+        <div className="relative">
             <button
               type="button"
               className="p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded transition-colors"
@@ -111,7 +110,6 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
               </div>
             )}
           </div>
-        )}
 
         {/* Amount */}
         <div className="text-right">
