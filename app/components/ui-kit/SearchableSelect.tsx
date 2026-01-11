@@ -10,6 +10,7 @@ interface SearchableSelectProps {
   icon?: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  onOptionSelected?: (value: string) => void;
 }
 
 export default function SearchableSelect({
@@ -20,6 +21,7 @@ export default function SearchableSelect({
   icon,
   className = "",
   disabled = false,
+  onOptionSelected,
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -69,6 +71,11 @@ export default function SearchableSelect({
     onChange(option.value); // Set final value to selected option
     setIsOpen(false);
     inputRef.current?.blur();
+
+    // Call callback if provided
+    if (onOptionSelected) {
+      onOptionSelected(option.value);
+    }
   };
 
   const handleInputFocus = () => {

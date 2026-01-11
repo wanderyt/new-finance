@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-01-11
+
+### Added
+- **Historical Data Auto-Populate Feature**: Smart form auto-completion based on merchant selection
+  - New API endpoint `GET /api/fin/history` fetches grouped historical data by merchant
+  - Three parallel database queries for categories, locations, and details (up to 10 unique values each)
+  - HistoricalDataSheet component with bottom sheet modal UI
+  - Single-select dropdowns for categories (分类), locations (地点), and details (详细说明)
+  - Optional field selection with "不选择" option per section
+  - Automatic form population of category, subcategory, place, city, and details
+  - Triggered when user selects merchant from dropdown in FinEditorForm
+  - Leverages existing `idx_fin_user_merchant` database index for optimal performance
+  - Comprehensive documentation in `docs/fin-auto-populate-feature.md`
+- **Income Categories**: Added three income subcategories to seed script
+  - 收入 → 工资 (Salary)
+  - 收入 → 奖金 (Bonus)
+  - 收入 → 福利 (Benefits)
+- **SearchableSelect Enhancement**: Added optional `onOptionSelected` callback prop
+  - Fires when user clicks dropdown option (not when typing)
+  - Maintains full backward compatibility
+
+### Fixed
+- **Exchange Rate Info Icon**: Now displays for all transactions regardless of currency
+  - Previously hidden for CAD transactions
+  - Provides USD/CNY exchange rate visibility for all records
+  - Tooltip shows CAD, USD, and CNY amounts on hover
+
 ## [0.15.0] - 2026-01-11
 
 ### Added
