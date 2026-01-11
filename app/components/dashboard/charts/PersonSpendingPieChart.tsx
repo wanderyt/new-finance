@@ -114,10 +114,10 @@ export default function PersonSpendingPieChart({
         <Pie
           data={chartData}
           cx="50%"
-          cy="50%"
+          cy="40%"
           labelLine={false}
           label={false}
-          outerRadius={80}
+          outerRadius={Math.min(80, height * 0.25)}
           fill="#8884d8"
           dataKey="value"
           onClick={handlePieClick}
@@ -133,8 +133,13 @@ export default function PersonSpendingPieChart({
         </Pie>
         <Tooltip content={<CustomTooltip />} />
         <Legend
+          verticalAlign="bottom"
+          align="center"
           iconType="circle"
-          wrapperStyle={{ fontSize: "12px" }}
+          wrapperStyle={{
+            fontSize: "12px",
+            paddingTop: "10px",
+          }}
           formatter={(value, entry: any) => (
             <span className="text-xs text-zinc-700 dark:text-zinc-300">
               {value} (${entry.payload.value.toFixed(0)})
