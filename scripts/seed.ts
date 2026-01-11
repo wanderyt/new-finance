@@ -174,7 +174,26 @@ async function main() {
         }))
       ).onConflictDoNothing()
 
-      console.log('✅ Categories created (83 expense categories)')
+      console.log('✅ Expense categories created (83 categories)')
+
+      // Insert income categories for the demo user
+      const incomeCategoryData = [
+        { category: '收入', subcategory: '工资' },
+        { category: '收入', subcategory: '奖金' },
+        { category: '收入', subcategory: '福利' },
+      ]
+
+      await db.insert(schema.categories).values(
+        incomeCategoryData.map(cat => ({
+          userId: demoUser.userId,
+          category: cat.category,
+          subcategory: cat.subcategory,
+          appliesTo: 'income',
+          isCommon: false,
+        }))
+      ).onConflictDoNothing()
+
+      console.log('✅ Income categories created (3 categories: 工资, 奖金, 福利)')
 
       // Verify categories were created
       const categories = await db.select().from(schema.categories)
