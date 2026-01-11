@@ -267,10 +267,11 @@ export default function Dashboard() {
                     </p>
                   </div>
                 ) : (
-                  finsUpToNow.map((fin) => (
+                  finsUpToNow.slice(0, 50).map((fin) => (
                     <ExpenseTile key={fin.finId} fin={fin} onClick={handleEditFin} />
                   ))
                 )}
+
               </div>
             </>
           ) : (
