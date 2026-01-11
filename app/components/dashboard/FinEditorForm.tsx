@@ -571,13 +571,14 @@ const FinEditorForm = ({
       )}
 
       {/* Action Buttons */}
-      <div className="flex gap-3 pt-4">
+      <div className="flex gap-2 pt-4">
         <Button
           type="button"
           variant="secondary"
+          size="sm"
           onClick={onCancel}
           disabled={isSubmitting}
-          fullWidth
+          className="flex-1"
         >
           取消
         </Button>
@@ -586,9 +587,10 @@ const FinEditorForm = ({
           <Button
             type="button"
             variant="ghost"
+            size="sm"
             onClick={onDelete}
             disabled={isSubmitting}
-            className="!bg-red-100 dark:!bg-red-900/30 !text-red-700 dark:!text-red-300 hover:!bg-red-200 dark:hover:!bg-red-900/50"
+            className="flex-1 !bg-red-100 dark:!bg-red-900/30 !text-red-700 dark:!text-red-300 hover:!bg-red-200 dark:hover:!bg-red-900/50"
           >
             删除
           </Button>
@@ -597,8 +599,9 @@ const FinEditorForm = ({
         <Button
           type="submit"
           variant="primary"
+          size="sm"
           disabled={!isValid() || isSubmitting}
-          fullWidth
+          className="flex-1"
         >
           {isSubmitting ? "保存中..." : existingFin ? "更新" : "保存"}
         </Button>

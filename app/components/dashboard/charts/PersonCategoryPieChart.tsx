@@ -106,10 +106,10 @@ export default function PersonCategoryPieChart({
         <Pie
           data={chartData}
           cx="50%"
-          cy="50%"
+          cy="35%"
           labelLine={false}
           label={false}
-          outerRadius={70}
+          outerRadius={Math.min(70, height * 0.25)}
           fill="#8884d8"
           dataKey="value"
         >
@@ -122,8 +122,13 @@ export default function PersonCategoryPieChart({
         </Pie>
         <Tooltip content={<CustomTooltip />} />
         <Legend
+          verticalAlign="bottom"
+          align="center"
           iconType="circle"
-          wrapperStyle={{ fontSize: "11px" }}
+          wrapperStyle={{
+            fontSize: "11px",
+            paddingTop: "8px",
+          }}
           formatter={(value, entry: any) => (
             <span className="text-xs text-zinc-700 dark:text-zinc-300">
               {value} (${entry.payload.value.toFixed(0)})

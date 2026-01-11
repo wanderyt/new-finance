@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-01-11
+
+### Added
+- **Database Migration Script**: Automated migration tool for transferring financial records from legacy database
+  - Migrates 500 latest non-scheduled records from 2025 from test.db to finance.db
+  - Comprehensive schema transformation (13 columns → 20 columns)
+  - Amount conversion from dollars to cents with multi-currency support
+  - FX rate application (CAD→USD: 0.72029, CAD→CNY: 5.0293)
+  - Tag parsing from comma-separated strings to relational tables (tags, fin_tags)
+  - Auto-creates fin_items for person-specific categories (骐骐→Robin, 慢慢→Luna)
+  - Dry-run mode for safe preview with `--dry-run` flag
+  - Comprehensive error handling and detailed logging
+  - Successfully migrated 500 records, 7 tags, and 50 person items
+  - Documentation: docs/migration-fin-records.md with validation queries
+  - Scripts: `yarn migrate:fin` and `yarn migrate:fin:dry-run`
+- **Dashboard Record Limit**: Performance optimization showing only 50 most recent records
+  - Improves load time and reduces UI clutter
+  - Applied to current month view in dashboard
+
+### Fixed
+- **Pie Chart Legend Overlap**: Resolved layout issues when many categories exist
+  - Adjusted pie chart position upward (cy: 50% → 40%/35%)
+  - Made outerRadius responsive based on chart height
+  - Added explicit legend vertical alignment and padding
+  - Applied to CategoryPieChart, PersonSpendingPieChart, and PersonCategoryPieChart
+- **Button Sizing Inconsistency**: Standardized action button sizes in fin editor form
+  - Reduced Button sm size font from text-sm to text-xs
+  - Changed button layout from fullWidth to flex-1 for equal widths
+  - Reduced gap between buttons from gap-3 to gap-2
+  - All three action buttons (取消/删除/保存) now have consistent sizing
+
 ## [0.14.0] - 2026-01-09
 
 ### Added
