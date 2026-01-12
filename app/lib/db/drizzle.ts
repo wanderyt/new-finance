@@ -8,9 +8,9 @@ const globalForDb = globalThis as unknown as {
 }
 
 // Create better-sqlite3 connection
-const sqlite = globalForDb.sqlite ?? new Database(
-  path.join(process.cwd(), 'db', 'finance.db')
-)
+// Support DATABASE_PATH env var for Docker, fallback to default for local dev
+const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'db', 'finance.db')
+const sqlite = globalForDb.sqlite ?? new Database(dbPath)
 
 if (process.env.NODE_ENV !== 'production') {
   globalForDb.sqlite = sqlite
