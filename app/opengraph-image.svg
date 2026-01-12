@@ -1,0 +1,70 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#grad)"/>
+
+  <!-- Icon circle on left -->
+  <circle cx="250" cy="315" r="120" fill="white" opacity="0.15"/>
+
+  <!-- Dollar sign icon -->
+  <g transform="translate(250, 315)">
+    <path d="M0 -80 L0 -60" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <path d="M0 60 L0 80" stroke="white" stroke-width="12" stroke-linecap="round"/>
+    <path d="M 25 -35 C 25 -47 20 -50 0 -50 C -20 -50 -25 -47 -25 -35 C -25 -23 -20 -15 0 0 C 20 15 25 23 25 35 C 25 47 20 50 0 50 C -20 50 -25 47 -25 35"
+          stroke="white"
+          stroke-width="15"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"/>
+  </g>
+
+  <!-- Chart decoration -->
+  <g opacity="0.2">
+    <path d="M 370 200 L 450 180 L 530 220 L 610 160 L 690 190 L 770 140"
+          stroke="white" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="370" cy="200" r="6" fill="white"/>
+    <circle cx="450" cy="180" r="6" fill="white"/>
+    <circle cx="530" cy="220" r="6" fill="white"/>
+    <circle cx="610" cy="160" r="6" fill="white"/>
+    <circle cx="690" cy="190" r="6" fill="white"/>
+    <circle cx="770" cy="140" r="6" fill="white"/>
+  </g>
+
+  <!-- Title -->
+  <text x="600" y="300" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle">
+    New Finance
+  </text>
+
+  <!-- Subtitle -->
+  <text x="600" y="360" font-family="system-ui, -apple-system, sans-serif" font-size="32" fill="white" opacity="0.9" text-anchor="middle">
+    Secure Financial Management
+  </text>
+
+  <!-- Feature tags -->
+  <g transform="translate(350, 430)">
+    <rect x="0" y="0" width="180" height="50" rx="25" fill="white" opacity="0.2"/>
+    <text x="90" y="33" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="white" text-anchor="middle">
+      Track Expenses
+    </text>
+  </g>
+
+  <g transform="translate(560, 430)">
+    <rect x="0" y="0" width="180" height="50" rx="25" fill="white" opacity="0.2"/>
+    <text x="90" y="33" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="white" text-anchor="middle">
+      AI Analysis
+    </text>
+  </g>
+
+  <g transform="translate(770, 430)">
+    <rect x="0" y="0" width="160" height="50" rx="25" fill="white" opacity="0.2"/>
+    <text x="80" y="33" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="white" text-anchor="middle">
+      Dashboard
+    </text>
+  </g>
+</svg>
