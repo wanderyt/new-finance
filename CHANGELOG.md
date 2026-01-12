@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-01-12
+
+### Added
+- **Docker Deployment Support**: Production-ready containerization for NAS deployment
+  - Multi-stage Dockerfile with optimized build (node:20-alpine base)
+  - Two deployment strategies:
+    - **Simplest Approach**: Direct build on NAS via docker-compose
+    - **Docker Hub Approach**: Pre-built images with GUI container manager support
+  - Docker Compose configurations for both local and production deployment
+  - `.dockerignore` for optimized build context
+  - Health check endpoint at `/api/health` for container monitoring
+  - Automated build and push script for Docker Hub deployment
+
+- **Configurable Database Path**: Environment-based database location
+  - `DATABASE_PATH` environment variable support in Drizzle ORM config
+  - Enables flexible database mounting in Docker containers
+  - Maintains backward compatibility with default `./db/finance.db` path
+  - Supports external volume mounting for data persistence on NAS
+
+- **Custom Finance Branding**: Professional app icons and social media assets
+  - Finance-themed SVG icons with emerald green color scheme (#10B981)
+  - Custom favicon (icon.svg) with dollar sign and chart elements
+  - Apple Touch Icon (apple-icon.svg) for iOS devices
+  - Open Graph image (opengraph-image.svg) for social media previews
+  - Removed generic Vercel branding
+  - Updated metadata configuration in layout.tsx
+
+- **Comprehensive Documentation**:
+  - `DEPLOYMENT-QUICK-START.md`: Quick reference guide for both deployment approaches
+  - `docs/docker-deployment.md`: Complete deployment guide (900+ lines)
+    - Prerequisites and system requirements
+    - Step-by-step instructions for CLI and GUI deployment
+    - Synology Container Manager and QNAP Container Station walkthroughs
+    - Database management, backups, and migrations
+    - Drizzle Studio access (SSH exec and always-on options)
+    - Troubleshooting common issues
+    - Security considerations and best practices
+  - `docs/docker-hub-deployment.md`: Detailed Docker Hub workflow
+    - Building and pushing images to Docker Hub
+    - Private repository configuration
+    - GUI-based deployment on NAS devices
+    - Authentication setup for private registries
+  - `docs/branding.md`: Icon and branding asset documentation
+    - Design specifications and color palette
+    - Usage guidelines and browser support
+    - Testing instructions for icons and social previews
+
+### Changed
+- Database configuration now supports environment variable override
+- Application layout includes custom icon metadata
+- Removed default Vercel favicon in favor of custom finance icons
+
+### Security
+- Docker Hub private repository recommended for production deployments
+- Environment variables for sensitive data (API keys)
+- Database mounted as external volume (not included in image)
+- `.dockerignore` prevents accidental inclusion of secrets
+
 ## [0.17.0] - 2026-01-11
 
 ### Added
