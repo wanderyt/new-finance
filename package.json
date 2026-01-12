@@ -1,6 +1,6 @@
 {
   "name": "new-finance",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "private": true,
   "packageManager": "yarn@4.5.3",
   "engines": {
@@ -29,6 +29,7 @@
     "@google/generative-ai": "^0.24.1",
     "@reduxjs/toolkit": "^2.11.2",
     "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
     "drizzle-orm": "0.45.1",
     "framer-motion": "^12.23.26",
     "next": "16.1.0",

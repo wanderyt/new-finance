@@ -27,6 +27,7 @@ import CategoryBreadcrumb from "./charts/CategoryBreadcrumb";
 import CategoryExpenseList from "./charts/CategoryExpenseList";
 import MonthComparisonLineChart from "./charts/MonthComparisonLineChart";
 import PersonAnalysisView from "./charts/PersonAnalysisView";
+import { ItemPriceTrendView } from "./charts/ItemPriceTrendView";
 
 interface ChartsViewProps {
   isOpen: boolean;
@@ -37,7 +38,7 @@ interface ChartsViewProps {
 export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewProps) {
   const dispatch = useAppDispatch();
   const [chartType, setChartType] = useState<"bar" | "pie">("pie");
-  const [viewMode, setViewMode] = useState<"category" | "comparison" | "person">("category");
+  const [viewMode, setViewMode] = useState<"category" | "comparison" | "person" | "price-trend">("category");
 
   // Selectors
   const categoryChartData = useAppSelector(selectCategoryChartData);
@@ -144,10 +145,20 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
           >
             个人分析
           </button>
+          <button
+            onClick={() => setViewMode("price-trend")}
+            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              viewMode === "price-trend"
+                ? "bg-blue-600 text-white"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+            }`}
+          >
+            价格趋势
+          </button>
         </div>
 
-        {/* Date Filter */}
-        <MonthYearFilter />
+        {/* Date Filter - Only show for category, comparison, and person views */}
+        {viewMode !== "price-trend" && <MonthYearFilter />}
 
         {/* Category View */}
         {viewMode === "category" && (
@@ -244,6 +255,9 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
 
         {/* Person Analysis View */}
         {viewMode === "person" && <PersonAnalysisView />}
+
+        {/* Price Trend View */}
+        {viewMode === "price-trend" && <ItemPriceTrendView />}
       </div>
     </BottomSheet>
   );

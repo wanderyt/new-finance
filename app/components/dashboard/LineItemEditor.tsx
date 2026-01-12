@@ -157,12 +157,19 @@ const LineItemEditor = ({
           />
         </div>
 
-        {/* Notes */}
-        <Input
-          value={localItem.notes || ""}
-          onChange={(e) => handleChange("notes", e.target.value || undefined)}
-          placeholder="备注"
-        />
+        {/* Notes - show original name if available */}
+        <div className="space-y-1">
+          <Input
+            value={localItem.notes || ""}
+            onChange={(e) => handleChange("notes", e.target.value || undefined)}
+            placeholder="备注"
+          />
+          {localItem.notes && (
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              原始名称: {localItem.notes}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

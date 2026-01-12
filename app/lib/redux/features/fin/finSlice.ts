@@ -16,6 +16,25 @@ import {
   ListFinItemsResponse,
 } from "@/app/lib/types/api";
 
+interface WeeklyPricePoint {
+  merchant: string;
+  week: string;
+  avgPrice: number;
+  count: number;
+}
+
+interface PriceTrendData {
+  itemName: string;
+  data: WeeklyPricePoint[];
+  merchants: string[];
+}
+
+interface AutocompleteItem {
+  name: string;
+  count: number;
+  lastPurchased: string;
+}
+
 export interface FinState {
   fins: FinData[];
   currentFin: FinData | null;
@@ -54,6 +73,18 @@ export interface FinState {
     personItems: FinItemWithParent[];
     personItemsLoading: boolean;
     personItemsError: string | null;
+  };
+
+  priceTrend: {
+    data: PriceTrendData | null;
+    loading: boolean;
+    error: string | null;
+  };
+
+  itemAutocomplete: {
+    items: AutocompleteItem[];
+    loading: boolean;
+    error: string | null;
   };
 
   persons: PersonData[];
@@ -104,6 +135,18 @@ const initialState: FinState = {
     personItems: [],
     personItemsLoading: false,
     personItemsError: null,
+  },
+
+  priceTrend: {
+    data: null,
+    loading: false,
+    error: null,
+  },
+
+  itemAutocomplete: {
+    items: [],
+    loading: false,
+    error: null,
   },
 
   persons: [],
@@ -510,6 +553,50 @@ export const fetchPersonItemsForChartsAsync = createAsyncThunk<
   }
 });
 
+// Async thunk for fetching price trend
+export const fetchPriceTrend = createAsyncThunk<
+  PriceTrendData,
+  string,
+  { rejectValue: string }
+>("fin/fetchPriceTrend", async (itemName, { rejectWithValue }) => {
+  try {
+    const response = await axios.get(
+      `/api/fin/items/price-trend?itemName=${encodeURIComponent(itemName)}`,
+      { withCredentials: true }
+    );
+    return response.data as PriceTrendData;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(
+        error.response.data.error || "Failed to fetch price trend"
+      );
+    }
+    return rejectWithValue("Network error. Please try again.");
+  }
+});
+
+// Async thunk for fetching item autocomplete
+export const fetchItemAutocomplete = createAsyncThunk<
+  AutocompleteItem[],
+  string,
+  { rejectValue: string }
+>("fin/fetchItemAutocomplete", async (query, { rejectWithValue }) => {
+  try {
+    const response = await axios.get(
+      `/api/fin/items/autocomplete?q=${encodeURIComponent(query)}`,
+      { withCredentials: true }
+    );
+    return response.data.items as AutocompleteItem[];
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(
+        error.response.data.error || "Failed to fetch autocomplete"
+      );
+    }
+    return rejectWithValue("Network error. Please try again.");
+  }
+});
+
 const finSlice = createSlice({
   name: "fin",
   initialState,
@@ -805,6 +892,36 @@ const finSlice = createSlice({
       .addCase(fetchPersonItemsForChartsAsync.rejected, (state, action) => {
         state.charts.personItemsLoading = false;
         state.charts.personItemsError = action.payload || "Failed to fetch person items";
+      });
+
+    // Fetch price trend
+    builder
+      .addCase(fetchPriceTrend.pending, (state) => {
+        state.priceTrend.loading = true;
+        state.priceTrend.error = null;
+      })
+      .addCase(fetchPriceTrend.fulfilled, (state, action) => {
+        state.priceTrend.loading = false;
+        state.priceTrend.data = action.payload;
+      })
+      .addCase(fetchPriceTrend.rejected, (state, action) => {
+        state.priceTrend.loading = false;
+        state.priceTrend.error = action.payload || "Failed to fetch price trend";
+      });
+
+    // Fetch item autocomplete
+    builder
+      .addCase(fetchItemAutocomplete.pending, (state) => {
+        state.itemAutocomplete.loading = true;
+        state.itemAutocomplete.error = null;
+      })
+      .addCase(fetchItemAutocomplete.fulfilled, (state, action) => {
+        state.itemAutocomplete.loading = false;
+        state.itemAutocomplete.items = action.payload;
+      })
+      .addCase(fetchItemAutocomplete.rejected, (state, action) => {
+        state.itemAutocomplete.loading = false;
+        state.itemAutocomplete.error = action.payload || "Failed to fetch autocomplete";
       });
   },
 });
@@ -1245,5 +1362,9 @@ export const selectPersonCategoryData = createSelector(
       .sort((a, b) => b.totalCents - a.totalCents);
   }
 );
+
+// Price trend selectors
+export const selectPriceTrend = (state: RootState) => state.fin.priceTrend;
+export const selectItemAutocomplete = (state: RootState) => state.fin.itemAutocomplete;
 
 export default finSlice.reducer;
