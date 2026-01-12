@@ -1,0 +1,22 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background with rounded corners for Apple -->
+  <rect width="180" height="180" rx="40" fill="#10B981"/>
+
+  <!-- Dollar sign -->
+  <path d="M90 30 L90 45" stroke="white" stroke-width="8" stroke-linecap="round"/>
+  <path d="M90 135 L90 150" stroke="white" stroke-width="8" stroke-linecap="round"/>
+
+  <!-- S shape for dollar -->
+  <path d="M 105 55 C 105 47 100 45 90 45 C 80 45 75 47 75 55 C 75 63 80 67 90 75 L 90 75 C 100 83 105 87 105 95 C 105 103 100 105 90 105 C 80 105 75 103 75 95"
+        stroke="white"
+        stroke-width="10"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        fill="none"/>
+
+  <!-- Circular chart segments (representing financial tracking) -->
+  <g opacity="0.25">
+    <path d="M 135 90 A 45 45 0 0 1 90 135" stroke="white" stroke-width="6" fill="none"/>
+    <path d="M 90 45 A 45 45 0 0 1 135 90" stroke="white" stroke-width="6" fill="none"/>
+  </g>
+</svg>

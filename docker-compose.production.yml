@@ -1,0 +1,34 @@
+# Docker Compose for production deployment from Docker Hub
+# This file uses a pre-built image from Docker Hub instead of building locally
+
+services:
+  new-finance:
+    container_name: new-finance
+    # Replace 'yourusername' with your Docker Hub username
+    image: yourusername/new-finance:latest
+    ports:
+      - "3000:3000"
+      # Uncomment the line below for always-on Drizzle Studio access
+      # - "4983:4983"
+    volumes:
+      # Update this path to your NAS storage location
+      # Synology example: /volume1/docker/new-finance-data:/app/db
+      # QNAP example: /share/Container/new-finance-data:/app/db
+      - /volume1/docker/new-finance-data:/app/db
+    environment:
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/db/finance.db
+      - GOOGLE_GEMINI_API_KEY=${GOOGLE_GEMINI_API_KEY}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# To deploy:
+# 1. Create .env file with: GOOGLE_GEMINI_API_KEY=your_key_here
+# 2. Update the image name above with your Docker Hub username
+# 3. Update the volume path for your NAS
+# 4. Run: docker-compose -f docker-compose.production.yml up -d
