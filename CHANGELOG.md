@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-01-11
+
+### Added
+- **Price Trend Analysis Feature**: Multi-line chart to compare product prices across merchants over time
+  - New "价格趋势" tab in Charts dashboard view
+  - API endpoints:
+    - `GET /api/fin/items/price-trend` - Fetch weekly average prices per merchant
+    - `GET /api/fin/items/autocomplete` - Search products with auto-complete
+  - Redux state management with fetchPriceTrend and fetchItemAutocomplete thunks
+  - ItemPriceTrendChart component with Recharts multi-line visualization
+  - ItemSearchInput component with auto-populate on focus and debounced search
+  - Weekly price aggregation using ISO week format
+  - Automatic conversion of ISO week labels to readable MM/DD date format
+  - Support for multiple merchants with distinct color coding
+  - Consistent small font sizes (11-12px) throughout the UI
+  - Test data generation scripts:
+    - `seed-price-trend-data.ts` - Generate realistic test transactions
+    - `cleanup-test-data.ts` - Safely remove test data
+  - Test data marked with "TEST_DATA" comment for easy identification
+  - Comprehensive documentation in `docs/item-price-trend-feature.md`
+- **AI-Powered Item Name Standardization**: Google Gemini integration for receipt analysis
+  - Standardize English/mixed product names to Chinese (家常话 format)
+  - Original names stored in notes field, standardized names in name field
+  - Improved product search and price comparison accuracy
+  - Documentation in `docs/item-name-standardization-feature.md`
+
+### Changed
+- MonthYearFilter now hidden in price-trend view (not applicable for this feature)
+- Added date-fns@4.1.0 dependency for ISO week calculations
+
 ## [0.16.0] - 2026-01-11
 
 ### Added
