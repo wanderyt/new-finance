@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-13
+
+### Added
+- **Full Historical Data Migration**: Comprehensive migration system for all historical financial records
+  - New `migrate-all-fin-records.ts` script to migrate all 13,721 historical records from `test.db` to `finance.db`
+  - Date filtering: Only migrates records before today (excludes future scheduled transactions)
+  - Automatic person assignment logic for fin_items:
+    - Robin (骐骐): Records with "骐骐" in category or tags
+    - Luna (慢慢): Records with "慢慢" in category or tags
+    - Family: Default for all other records
+  - Single fin_item created per fin record with matching amount
+  - All migrated records set as non-scheduled (`is_scheduled=0`)
+  - Transaction batching (500 records per batch) for optimal performance
+  - Progress logging for large dataset migrations
+  - Dry-run mode for preview before execution
+
+- **Database Reset Script**: New cleanup utility for fresh migrations
+  - `reset-fin-data.ts` script to remove all fin records while preserving seed data
+  - Deletes fin_tags, fin_items, fin, and tags tables
+  - Preserves users, persons, categories, and fx_snapshots
+  - Built-in validation to ensure proper cleanup
+
+- **New NPM Scripts**: Convenient commands for database operations
+  - `yarn db:reset-fin-data` - Clean up fin records
+  - `yarn migrate:all-fin` - Execute full historical migration
+  - `yarn migrate:all-fin:dry-run` - Preview migration without changes
+
+### Changed
+- **UI Simplification**: Removed redundant type badge from expense tiles
+  - Removed "支出/收入" text badge as color-coded amounts already indicate type
+  - Red text for expenses, green text for income
+  - Cleaner, less cluttered transaction list view
+
+### Fixed
+- **Docker Build**: Removed non-existent `tailwind.config.ts` reference from Dockerfile
+  - Fixed build error caused by missing config file
+  - Tailwind CSS 4 uses `@tailwindcss/postcss` plugin without separate config
+
+### Migration Results
+- Successfully migrated **13,721 historical records** (2015-10-01 to 2026-01-12)
+- Person distribution: 12,443 Family, 1,024 Robin, 254 Luna
+- 42 unique tags created and normalized
+- Total historical spending tracked: $3,842,846.27
+
 ## [1.0.0] - 2026-01-12
 
 ### Added
