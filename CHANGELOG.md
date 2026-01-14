@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-01-13
+
+### Fixed
+- **TypeScript Build Errors**: Resolved drizzle-orm 0.45.1 type inference issues
+  - Added `@ts-expect-error` comments to suppress TypeScript errors in table definitions
+  - Fixed build failures caused by complex type inference in composite primary keys
+  - Affected tables: categories, fxSnapshots, scheduleRules, fin, persons, finItems
+  - Build now completes successfully without type errors
+- **ItemPriceTrendChart Type Safety**: Improved tooltip formatter type handling
+  - Changed tooltip formatter parameter from `number` to `number | undefined`
+  - Fixed potential runtime errors from undefined values
+  - Improved code formatting and quote consistency
+
 ## [1.1.0] - 2026-01-13
 
 ### Added
