@@ -39,6 +39,8 @@ COPY public ./public
 COPY next.config.ts ./
 COPY tsconfig.json ./
 COPY postcss.config.mjs ./
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
 
 # Set production environment
 ENV NODE_ENV=production

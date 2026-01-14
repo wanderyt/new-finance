@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-01-14
+
+### Fixed
+- **Docker Build Errors**: Resolved missing drizzle configuration files in builder stage
+  - Added `drizzle.config.ts` and `drizzle/` directory to Docker builder stage
+  - Fixed "file not found" error when copying drizzle files to runner stage
+  - Database migrations now work correctly in Docker containers
+- **Docker Database Initialization**: Implemented lazy database connection pattern
+  - Database connection now deferred until first actual query
+  - Prevents SQLite errors during Docker build process
+  - Ensures `db` directory exists before database operations
+  - Build process completes successfully without database file present
+
 ## [1.1.1] - 2026-01-13
 
 ### Fixed
