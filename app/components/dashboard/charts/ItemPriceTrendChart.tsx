@@ -38,7 +38,7 @@ const COLORS = [
 
 // Convert ISO week (e.g., "2025-W08") to readable date format
 function formatWeekLabel(isoWeek: string): string {
-  const [year, weekStr] = isoWeek.split('-W');
+  const [year, weekStr] = isoWeek.split("-W");
   const weekNum = parseInt(weekStr, 10);
 
   // Calculate the date of the first day of the week (Monday)
@@ -49,8 +49,8 @@ function formatWeekLabel(isoWeek: string): string {
   weekStart.setDate(jan4.getDate() - jan4Day + 1 + (weekNum - 1) * 7);
 
   // Format as MM/DD
-  const month = String(weekStart.getMonth() + 1).padStart(2, '0');
-  const day = String(weekStart.getDate()).padStart(2, '0');
+  const month = String(weekStart.getMonth() + 1).padStart(2, "0");
+  const day = String(weekStart.getDate()).padStart(2, "0");
   return `${month}/${day}`;
 }
 
@@ -114,13 +114,13 @@ export function ItemPriceTrendChart({
               borderRadius: "0.375rem",
               fontSize: "11px",
             }}
-            formatter={(value: number) => [`$${value.toFixed(2)}`, ""]}
+            formatter={(value: number | undefined) => [
+              `$${value?.toFixed(2)}`,
+              "",
+            ]}
             labelFormatter={(label) => `日期: ${label}`}
           />
-          <Legend
-            wrapperStyle={{ fontSize: "11px" }}
-            iconSize={10}
-          />
+          <Legend wrapperStyle={{ fontSize: "11px" }} iconSize={10} />
           {merchants.map((merchant, index) => (
             <Line
               key={merchant}
