@@ -33,7 +33,7 @@
     "@reduxjs/toolkit": "^2.11.2",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
-    "drizzle-orm": "0.45.1",
+    "drizzle-orm": "^0.45.1",
     "framer-motion": "^12.23.26",
     "next": "16.1.0",
     "openai": "^6.15.0",
