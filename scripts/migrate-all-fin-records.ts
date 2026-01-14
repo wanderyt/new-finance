@@ -1,0 +1,502 @@
+#!/usr/bin/env tsx
+
+/**
+ * Migration Script: test.db → finance.db (FULL HISTORICAL DATA)
+ *
+ * Migrates ALL non-future financial records (13,721 records before 2026-01-13) from test.db
+ * to the new schema in finance.db.
+ *
+ * Features:
+ * - Migrates all records before today (date < '2026-01-13')
+ * - Converts amounts from dollars to cents
+ * - Applies FX rates for multi-currency support
+ * - Migrates comma-separated tags to tags table
+ * - Creates ONE fin_item for EVERY fin record with person assignment:
+ *   - Robin (person_id=1): category='骐骐' OR tags contains '骐骐'
+ *   - Luna (person_id=4): category='慢慢' OR tags contains '慢慢'
+ *   - Family (person_id=5): Default for all others
+ * - Sets is_scheduled=0 for all records (no schedule rules)
+ * - Supports dry-run mode for preview
+ * - Transaction batching for performance (500 records per batch)
+ *
+ * Usage:
+ *   yarn migrate:all-fin              # Execute migration
+ *   yarn migrate:all-fin:dry-run      # Preview without changes
+ */
+
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Parse command-line arguments
+const isDryRun = process.argv.includes('--dry-run');
+
+// Database paths
+const TEST_DB_PATH = path.join(__dirname, '../db/test.db');
+const FINANCE_DB_PATH = path.join(__dirname, '../db/finance.db');
+
+// Constants
+const TODAY = '2026-01-13';
+const BATCH_SIZE = 500;
+const DRY_RUN_PREVIEW_COUNT = 20;
+
+// Person IDs
+const PERSON_IDS = {
+  ROBIN: 1,
+  LUNA: 4,
+  FAMILY: 5,
+};
+
+// Person-category mapping
+const PERSON_CATEGORY_MAP: Record<string, number> = {
+  骐骐: PERSON_IDS.ROBIN,
+  慢慢: PERSON_IDS.LUNA,
+};
+
+// Type definitions
+interface OldFinRecord {
+  id: string;
+  category: string | null;
+  subcategory: string | null;
+  comment: string | null;
+  date: string;
+  amount: number;
+  isScheduled: number | null;
+  scheduleId: string | null;
+  place: string | null;
+  city: string | null;
+  USERID: number;
+  tags: string | null;
+  details: string | null;
+}
+
+interface FXRate {
+  fx_id: number;
+  cad_to_usd: number;
+  cad_to_cny: number;
+}
+
+interface Person {
+  person_id: number;
+  name: string;
+}
+
+interface Tag {
+  tag_id: number;
+  name: string;
+}
+
+interface MigrationStats {
+  totalProcessed: number;
+  recordsInserted: number;
+  recordsSkipped: number;
+  tagsCreated: number;
+  itemsCreated: number;
+  personCounts: {
+    robin: number;
+    luna: number;
+    family: number;
+  };
+  errors: string[];
+}
+
+// Helper functions
+function log(message: string, level: 'info' | 'success' | 'warning' | 'error' = 'info') {
+  const prefix = {
+    info: '📋',
+    success: '✅',
+    warning: '⚠️',
+    error: '❌',
+  }[level];
+
+  console.log(`${prefix} ${message}`);
+}
+
+function toDisplayAmount(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
+function detectPerson(category: string | null, tags: string[]): number {
+  // Check for Robin (骐骐)
+  if (category === '骐骐' || tags.includes('骐骐')) {
+    return PERSON_IDS.ROBIN;
+  }
+
+  // Check for Luna (慢慢)
+  if (category === '慢慢' || tags.includes('慢慢')) {
+    return PERSON_IDS.LUNA;
+  }
+
+  // Default to Family
+  return PERSON_IDS.FAMILY;
+}
+
+function getPersonName(personId: number): string {
+  const names: Record<number, string> = {
+    [PERSON_IDS.ROBIN]: 'Robin',
+    [PERSON_IDS.LUNA]: 'Luna',
+    [PERSON_IDS.FAMILY]: 'Family',
+  };
+  return names[personId] || 'Unknown';
+}
+
+// Main migration function
+async function migrate() {
+  log(`Migration Mode: ${isDryRun ? 'DRY-RUN (no changes)' : 'EXECUTE'}`, 'info');
+  log(`Target Date Filter: Records before ${TODAY}`, 'info');
+  log(`Batch Size: ${BATCH_SIZE} records per transaction`, 'info');
+  log('', 'info');
+
+  // Connect to databases
+  log('Connecting to databases...', 'info');
+  const testDb = new Database(TEST_DB_PATH, { readonly: true });
+  const financeDb = isDryRun
+    ? new Database(FINANCE_DB_PATH, { readonly: true })
+    : new Database(FINANCE_DB_PATH, { fileMustExist: true });
+
+  const stats: MigrationStats = {
+    totalProcessed: 0,
+    recordsInserted: 0,
+    recordsSkipped: 0,
+    tagsCreated: 0,
+    itemsCreated: 0,
+    personCounts: {
+      robin: 0,
+      luna: 0,
+      family: 0,
+    },
+    errors: [],
+  };
+
+  try {
+    // Load reference data from finance.db
+    log('Loading reference data from finance.db...', 'info');
+
+    // Get latest FX rate
+    const fxRate = financeDb
+      .prepare('SELECT fx_id, cad_to_usd, cad_to_cny FROM fx_snapshots ORDER BY captured_at DESC LIMIT 1')
+      .get() as FXRate | undefined;
+
+    if (!fxRate) {
+      throw new Error('No FX rate found in finance.db');
+    }
+
+    log(`Using FX rate (fx_id=${fxRate.fx_id}): CAD→USD=${fxRate.cad_to_usd}, CAD→CNY=${fxRate.cad_to_cny}`, 'info');
+
+    // Load persons map
+    const persons = financeDb.prepare('SELECT person_id, name FROM persons WHERE user_id=1').all() as Person[];
+
+    const personsMap = new Map<string, number>();
+    persons.forEach((p) => personsMap.set(p.name, p.person_id));
+
+    log(`Loaded ${persons.length} persons: ${persons.map((p) => p.name).join(', ')}`, 'info');
+
+    // Query records from test.db
+    log('Querying records from test.db...', 'info');
+    const oldRecords = testDb
+      .prepare(
+        `SELECT * FROM FIN
+         WHERE date < ?
+         ORDER BY date ASC`
+      )
+      .all(TODAY) as OldFinRecord[];
+
+    log(`Found ${oldRecords.length} records to migrate`, 'success');
+    log(`Expected: 13,721 records (all historical data before ${TODAY})`, 'info');
+    log('', 'info');
+
+    if (oldRecords.length === 0) {
+      log('No records to migrate', 'warning');
+      return;
+    }
+
+    // Process each record
+    log('Processing records...', 'info');
+    log('', 'info');
+
+    // Track tags to avoid duplicate inserts
+    const existingTags = new Map<string, number>();
+    const allTags = financeDb.prepare('SELECT tag_id, name FROM tags WHERE user_id=1').all() as Tag[];
+    allTags.forEach((t) => existingTags.set(t.name, t.tag_id));
+
+    // Prepare statements (only in execute mode)
+    const insertFinStmt = isDryRun
+      ? null
+      : financeDb.prepare(`
+          INSERT OR IGNORE INTO fin (
+            fin_id, user_id, type, date, scheduled_on, schedule_rule_id,
+            merchant, comment, place, city, category, subcategory, details,
+            original_currency, original_amount_cents, fx_id,
+            amount_cad_cents, amount_usd_cents, amount_cny_cents, amount_base_cad_cents,
+            is_scheduled
+          ) VALUES (
+            ?, ?, ?, ?, ?, ?,
+            ?, ?, ?, ?, ?, ?, ?,
+            ?, ?, ?,
+            ?, ?, ?, ?,
+            ?
+          )
+        `);
+
+    const insertTagStmt = isDryRun ? null : financeDb.prepare('INSERT OR IGNORE INTO tags (user_id, name) VALUES (?, ?)');
+
+    const getTagIdStmt = financeDb.prepare('SELECT tag_id FROM tags WHERE user_id=? AND name=?');
+
+    const insertFinTagStmt = isDryRun ? null : financeDb.prepare('INSERT OR IGNORE INTO fin_tags (fin_id, tag_id) VALUES (?, ?)');
+
+    const insertFinItemStmt = isDryRun
+      ? null
+      : financeDb.prepare(`
+          INSERT INTO fin_items (
+            fin_id, line_no, name, original_amount_cents, person_id, category, subcategory
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+
+    // Transaction function for batch processing
+    const processBatch = isDryRun
+      ? null
+      : financeDb.transaction((records: OldFinRecord[]) => {
+          for (const old of records) {
+            try {
+              // Calculate amounts in cents
+              const amount = Math.abs(old.amount || 0);
+              const originalAmountCents = Math.round(amount * 100);
+              const amountCadCents = originalAmountCents;
+              const amountUsdCents = Math.round(amount * 100 * fxRate.cad_to_usd);
+              const amountCnyCents = Math.round(amount * 100 * fxRate.cad_to_cny);
+              const amountBaseCadCents = originalAmountCents;
+
+              if (old.amount < 0) {
+                log(`Warning: Negative amount ${old.amount} for record ${old.id}, using absolute value`, 'warning');
+              }
+
+              // Parse tags
+              const tagNames = old.tags
+                ? old.tags
+                    .split(',')
+                    .map((t) => t.trim())
+                    .filter((t) => t.length > 0)
+                : [];
+
+              // Detect person for this record
+              const personId = detectPerson(old.category, tagNames);
+              const personName = getPersonName(personId);
+
+              // Update person counts
+              if (personId === PERSON_IDS.ROBIN) stats.personCounts.robin++;
+              else if (personId === PERSON_IDS.LUNA) stats.personCounts.luna++;
+              else if (personId === PERSON_IDS.FAMILY) stats.personCounts.family++;
+
+              // Insert transaction
+              const finResult = insertFinStmt!.run(
+                old.id, // fin_id
+                1, // user_id (always 1)
+                'expense', // type
+                old.date, // date
+                null, // scheduled_on
+                null, // schedule_rule_id
+                old.comment, // merchant
+                old.comment, // comment
+                old.place, // place
+                old.city, // city
+                old.category, // category
+                old.subcategory, // subcategory
+                old.details, // details
+                'CAD', // original_currency
+                originalAmountCents, // original_amount_cents
+                fxRate.fx_id, // fx_id
+                amountCadCents, // amount_cad_cents
+                amountUsdCents, // amount_usd_cents
+                amountCnyCents, // amount_cny_cents
+                amountBaseCadCents, // amount_base_cad_cents
+                0 // is_scheduled
+              );
+
+              if (finResult.changes > 0) {
+                stats.recordsInserted++;
+              } else {
+                stats.recordsSkipped++;
+              }
+
+              // Insert tags
+              for (const tagName of tagNames) {
+                if (!existingTags.has(tagName)) {
+                  insertTagStmt!.run(1, tagName);
+                  const newTag = getTagIdStmt.get(1, tagName) as Tag | undefined;
+                  if (newTag) {
+                    existingTags.set(tagName, newTag.tag_id);
+                    stats.tagsCreated++;
+                  }
+                }
+
+                const tagId = existingTags.get(tagName);
+                if (tagId) {
+                  insertFinTagStmt!.run(old.id, tagId);
+                }
+              }
+
+              // ALWAYS insert fin_item for EVERY record
+              insertFinItemStmt!.run(
+                old.id, // fin_id
+                1, // line_no (always 1 for single item)
+                old.comment || 'Item', // name
+                originalAmountCents, // original_amount_cents (same as parent)
+                personId, // person_id (1=Robin, 4=Luna, 5=Family)
+                old.category, // category
+                old.subcategory // subcategory
+              );
+              stats.itemsCreated++;
+
+              stats.totalProcessed++;
+
+              // Progress logging every 1000 records
+              if (stats.totalProcessed % 1000 === 0) {
+                log(`Progress: ${stats.totalProcessed}/${oldRecords.length} records processed...`, 'info');
+              }
+            } catch (error) {
+              const errorMsg = error instanceof Error ? error.message : String(error);
+              stats.errors.push(`Record ${old.id}: ${errorMsg}`);
+              log(`Error processing record ${old.id}: ${errorMsg}`, 'error');
+            }
+          }
+        });
+
+    // Process records
+    if (isDryRun) {
+      // Dry-run: Preview first N records
+      const previewCount = Math.min(DRY_RUN_PREVIEW_COUNT, oldRecords.length);
+      log(`Previewing first ${previewCount} records:`, 'info');
+      log('', 'info');
+
+      for (let i = 0; i < previewCount; i++) {
+        const old = oldRecords[i];
+        const amount = Math.abs(old.amount || 0);
+        const originalAmountCents = Math.round(amount * 100);
+        const amountUsdCents = Math.round(amount * 100 * fxRate.cad_to_usd);
+        const amountCnyCents = Math.round(amount * 100 * fxRate.cad_to_cny);
+
+        const tagNames = old.tags
+          ? old.tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter((t) => t.length > 0)
+          : [];
+
+        const personId = detectPerson(old.category, tagNames);
+        const personName = getPersonName(personId);
+
+        log(`Record ${i + 1}/${previewCount}: ${old.id}`, 'info');
+        log(`  Date: ${old.date}`, 'info');
+        log(`  Merchant: ${old.comment || '(empty)'}`, 'info');
+        log(`  Category: ${old.category || '(empty)'} / ${old.subcategory || '(empty)'}`, 'info');
+        log(
+          `  Amount: $${amount.toFixed(2)} → ${originalAmountCents}¢ CAD, ${amountUsdCents}¢ USD, ${amountCnyCents}¢ CNY`,
+          'info'
+        );
+        if (tagNames.length > 0) {
+          log(`  Tags: ${tagNames.join(', ')}`, 'info');
+        }
+        log(`  Person: ${personName} (ID ${personId})`, 'info');
+        log('', 'info');
+      }
+
+      // Count person distribution in full dataset
+      const personDistribution = { robin: 0, luna: 0, family: 0 };
+      for (const old of oldRecords) {
+        const tagNames = old.tags
+          ? old.tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter((t) => t.length > 0)
+          : [];
+        const personId = detectPerson(old.category, tagNames);
+        if (personId === PERSON_IDS.ROBIN) personDistribution.robin++;
+        else if (personId === PERSON_IDS.LUNA) personDistribution.luna++;
+        else if (personId === PERSON_IDS.FAMILY) personDistribution.family++;
+      }
+
+      log('Estimated person distribution:', 'info');
+      log(`  Robin: ${personDistribution.robin} records`, 'info');
+      log(`  Luna: ${personDistribution.luna} records`, 'info');
+      log(`  Family: ${personDistribution.family} records`, 'info');
+      stats.totalProcessed = oldRecords.length;
+    } else {
+      // Execute mode: Process in batches
+      log(`Processing ${oldRecords.length} records in batches of ${BATCH_SIZE}...`, 'info');
+      for (let i = 0; i < oldRecords.length; i += BATCH_SIZE) {
+        const batch = oldRecords.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(oldRecords.length / BATCH_SIZE);
+        log(`Processing batch ${batchNum}/${totalBatches} (${batch.length} records)...`, 'info');
+        processBatch!(batch);
+      }
+    }
+
+    // Summary
+    log('', 'info');
+    log('='.repeat(60), 'info');
+    log('MIGRATION SUMMARY', 'info');
+    log('='.repeat(60), 'info');
+    log(`Total Records Processed: ${stats.totalProcessed}`, 'info');
+
+    if (!isDryRun) {
+      log(`Records Inserted: ${stats.recordsInserted}`, 'success');
+      log(`Records Skipped (duplicates): ${stats.recordsSkipped}`, 'warning');
+      log(`Tags Created: ${stats.tagsCreated}`, 'success');
+      log(`Fin Items Created: ${stats.itemsCreated}`, 'success');
+      log('', 'info');
+      log('Person Distribution:', 'info');
+      log(`  Robin (骐骐): ${stats.personCounts.robin} records`, 'success');
+      log(`  Luna (慢慢): ${stats.personCounts.luna} records`, 'success');
+      log(`  Family (default): ${stats.personCounts.family} records`, 'success');
+      log('', 'info');
+      log(`Errors: ${stats.errors.length}`, stats.errors.length > 0 ? 'error' : 'success');
+
+      if (stats.errors.length > 0) {
+        log('', 'info');
+        log('ERRORS:', 'error');
+        stats.errors.slice(0, 10).forEach((err) => log(`  - ${err}`, 'error'));
+        if (stats.errors.length > 10) {
+          log(`  ... and ${stats.errors.length - 10} more errors`, 'error');
+        }
+      }
+    } else {
+      log('(Dry-run mode - no changes made)', 'info');
+      log(`Would insert: ${stats.totalProcessed} records`, 'info');
+      log(
+        `Estimated tags: ${new Set(oldRecords.flatMap((r) => (r.tags ? r.tags.split(',').map((t) => t.trim()) : []))).size}`,
+        'info'
+      );
+      log(`Estimated fin_items: ${stats.totalProcessed} (one per record)`, 'info');
+    }
+
+    log('='.repeat(60), 'info');
+  } catch (error) {
+    log(`Fatal error: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    throw error;
+  } finally {
+    testDb.close();
+    financeDb.close();
+    log('Database connections closed', 'info');
+  }
+}
+
+// Run migration
+migrate()
+  .then(() => {
+    log('', 'info');
+    log('Migration completed successfully!', 'success');
+    if (isDryRun) {
+      log('Run without --dry-run to execute the migration', 'info');
+    }
+    process.exit(0);
+  })
+  .catch((error) => {
+    log('', 'info');
+    log('Migration failed!', 'error');
+    log(error instanceof Error ? error.message : String(error), 'error');
+    process.exit(1);
+  });
