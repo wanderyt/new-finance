@@ -25,17 +25,6 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
     cny: `¥${(fin.amountCnyCents / 100).toFixed(2)}`,
   };
 
-  // Type badge
-  const typeBadge = isExpense ? (
-    <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-medium">
-      支出
-    </span>
-  ) : (
-    <span className="px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">
-      收入
-    </span>
-  );
-
   return (
     <div
       onClick={() => onClick?.(fin)}
@@ -66,7 +55,6 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
         {/* Place & Badges */}
         <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-500">
           {fin.place && <span>{fin.place}</span>}
-          {typeBadge}
           {fin.isScheduled && (
             <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">
               周期
