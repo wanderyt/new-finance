@@ -2729,7 +2729,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"drizzle-orm@npm:0.45.1":
+"drizzle-orm@npm:^0.45.1":
   version: 0.45.1
   resolution: "drizzle-orm@npm:0.45.1"
   peerDependencies:
@@ -5024,7 +5024,7 @@ __metadata:
     better-sqlite3: "npm:^12.5.0"
     date-fns: "npm:^4.1.0"
     drizzle-kit: "npm:^0.31.8"
-    drizzle-orm: "npm:0.45.1"
+    drizzle-orm: "npm:^0.45.1"
     eslint: "npm:^9"
     eslint-config-next: "npm:16.1.0"
     framer-motion: "npm:^12.23.26"
