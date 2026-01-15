@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-01-15
+
+### Fixed
+- **Autopopulate Premature Save**: Fixed issue where finance records were saved immediately upon confirming autopopulate dialog
+  - Merchant field is no longer set when dropdown option is selected
+  - Historical data sheet now sets merchant value only when user confirms or cancels the dialog
+  - Users can now review and edit autopopulated form fields before saving
+  - Prevents unexpected record creation without explicit user confirmation
+- **React Hydration Warning**: Resolved hydration mismatch warning on `<html>` tag
+  - Added `suppressHydrationWarning` attribute to layout's html element
+  - Fixes console warning caused by dark mode CSS media query (`prefers-color-scheme`)
+  - Server-rendered HTML now properly matches client-rendered output
+
 ## [1.1.4] - 2026-01-15
 
 ### Fixed
