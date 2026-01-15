@@ -94,5 +94,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start Next.js
-CMD ["yarn", "start"]
+# Start Next.js on all interfaces for Docker
+CMD ["yarn", "start", "-H", "0.0.0.0", "-p", "3000"]
