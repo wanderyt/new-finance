@@ -10,19 +10,19 @@ async function main() {
   console.log('🌱 Seeding database...')
 
   try {
-    // Insert demo user
+    // Insert demo user (update credentials before production deployment)
     await db.insert(schema.users).values({
       username: 'demo',
       password: 'demo123', // TODO: Hash with bcrypt in production
     }).onConflictDoNothing()
 
-    console.log('✅ Demo user created (username: demo, password: demo123)')
+    console.log('✅ User created')
 
     // Verify the user was created
     const users = await db.select().from(schema.users)
-    console.log('📊 Users in database:', users)
+    console.log('📊 Users in database:', users.length, 'user(s)')
 
-    // Get the demo user ID
+    // Get the user ID
     const demoUser = users.find(u => u.username === 'demo')
     if (demoUser) {
       // Insert persons for the demo user

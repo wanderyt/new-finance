@@ -63,6 +63,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DATABASE_PATH=/app/db/finance.db
+ENV SECURE_COOKIES=false
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs

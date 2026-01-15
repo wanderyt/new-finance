@@ -7,10 +7,14 @@ const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 // Get cookie configuration based on environment
 export function getCookieOptions() {
+  // Allow disabling secure cookies for HTTP access on private networks
+  // Set SECURE_COOKIES=false in environment to disable (e.g., for Docker deployments on private networks)
+  const useSecure = IS_PRODUCTION && process.env.SECURE_COOKIES !== 'false';
+
   return {
     httpOnly: true,
-    secure: IS_PRODUCTION, // HTTPS only in production
-    sameSite: (IS_PRODUCTION ? "strict" : "lax") as "strict" | "lax",
+    secure: useSecure,
+    sameSite: "lax" as const, // Use lax for better compatibility with custom ports
     maxAge: COOKIE_MAX_AGE,
     path: "/",
   };
