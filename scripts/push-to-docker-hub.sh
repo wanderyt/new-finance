@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to build and push new-finance to Docker Hub
-# Usage: ./scripts/push-to-docker-hub.sh [docker-hub-username]
+# Usage: ./scripts/push-to-docker-hub.sh
 
 set -e  # Exit on error
 
@@ -11,18 +11,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Get Docker Hub username
-if [ -z "$1" ]; then
-    echo -e "${YELLOW}Enter your Docker Hub username:${NC}"
-    read DOCKER_USERNAME
-else
-    DOCKER_USERNAME=$1
-fi
-
-if [ -z "$DOCKER_USERNAME" ]; then
-    echo -e "${RED}Error: Docker Hub username is required${NC}"
-    exit 1
-fi
+# Docker Hub username is hardcoded
+DOCKER_USERNAME="wanderyt"
 
 # Get version from package.json
 VERSION=$(node -p "require('./package.json').version")
@@ -48,8 +38,12 @@ echo ""
 echo -e "${GREEN}Your image is now available at:${NC}"
 echo -e "  https://hub.docker.com/r/${DOCKER_USERNAME}/new-finance"
 echo ""
+echo -e "${GREEN}Available tags:${NC}"
+echo -e "  - ${IMAGE_NAME}:${VERSION}"
+echo -e "  - ${IMAGE_NAME}:latest"
+echo ""
 echo -e "${GREEN}To pull on your NAS:${NC}"
 echo -e "  docker pull ${IMAGE_NAME}:latest"
 echo ""
-echo -e "${GREEN}Or update docker-compose.production.yml with:${NC}"
-echo -e "  image: ${IMAGE_NAME}:latest"
+echo -e "${GREEN}Or use docker-compose to deploy:${NC}"
+echo -e "  docker-compose up -d"
