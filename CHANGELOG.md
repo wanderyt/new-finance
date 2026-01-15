@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-01-15
+
+### Changed
+- **Docker Deployment Workflow**: Simplified deployment using Docker Hub images
+  - Changed docker-compose.yml to pull from `wanderyt/new-finance:latest` instead of building locally
+  - Removed health check configuration (not necessary for basic container management)
+  - Hardcoded Docker Hub username in push script for streamlined deployment
+  - Updated docker-compose.production.yml with same image configuration
+  - Added `SECURE_COOKIES=false` environment variable for HTTP/HTTPS compatibility
+  - Push script now clearly shows both version and latest tags are pushed
+  - Updated deployment instructions with simple upgrade workflow
+
+### Technical
+- Docker image: `wanderyt/new-finance:latest`
+- Dual tagging: Both version-specific (e.g., `1.2.0`) and `latest` tags pushed to Docker Hub
+- Upgrade workflow: `docker pull wanderyt/new-finance:latest && docker-compose up -d`
+- Cookie settings support both local HTTP access and public HTTPS domains
+
 ## [1.1.5] - 2026-01-15
 
 ### Fixed
