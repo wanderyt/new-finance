@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { users } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { createSessionToken } from "@/app/lib/auth/session";
+import { createSessionToken, getCookieOptions } from "@/app/lib/auth/session";
 import {
   LoginRequest,
   LoginResponse,
@@ -72,14 +72,8 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // Set cookie on response
-    response.cookies.set("fin_plat", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-      maxAge: 604800, // 7 days
-      path: "/",
-    });
+    // Set cookie on response using centralized cookie options
+    response.cookies.set("fin_plat", token, getCookieOptions());
 
     return response;
   } catch (error) {

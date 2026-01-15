@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed HEALTHCHECK instruction that was interfering with startup
   - Added explicit DATABASE_PATH environment variable (`/app/db/finance.db`)
   - Container now starts successfully in Synology Container Manager and other Docker environments
+- **Cookie Authentication Failure in Docker/Production**: Fixed cookies rejected by browser over HTTP
+  - Added `SECURE_COOKIES` environment variable to control cookie security settings
+  - Browsers reject cookies with `Secure` flag when accessed over HTTP
+  - Changed `sameSite` from "strict" to "lax" for better compatibility with custom ports
+  - Centralized cookie configuration in `getCookieOptions()` for consistency
+  - Authentication now works correctly on private networks without HTTPS (10.0.0.x)
 
 ### Added
 - **Docker Troubleshooting Documentation**: Comprehensive guide for Docker startup issues
@@ -21,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Detailed explanation of CMD syntax issues with yarn wrapper
   - Verification steps for local and Synology deployment
   - Troubleshooting guide for common Docker problems
+- **Cookie Authentication Documentation**: Complete guide for authentication issues
+  - Created `docs/cookie-authentication-docker.md` explaining cookie security
+  - Root cause analysis of `Secure` flag and HTTPS requirements
+  - Solution options for private vs public deployments
+  - Security considerations for HTTP on private networks
+  - Step-by-step verification and troubleshooting guide
 
 ## [1.1.2] - 2026-01-14
 
