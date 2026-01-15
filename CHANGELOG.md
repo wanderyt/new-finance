@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-01-14
+
+### Fixed
+- **Docker Network Access**: Resolved Next.js server unreachable from host network
+  - Added `-H 0.0.0.0` flag to Next.js start command in Dockerfile
+  - Binds server to all network interfaces instead of localhost only
+  - Enables external connections from Synology Container Manager and other Docker deployments
+  - Required for proper port mapping when running in containerized environments
+
 ## [1.1.2] - 2026-01-14
 
 ### Fixed
