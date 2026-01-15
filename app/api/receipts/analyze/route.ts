@@ -165,9 +165,9 @@ async function standardizeItemNames(
   }
 
   try {
-    // Use gemini-1.5-flash for text-only standardization (separate rate limit from vision model)
+    // Use gemini-2.5-flash-lite for text-only standardization (separate rate limit from vision model)
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash-lite",
       generationConfig: {
         temperature: 0.3,
         maxOutputTokens: 2048, // Increased for larger receipts

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-01-15
+
+### Fixed
+- **Gemini API Model Error**: Resolved 404 "model not found" errors in receipt item standardization
+  - Updated from deprecated `gemini-1.5-flash` to `gemini-2.5-flash-lite`
+  - Maintains separate quota limits between vision (gemini-2.5-flash) and text operations
+  - Optimized lite model for cost-effective text-only standardization tasks
+  - Item name standardization now works correctly without API errors
+
+### Added
+- **Synology Docker Permission Documentation**: Comprehensive troubleshooting guide for SQLite readonly errors
+  - Created `docs/synology-docker-permissions-fix.md` with root cause analysis
+  - File ownership mismatch solution between host (variable UID) and container (uid=1001)
+  - Three permission fix methods with security trade-offs
+  - Step-by-step verification checklist and troubleshooting tips
+  - Prevention strategies for future Docker deployments on NAS systems
+
+### Changed
+- **Claude Settings**: Updated allowed commands list to include version bump scripts
+
+
+
 ## [1.1.3] - 2026-01-14
 
 ### Fixed

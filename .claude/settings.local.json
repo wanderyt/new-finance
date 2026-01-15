@@ -15,7 +15,8 @@
       "Bash(node:*)",
       "Bash(yarn build:*)",
       "Bash(yarn lint:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(yarn version:patch:*)"
     ]
   }
 }
