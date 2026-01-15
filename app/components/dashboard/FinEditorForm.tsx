@@ -306,8 +306,8 @@ const FinEditorForm = ({
 
   // Handle merchant selection from dropdown
   const handleMerchantSelected = (selectedMerchant: string) => {
-    setMerchant(selectedMerchant);
-
+    // Don't set merchant immediately - wait for user confirmation
+    // Only store the selected merchant for historical data lookup
     if (selectedMerchant?.trim()) {
       setSelectedMerchantForHistory(selectedMerchant);
       setShowHistoricalDataSheet(true);
@@ -316,6 +316,10 @@ const FinEditorForm = ({
 
   // Handle historical data confirmation
   const handleHistoricalDataConfirm = (selections: HistoricalDataItem[]) => {
+    // Set the merchant when user confirms the autopopulate
+    setMerchant(selectedMerchantForHistory);
+
+    // Apply selected historical data to form fields
     selections.forEach((item) => {
       if (item.type === "category") {
         setCategory(item.category || "");
@@ -333,6 +337,8 @@ const FinEditorForm = ({
 
   // Handle historical data cancellation
   const handleHistoricalDataCancel = () => {
+    // Set the merchant even when user cancels - they selected it from the dropdown
+    setMerchant(selectedMerchantForHistory);
     setShowHistoricalDataSheet(false);
   };
 
