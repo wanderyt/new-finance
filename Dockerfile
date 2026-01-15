@@ -62,6 +62,7 @@ WORKDIR /app
 # Set production environment
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV DATABASE_PATH=/app/db/finance.db
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs
@@ -90,9 +91,5 @@ USER nextjs
 # Expose Next.js port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
 # Start Next.js on all interfaces for Docker
-CMD ["yarn", "start", "-H", "0.0.0.0", "-p", "3000"]
+CMD ["node_modules/.bin/next", "start", "-H", "0.0.0.0", "-p", "3000"]
