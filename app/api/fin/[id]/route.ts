@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
-import { fin, finItems, finTags } from "@/app/lib/db/schema";
+import { fin, finItems, finTags, receipts } from "@/app/lib/db/schema";
 import { eq, and, gte } from "drizzle-orm";
 import {
   withAuth,
@@ -45,12 +45,19 @@ export const GET = withAuth(async (request, user) => {
       .from(finTags)
       .where(eq(finTags.finId, finId));
 
+    // Fetch receipts
+    const finReceipts = await db
+      .select()
+      .from(receipts)
+      .where(eq(receipts.finId, finId));
+
     return NextResponse.json({
       success: true,
       data: {
         ...userFins[0],
         items,
         tags,
+        receipts: finReceipts,
       },
     });
   } catch (error) {

@@ -86,6 +86,10 @@ COPY --from=builder /app/drizzle.config.ts ./
 # Create db directory for volume mount
 RUN mkdir -p /app/db && chown -R nextjs:nodejs /app/db
 
+# Create uploads directory for receipts
+RUN mkdir -p /app/db/uploads/receipts && \
+    chown -R nextjs:nodejs /app/db/uploads
+
 # Switch to non-root user
 USER nextjs
 
