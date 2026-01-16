@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { fin, finItems, scheduleRules } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
-import {
-  CreateFinRequest,
-  CreateFinResponse,
-} from "@/app/lib/types/api";
+import { CreateFinRequest, CreateFinResponse } from "@/app/lib/types/api";
 import {
   withAuth,
   badRequestResponse,
@@ -211,11 +208,11 @@ export const POST = withAuth(async (request, user) => {
       // Calculate number of occurrences based on frequency
       // daily/weekly/biweekly: 3 years, monthly: 10 years, annually: 10 years
       const occurrenceCount = {
-        daily: 365 * 3,       // 1095 occurrences
-        weekly: 52 * 3,       // 156 occurrences
-        biweekly: 26 * 3,     // 78 occurrences
-        monthly: 12 * 10,     // 120 occurrences
-        annually: 10,         // 10 occurrences
+        daily: 365 * 3, // 1095 occurrences
+        weekly: 52 * 3, // 156 occurrences
+        biweekly: 26 * 3, // 78 occurrences
+        monthly: 12 * 10, // 120 occurrences
+        annually: 10, // 10 occurrences
       };
 
       const { interval, unit } = frequencyMap[body.frequency];
@@ -229,7 +226,7 @@ export const POST = withAuth(async (request, user) => {
 
         if (unit === "day") {
           nextDate = new Date(baseDate);
-          nextDate.setUTCDate(baseDate.getUTCDate() + (interval * i));
+          nextDate.setUTCDate(baseDate.getUTCDate() + interval * i);
         } else if (unit === "month") {
           // Handle month-end dates properly for monthly schedules
           // Use UTC methods to avoid timezone issues
@@ -242,37 +239,43 @@ export const POST = withAuth(async (request, user) => {
           const originalMilliseconds = baseDate.getUTCMilliseconds();
 
           // Calculate target month and year
-          const totalMonths = originalMonth + (interval * i);
+          const totalMonths = originalMonth + interval * i;
           const targetYear = originalYear + Math.floor(totalMonths / 12);
           const targetMonth = totalMonths % 12;
 
           // Get the last day of the target month (using UTC)
-          const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+          const lastDayOfTargetMonth = new Date(
+            Date.UTC(targetYear, targetMonth + 1, 0)
+          ).getUTCDate();
 
           // Use the original day, or the last day of the month if original day doesn't exist
           const targetDay = Math.min(originalDay, lastDayOfTargetMonth);
 
           // Create the date in UTC
-          nextDate = new Date(Date.UTC(
-            targetYear,
-            targetMonth,
-            targetDay,
-            originalHours,
-            originalMinutes,
-            originalSeconds,
-            originalMilliseconds
-          ));
+          nextDate = new Date(
+            Date.UTC(
+              targetYear,
+              targetMonth,
+              targetDay,
+              originalHours,
+              originalMinutes,
+              originalSeconds,
+              originalMilliseconds
+            )
+          );
         } else if (unit === "year") {
           // Handle yearly schedules (using UTC)
           const originalYear = baseDate.getUTCFullYear();
-          const targetYear = originalYear + (interval * i);
+          const targetYear = originalYear + interval * i;
 
           nextDate = new Date(baseDate);
           nextDate.setUTCFullYear(targetYear);
 
           // Handle Feb 29 leap year case
           if (baseDate.getUTCMonth() === 1 && baseDate.getUTCDate() === 29) {
-            const isLeapYear = (targetYear % 4 === 0 && targetYear % 100 !== 0) || (targetYear % 400 === 0);
+            const isLeapYear =
+              (targetYear % 4 === 0 && targetYear % 100 !== 0) ||
+              targetYear % 400 === 0;
             if (!isLeapYear) {
               nextDate.setUTCDate(28);
             }

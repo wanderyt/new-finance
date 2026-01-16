@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import BottomSheet from "../ui-kit/BottomSheet";
 import FinEditorForm from "./FinEditorForm";
 import ScheduleActionDialog from "./ScheduleActionDialog";
+import ConfirmDialog from "../ui-kit/ConfirmDialog";
 import { CreateFinRequest, UpdateFinRequest, FinData } from "@/app/lib/types/api";
 
 interface FinEditorProps {
@@ -27,6 +28,7 @@ const FinEditor = ({
   const [scheduleAction, setScheduleAction] = useState<"update" | "delete">("update");
   const [pendingData, setPendingData] = useState<CreateFinRequest | UpdateFinRequest | FormData | null>(null);
   const [currentFinData, setCurrentFinData] = useState<FinData | undefined>(existingFin);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Sync current fin data when existingFin changes
   useEffect(() => {
@@ -145,14 +147,16 @@ const FinEditor = ({
     }
 
     // For non-scheduled transactions, show confirmation dialog
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this transaction? This action cannot be undone."
-    );
+    setShowDeleteConfirm(true);
+  };
 
-    if (!confirmed) return;
-
-    // Proceed with normal deletion
+  const handleDeleteConfirm = async () => {
+    setShowDeleteConfirm(false);
     await executeDelete();
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
   };
 
   const executeDelete = async (scope?: "single" | "all") => {
@@ -266,6 +270,18 @@ const FinEditor = ({
         action={scheduleAction}
         onChoice={handleScheduleChoice}
         onCancel={handleScheduleCancel}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="删除记录"
+        message="确定要删除这条记录吗？此操作无法撤销。"
+        confirmLabel="删除"
+        cancelLabel="取消"
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        variant="danger"
       />
     </>
   );

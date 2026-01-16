@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-01-15
+
+### Added
+- **ConfirmDialog Component**: New reusable confirmation dialog in ui-kit
+  - Generic confirmation dialog with customizable title, message, and button labels
+  - Supports danger and primary variants for different use cases
+  - Consistent styling with existing UI components
+  - Used for transaction deletion confirmations
+
+### Changed
+- **Transaction Deletion UX**: Replaced native window.confirm with custom ConfirmDialog
+  - Better visual consistency with application design
+  - Chinese language support with localized messages
+  - Improved user experience with clear action buttons
+
+### Fixed
+- **Button Type Attributes**: Added explicit type="button" to prevent accidental form submissions
+  - Fixed buttons in HistoricalDataSheet that could trigger form submit
+  - Prevents unexpected behavior when buttons are inside form elements
+
+### Technical
+- Code formatting improvements in fin create route
+- Consistent code style across scheduling calculations
+
 ## [1.3.0] - 2026-01-15
 
 ### Added
