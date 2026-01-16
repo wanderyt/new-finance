@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-01-15
+
+### Added
+- **Receipt Storage System**: Complete receipt image management functionality
+  - Upload and store receipt images with SHA256-based deduplication
+  - Receipt viewer dialog with click-to-view full-size images
+  - Re-upload capability to replace incorrect receipts
+  - Receipts linked to transactions via foreign key relationships
+  - Storage path: `db/uploads/receipts/` (persists in Docker volumes)
+  - Automatic cleanup of old files when not referenced by other receipts
+- **Tax Recognition**: Enhanced Gemini prompt to extract tax information from receipts
+  - Extracts subtotal, tax amount, and total amount separately
+  - Tax stored as special line item with name "税" (HST/GST/PST combined)
+  - Optional field - works correctly for Chinese receipts without tax
+  - Validation: subtotal + tax ≈ total (within 2 cents)
+- **Clickable Pie Chart Legends**: Improved interaction with small pie slices
+  - Click legend items to trigger same action as clicking pie slices
+  - Added hover underline visual feedback on legend text
+  - Applied to CategoryPieChart and PersonSpendingPieChart
+  - Makes it much easier to interact with charts containing many categories
+
+### Changed
+- **Chart Page Dropdowns**: Standardized all dropdowns to use consistent Dropdown component
+  - Replaced Select component with Dropdown in MonthYearFilter (2 dropdowns)
+  - Replaced native select with Dropdown in MonthComparisonLineChart (2 dropdowns)
+  - Replaced native select with Dropdown in PersonSelector (1 dropdown)
+  - Consistent styling and behavior across all chart filters
+  - Matches FinEditorForm dropdown style and interaction patterns
+
+### Fixed
+- **Form State Synchronization**: Fixed merchant/city fields not updating when existingFin prop changes
+  - Added useEffect hook to sync form state when existingFin changes
+  - Applies to merchant, city, place, date, amount, currency, category, subcategory, and details
+  - Fixes stale data display after receipt updates or data refreshes
+  - Form fields now correctly update when viewing edited transaction records
+
+### Technical
+- Receipt API endpoints: `/api/receipts/[id]` (GET), `/api/receipts/[id]/replace` (PUT)
+- Receipt storage utility: `app/lib/utils/receipt-storage.ts`
+- File deduplication prevents duplicate storage of identical images
+- Updated .gitignore to exclude uploaded receipt files
+- Dockerfile creates uploads directory with proper permissions
+- Receipt records include filePath, mimeType, sha256, and uploadedAt fields
+
 ## [1.2.0] - 2026-01-15
 
 ### Changed
