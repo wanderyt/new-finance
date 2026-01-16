@@ -268,6 +268,7 @@ export default function HistoricalDataSheet({
         {!isLoading && !error && (
           <div className="flex gap-3 mt-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
             <Button
+              type="button"
               onClick={onCancel}
               variant="secondary"
               className="flex-1"
@@ -276,6 +277,7 @@ export default function HistoricalDataSheet({
             </Button>
             {hasData && (
               <Button
+                type="button"
                 onClick={handleConfirm}
                 variant="primary"
                 className="flex-1"
