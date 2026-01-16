@@ -11,8 +11,7 @@ import {
   setChartsSelectedMonth,
   setChartsSelectedYear,
 } from "@/app/lib/redux/features/fin/finSlice";
-import Button from "../../ui-kit/Button";
-import Select from "../../ui-kit/Select";
+import Dropdown from "../../ui-kit/Dropdown";
 
 export default function MonthYearFilter() {
   const dispatch = useAppDispatch();
@@ -26,12 +25,12 @@ export default function MonthYearFilter() {
     dispatch(setChartsViewMode(mode));
   };
 
-  const handleMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    dispatch(setChartsSelectedMonth(e.target.value));
+  const handleMonthChange = (value: string) => {
+    dispatch(setChartsSelectedMonth(value));
   };
 
-  const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    dispatch(setChartsSelectedYear(e.target.value));
+  const handleYearChange = (value: string) => {
+    dispatch(setChartsSelectedYear(value));
   };
 
   // Format month for display (e.g., "2026-01" → "January 2026")
@@ -73,24 +72,24 @@ export default function MonthYearFilter() {
 
       {/* Month/Year Selector */}
       {viewMode === "month" ? (
-        <Select
-          label=""
+        <Dropdown
           value={selectedMonth || ""}
           onChange={handleMonthChange}
           options={availableMonths.map((month) => ({
             value: month,
             label: formatMonth(month),
           }))}
+          placeholder="选择月份"
         />
       ) : (
-        <Select
-          label=""
+        <Dropdown
           value={selectedYear || ""}
           onChange={handleYearChange}
           options={availableYears.map((year) => ({
             value: year,
             label: year,
           }))}
+          placeholder="选择年份"
         />
       )}
     </div>

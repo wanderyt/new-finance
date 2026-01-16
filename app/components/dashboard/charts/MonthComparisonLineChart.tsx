@@ -10,7 +10,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import Select from "../../ui-kit/Select";
+import Dropdown from "../../ui-kit/Dropdown";
 
 interface DayAccumulation {
   day: number;
@@ -95,33 +95,29 @@ export default function MonthComparisonLineChart({
           <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             月份 1
           </label>
-          <select
+          <Dropdown
             value={month1}
-            onChange={(e) => onMonth1Change(e.target.value)}
-            className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-          >
-            {availableMonths.map((month) => (
-              <option key={month} value={month}>
-                {formatMonth(month)}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => onMonth1Change(value)}
+            options={availableMonths.map((month) => ({
+              value: month,
+              label: formatMonth(month),
+            }))}
+            placeholder="选择月份"
+          />
         </div>
         <div>
           <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
             月份 2
           </label>
-          <select
+          <Dropdown
             value={month2}
-            onChange={(e) => onMonth2Change(e.target.value)}
-            className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-          >
-            {availableMonths.map((month) => (
-              <option key={month} value={month}>
-                {formatMonth(month)}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => onMonth2Change(value)}
+            options={availableMonths.map((month) => ({
+              value: month,
+              label: formatMonth(month),
+            }))}
+            placeholder="选择月份"
+          />
         </div>
       </div>
 
