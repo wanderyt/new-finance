@@ -95,6 +95,15 @@ export default function CategoryPieChart({
     }
   };
 
+  // Handle legend click - same as pie click
+  const handleLegendClick = (entry: any) => {
+    // Find the data entry for this legend item
+    const dataEntry = chartData.find((d) => d.name === entry.value);
+    if (dataEntry) {
+      handlePieClick(dataEntry);
+    }
+  };
+
   if (data.length === 0) {
     return (
       <div
@@ -158,9 +167,11 @@ export default function CategoryPieChart({
           wrapperStyle={{
             fontSize: "12px",
             paddingTop: "10px",
+            cursor: "pointer",
           }}
+          onClick={handleLegendClick}
           formatter={(value, entry: any) => (
-            <span className="text-xs text-zinc-700 dark:text-zinc-300">
+            <span className="text-xs text-zinc-700 dark:text-zinc-300 hover:underline">
               {value} (${entry.payload.value.toFixed(0)})
             </span>
           )}
