@@ -25,7 +25,13 @@ const FinEditor = ({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduleAction, setScheduleAction] = useState<"update" | "delete">("update");
-  const [pendingData, setPendingData] = useState<CreateFinRequest | UpdateFinRequest | null>(null);
+  const [pendingData, setPendingData] = useState<CreateFinRequest | UpdateFinRequest | FormData | null>(null);
+  const [currentFinData, setCurrentFinData] = useState<FinData | undefined>(existingFin);
+
+  // Sync current fin data when existingFin changes
+  useEffect(() => {
+    setCurrentFinData(existingFin);
+  }, [existingFin]);
 
   // Reset state when editor closes
   useEffect(() => {
@@ -45,9 +51,9 @@ const FinEditor = ({
     onClose();
   };
 
-  const handleSubmit = async (data: CreateFinRequest | UpdateFinRequest) => {
+  const handleSubmit = async (data: CreateFinRequest | UpdateFinRequest | FormData) => {
     // Check if this is an update to a scheduled transaction
-    const isUpdate = "finId" in data;
+    const isUpdate = data instanceof FormData ? false : "finId" in data;
     if (isUpdate && existingFin?.isScheduled && existingFin?.scheduleRuleId) {
       // Show dialog to ask user's preference
       setPendingData(data);
@@ -60,25 +66,43 @@ const FinEditor = ({
     await executeSubmit(data);
   };
 
-  const executeSubmit = async (data: CreateFinRequest | UpdateFinRequest, scope?: "single" | "all") => {
+  const executeSubmit = async (data: CreateFinRequest | UpdateFinRequest | FormData, scope?: "single" | "all") => {
     setIsSubmitting(true);
 
     try {
-      const isUpdate = "finId" in data;
+      const isUpdate = data instanceof FormData
+        ? false  // FormData always means create
+        : "finId" in data;
+
       const endpoint = isUpdate ? "/api/fin/update" : "/api/fin/create";
       const method = isUpdate ? "PATCH" : "POST";
 
-      // Add scope parameter for scheduled updates
-      const payload = scope ? { ...data, scope } : data;
+      // Prepare body and headers
+      let body: BodyInit;
+      let headers: HeadersInit = {};
+
+      if (data instanceof FormData) {
+        // FormData: browser sets Content-Type with boundary
+        body = scope
+          ? (() => {
+              data.append("scope", scope);
+              return data;
+            })()
+          : data;
+        // No Content-Type header - let browser set it
+      } else {
+        // JSON
+        const payload = scope ? { ...data, scope } : data;
+        body = JSON.stringify(payload);
+        headers = { "Content-Type": "application/json" };
+      }
 
       // Start both the API call and the minimum delay timer
       const [response] = await Promise.all([
         fetch(endpoint, {
           method,
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
+          headers,
+          body,
         }),
         new Promise((resolve) => setTimeout(resolve, 300)), // Minimum 300ms loading
       ]);
@@ -194,17 +218,32 @@ const FinEditor = ({
     setPendingData(null);
   };
 
+  const handleReceiptUpdate = async (finId: string) => {
+    try {
+      // Fetch updated fin data
+      const response = await fetch(`/api/fin/${finId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCurrentFinData(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to refresh fin data:", error);
+    }
+  };
+
   return (
     <>
       <BottomSheet isOpen={isOpen} onClose={handleClose}>
         <div className="relative">
           <FinEditorForm
             type={type}
-            existingFin={existingFin}
+            existingFin={currentFinData}
             onSubmit={handleSubmit}
             onCancel={handleClose}
             onDelete={existingFin ? handleDelete : undefined}
             isSubmitting={isSubmitting}
+            onReceiptUpdate={handleReceiptUpdate}
           />
 
           {/* Loading Overlay */}

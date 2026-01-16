@@ -120,6 +120,17 @@ export interface UpdateFinRequest {
   // CANNOT update: isScheduled, scheduleRuleId, scheduledOn, finId, userId
 }
 
+// Receipt data structure
+export interface ReceiptData {
+  receiptId: number;
+  userId: number;
+  finId: string | null;
+  filePath: string;
+  mimeType: string | null;
+  sha256: string | null;
+  uploadedAt: string;
+}
+
 // Fin Response (client-safe)
 export interface FinData {
   finId: string;
@@ -143,6 +154,7 @@ export interface FinData {
   isScheduled: boolean;
   scheduleRuleId: number | null;
   scheduledOn: string | null;
+  receipts?: ReceiptData[];
 }
 
 // Create Fin Response

@@ -46,6 +46,11 @@ next-env.d.ts
 db/*.db
 db/*.db-*
 
+# Uploads
+db/uploads/*
+!db/uploads/.gitkeep
+!db/uploads/receipts/.gitkeep
+
 # Prisma
 prisma/migrations/*_*/
 

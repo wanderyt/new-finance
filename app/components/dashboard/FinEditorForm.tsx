@@ -11,11 +11,13 @@ import { LineItem } from "./LineItemEditor";
 import ReceiptAnalysisDialog from "./ReceiptAnalysisDialog";
 import LineItemsDialog from "./LineItemsDialog";
 import HistoricalDataSheet from "./HistoricalDataSheet";
+import ReceiptViewer from "./ReceiptViewer";
 import {
   CreateFinRequest,
   UpdateFinRequest,
   FinData,
   HistoricalDataItem,
+  ReceiptData,
 } from "@/app/lib/types/api";
 
 interface ReceiptAnalysisResult {
@@ -24,6 +26,7 @@ interface ReceiptAnalysisResult {
     amount: number;
     quantity?: number;
     unit?: string;
+    notes?: string;
   }>;
   totalAmount: number;
   detectedCurrency?: string;
@@ -34,10 +37,11 @@ interface ReceiptAnalysisResult {
 interface FinEditorFormProps {
   type: "expense" | "income";
   existingFin?: FinData;
-  onSubmit: (data: CreateFinRequest | UpdateFinRequest) => Promise<void>;
+  onSubmit: (data: CreateFinRequest | UpdateFinRequest | FormData) => Promise<void>;
   onCancel: () => void;
   onDelete?: () => Promise<void>;
   isSubmitting?: boolean;
+  onReceiptUpdate?: (finId: string) => Promise<void>;
 }
 
 const FinEditorForm = ({
@@ -47,6 +51,7 @@ const FinEditorForm = ({
   onCancel,
   onDelete,
   isSubmitting = false,
+  onReceiptUpdate,
 }: FinEditorFormProps) => {
   // Helper function to convert UTC date to local datetime-local format
   const toLocalDatetimeString = (utcDate: string | Date) => {
@@ -99,6 +104,10 @@ const FinEditorForm = ({
   const [showAnalysisDialog, setShowAnalysisDialog] = useState(false);
   const [analysisResult, setAnalysisResult] =
     useState<ReceiptAnalysisResult | null>(null);
+
+  // Receipt viewer state
+  const [showReceiptViewer, setShowReceiptViewer] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState<ReceiptData | null>(null);
 
   // Line items dialog state
   const [showLineItemsDialog, setShowLineItemsDialog] = useState(false);
@@ -200,6 +209,32 @@ const FinEditorForm = ({
     }
   }, [existingFin?.finId]);
 
+  // Sync form state when existingFin changes (e.g., after receipt update)
+  useEffect(() => {
+    if (existingFin) {
+      setDate(
+        toLocalDatetimeString(
+          existingFin.isScheduled && existingFin.scheduledOn
+            ? existingFin.scheduledOn
+            : existingFin.date
+        )
+      );
+      setMerchant(existingFin.merchant || "");
+      setPlace(existingFin.place || "");
+      setCity(existingFin.city || "");
+      setAmount(
+        existingFin.originalAmountCents
+          ? (existingFin.originalAmountCents / 100).toFixed(2)
+          : ""
+      );
+      setCurrency((existingFin.originalCurrency as "CAD" | "USD" | "CNY") || "CAD");
+      setCategory(existingFin.category || "");
+      setSubcategory(existingFin.subcategory || "");
+      setDetails(existingFin.details || "");
+      setIsScheduled(existingFin.isScheduled || false);
+    }
+  }, [existingFin]);
+
   // Form validation
   const isValid = () => {
     if (!date) return false;
@@ -239,6 +274,9 @@ const FinEditorForm = ({
 
       await onSubmit(updateData);
     } else {
+      // Build FormData to include receipt file
+      const formData = new FormData();
+
       const createData: CreateFinRequest = {
         type,
         date: new Date(date).toISOString(),
@@ -255,7 +293,15 @@ const FinEditorForm = ({
         lineItems: lineItems.length > 0 ? lineItems : undefined,
       };
 
-      await onSubmit(createData);
+      // Append data as JSON string
+      formData.append("data", JSON.stringify(createData));
+
+      // Append receipt file if present
+      if (receiptFile) {
+        formData.append("receipt", receiptFile);
+      }
+
+      await onSubmit(formData);
     }
   };
 
@@ -342,6 +388,41 @@ const FinEditorForm = ({
     setShowHistoricalDataSheet(false);
   };
 
+  // Handle receipt click - open viewer
+  const handleReceiptClick = (receipt: ReceiptData) => {
+    setSelectedReceipt(receipt);
+    setShowReceiptViewer(true);
+  };
+
+  // Handle receipt re-upload
+  const handleReceiptReupload = async (receiptId: number, file: File) => {
+    if (!existingFin) return;
+
+    try {
+      // Create FormData with new image
+      const formData = new FormData();
+      formData.append("receipt", file);
+
+      // Upload new receipt (this will replace the old one)
+      const response = await fetch(`/api/receipts/${receiptId}/replace`, {
+        method: "PUT",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to reupload receipt");
+      }
+
+      // Notify parent to refresh the fin data
+      if (onReceiptUpdate) {
+        await onReceiptUpdate(existingFin.finId);
+      }
+    } catch (error) {
+      console.error("Failed to reupload receipt:", error);
+      throw error;
+    }
+  };
+
   // Filter categories by type
   const filteredCategories = categories.filter(
     (cat) => cat.appliesTo === type || cat.appliesTo === "both"
@@ -399,7 +480,7 @@ const FinEditorForm = ({
             onChange={(e) => setDate(e.target.value)}
             required
             disabled={isScheduledTransaction}
-            className={`w-full pl-10 pr-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all ${
+            className={`w-full pl-10 pr-3 py-1.5 text-[10px] sm:text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all ${
               isScheduledTransaction ? 'opacity-60 cursor-not-allowed' : ''
             }`}
           />
@@ -605,15 +686,62 @@ const FinEditorForm = ({
         />
       </div>
 
-      {/* Receipt Upload */}
-      {!existingFin && (
+      {/* Receipt Upload / Display */}
+      {!existingFin ? (
         <ReceiptUpload
           onFileSelect={setReceiptFile}
           onAnalyze={handleReceiptUpload}
           isAnalyzing={isAnalyzingReceipt}
           label=""
         />
-      )}
+      ) : existingFin.receipts && existingFin.receipts.length > 0 ? (
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+            小票
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {existingFin.receipts.map((receipt) => (
+              <button
+                key={receipt.receiptId}
+                type="button"
+                onClick={() => handleReceiptClick(receipt)}
+                className="relative aspect-square rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-zinc-100 dark:bg-zinc-800 hover:ring-2 hover:ring-blue-500 dark:hover:ring-blue-400 transition-all cursor-pointer"
+              >
+                <img
+                  src={`/api/receipts/${receipt.receiptId}`}
+                  alt="Receipt"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback for images that fail to load
+                    e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor'%3E%3Cpath d='M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'/%3E%3C/svg%3E";
+                  }}
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                  <p className="text-[10px] text-white truncate">
+                    {new Date(receipt.uploadedAt).toLocaleDateString()}
+                  </p>
+                </div>
+                {/* Hover overlay with zoom icon */}
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-all flex items-center justify-center opacity-0 hover:opacity-100">
+                  <svg
+                    className="w-8 h-8 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
+                    />
+                  </svg>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {/* Action Buttons */}
       <div className="flex gap-2 pt-4">
@@ -684,6 +812,14 @@ const FinEditorForm = ({
         merchant={selectedMerchantForHistory}
         onConfirm={handleHistoricalDataConfirm}
         onCancel={handleHistoricalDataCancel}
+      />
+
+      {/* Receipt Viewer Dialog */}
+      <ReceiptViewer
+        isOpen={showReceiptViewer}
+        receipt={selectedReceipt}
+        onClose={() => setShowReceiptViewer(false)}
+        onReupload={handleReceiptReupload}
       />
     </form>
   );

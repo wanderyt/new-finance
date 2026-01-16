@@ -59,9 +59,26 @@ export default function Dashboard() {
     setIsEditorOpen(true);
   };
 
-  const handleEditFin = (fin: FinData) => {
+  const handleEditFin = async (fin: FinData) => {
     setEditorType(fin.type as "expense" | "income");
-    setEditingFin(fin);
+
+    // Fetch full fin details including receipts
+    try {
+      const response = await fetch(`/api/fin/${fin.finId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setEditingFin(data.data);
+      } else {
+        // Fallback to original fin data if fetch fails
+        setEditingFin(fin);
+      }
+    } catch (error) {
+      console.error("Failed to fetch fin details:", error);
+      // Fallback to original fin data
+      setEditingFin(fin);
+    }
+
     setIsEditorOpen(true);
   };
 

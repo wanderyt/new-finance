@@ -23,24 +23,29 @@ Analyze this receipt image and extract the following information in JSON format:
   "city": "City if visible on receipt",
   "date": "ISO date string (YYYY-MM-DD)",
   "detectedCurrency": "CAD, USD, or CNY",
+  "subtotalAmount": 2200,  // Subtotal before tax in cents (optional)
+  "taxAmount": 286,        // Tax in cents (HST/GST/PST combined, optional)
+  "totalAmount": 2486,     // Final total in cents (required)
   "lineItems": [
     {
       "name": "Item name/description",
-      "amount": 1250,  // Total item price in cents
+      "amount": 1250,  // Item price in cents
       "quantity": 2,
       "unit": "pcs"
     }
-  ],
-  "totalAmount": 2500  // Total in cents
+  ]
 }
 
-Important rules:
-- Extract ALL line items from the receipt
-- Convert all amounts to CENTS (multiply by 100)
-- For Chinese text, provide English translation of item names
-- If quantity is not specified, default to 1
-- Calculate totalAmount as sum of all line items
-- Return valid JSON only, no markdown or explanation
+Rules:
+- Extract ALL line items (do NOT include tax as a line item)
+- Convert amounts to CENTS (multiply by 100)
+- If receipt shows subtotal and tax separately, extract both
+- If no tax visible, omit taxAmount or set to null
+- For Chinese receipts without tax, omit taxAmount
+- For Canadian receipts, combine HST/GST/PST as single taxAmount
+- Verify: subtotalAmount + taxAmount = totalAmount (if both present)
+- For Chinese text, provide English translation
+- Return valid JSON only, no markdown
 `;
 
 const ITEM_STANDARDIZATION_PROMPT = `You are an expert at standardizing grocery item names from receipts. Convert English/mixed-language item names into standardized Chinese names for household finance tracking.
@@ -243,6 +248,26 @@ export const POST = withAuth(async (request, user) => {
     // Standardize item names (automatically converts to Chinese)
     if (receiptData.lineItems && receiptData.lineItems.length > 0) {
       receiptData.lineItems = await standardizeItemNames(receiptData.lineItems);
+    }
+
+    // Add tax as special line item if present
+    if (receiptData.taxAmount && receiptData.taxAmount > 0) {
+      receiptData.lineItems.push({
+        name: "税",
+        amount: receiptData.taxAmount,
+        quantity: 1,
+        unit: null,
+        notes: "Tax (HST/GST/PST combined)",
+      });
+    }
+
+    // Validate total if both subtotal and tax present
+    if (receiptData.subtotalAmount && receiptData.taxAmount) {
+      const calculatedTotal = receiptData.subtotalAmount + receiptData.taxAmount;
+      // Allow small rounding differences (within 2 cents)
+      if (Math.abs(calculatedTotal - receiptData.totalAmount) <= 2) {
+        receiptData.totalAmount = calculatedTotal;
+      }
     }
 
     // Validate response

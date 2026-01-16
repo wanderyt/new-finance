@@ -13,6 +13,7 @@ import {
 } from "@/app/lib/middleware/auth";
 import { convertCurrency } from "@/app/lib/utils/currency";
 import { generateFinId } from "@/app/lib/utils/id";
+import { saveReceipt } from "@/app/lib/utils/receipt-storage";
 
 /**
  * Validate date format - must be ISO 8601 with time in UTC timezone
@@ -32,8 +33,20 @@ function isValidDateFormat(dateString: string): boolean {
 
 export const POST = withAuth(async (request, user) => {
   try {
-    // Parse request body
-    const body: CreateFinRequest = await request.json();
+    // Parse request body - support both JSON and FormData
+    let body: CreateFinRequest;
+    let receiptFile: File | null = null;
+
+    const contentType = request.headers.get("content-type") || "";
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await request.formData();
+      const dataStr = formData.get("data") as string;
+      body = JSON.parse(dataStr);
+      receiptFile = formData.get("receipt") as File | null;
+    } else {
+      body = await request.json();
+    }
 
     // Validate required fields
     if (!body.date) {
@@ -168,6 +181,21 @@ export const POST = withAuth(async (request, user) => {
           notes: item.notes || null,
         }))
       );
+    }
+
+    // Save receipt if provided
+    if (receiptFile) {
+      try {
+        await saveReceipt({
+          file: receiptFile,
+          userId: user.userId,
+          finId,
+        });
+        console.log(`Receipt saved for fin ${finId}`);
+      } catch (error) {
+        console.error("Failed to save receipt:", error);
+        // Continue anyway - receipt storage is optional
+      }
     }
 
     // Generate recurring fin records if scheduled
