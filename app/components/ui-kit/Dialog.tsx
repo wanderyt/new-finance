@@ -79,6 +79,7 @@ export default function Dialog({
                     {title}
                   </h2>
                   <button
+                    type="button"
                     onClick={onClose}
                     className="p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                     aria-label="Close dialog"

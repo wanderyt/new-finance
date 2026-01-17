@@ -131,6 +131,7 @@ export default function HistoricalDataSheet({
             Choose Details
           </h2>
           <button
+            type="button"
             onClick={onCancel}
             className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
             aria-label="Close"

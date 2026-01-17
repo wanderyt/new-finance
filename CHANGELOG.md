@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-01-16
+
+### Fixed
+- **Layout Collapse on Mobile**: Fixed date picker and frequency dropdown collapsing on narrow screens
+  - Added `min-w-0` to datetime input container to prevent overflow
+  - Added `shrink-0` to frequency dropdown to maintain fixed width
+  - Ensures proper layout on all screen sizes
+- **Unintended Form Submissions**: Fixed dialog and sheet close buttons triggering form submit
+  - Added explicit `type="button"` to Dialog component close button
+  - Added explicit `type="button"` to HistoricalDataSheet close button
+  - Prevents unexpected form submissions when clicking close buttons inside forms
+
 ## [1.4.0] - 2026-01-15
 
 ### Added

@@ -460,7 +460,7 @@ const FinEditorForm = ({
     <form onSubmit={handleSubmit} className="space-y-3">
       {/* Date and Scheduled */}
       <div className="flex gap-2">
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-w-0">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
             fill="none"
@@ -497,7 +497,7 @@ const FinEditorForm = ({
           }}
           options={frequencyOptions}
           placeholder={isScheduledTransaction ? "已排期" : "一次"}
-          className="w-32"
+          className="w-32 shrink-0"
           disabled={isScheduledTransaction}
         />
       </div>
