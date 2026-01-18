@@ -37,10 +37,14 @@ const LineItemEditor = ({
   const [amountInput, setAmountInput] = useState<string>(
     (item.originalAmountCents / 100).toFixed(2)
   );
+  const [unitPriceInput, setUnitPriceInput] = useState<string>(
+    item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : ""
+  );
 
   useEffect(() => {
     setLocalItem(item);
     setAmountInput((item.originalAmountCents / 100).toFixed(2));
+    setUnitPriceInput(item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "");
   }, [item]);
 
   const handleChange = (field: keyof LineItem, value: any) => {
@@ -59,6 +63,30 @@ const LineItemEditor = ({
     const cents = Math.round(dollars * 100);
     setAmountInput(dollars.toFixed(2));
     handleChange("originalAmountCents", cents);
+
+    // Auto-calculate unit price if quantity exists
+    if (localItem.qty && localItem.qty > 0) {
+      calculateUnitPrice(cents, localItem.qty);
+    }
+  };
+
+  const calculateUnitPrice = (totalCents: number, qty: number) => {
+    if (qty > 0) {
+      const unitPrice = totalCents / qty;
+      setUnitPriceInput((unitPrice / 100).toFixed(2));
+      handleChange("unitPriceCents", Math.round(unitPrice));
+    }
+  };
+
+  const handleUnitPriceChange = (value: string) => {
+    setUnitPriceInput(value);
+  };
+
+  const handleUnitPriceBlur = () => {
+    const dollars = parseFloat(unitPriceInput) || 0;
+    const cents = Math.round(dollars * 100);
+    setUnitPriceInput(dollars.toFixed(2));
+    handleChange("unitPriceCents", cents || undefined);
   };
 
   const personOptions = persons.map((p) => ({
@@ -128,22 +156,55 @@ const LineItemEditor = ({
           </div>
         </div>
 
-        {/* Quantity, unit, and person */}
+        {/* Quantity, unit price, and unit */}
         <div className="grid grid-cols-3 gap-2">
           <Input
             type="text"
             inputMode="decimal"
             value={localItem.qty || ""}
-            onChange={(e) =>
-              handleChange("qty", e.target.value ? parseFloat(e.target.value) : undefined)
-            }
+            onChange={(e) => {
+              const qty = e.target.value ? parseFloat(e.target.value) : undefined;
+              handleChange("qty", qty);
+              // Auto-calculate unit price when qty changes
+              if (qty && qty > 0) {
+                calculateUnitPrice(localItem.originalAmountCents, qty);
+              }
+            }}
             placeholder="数量"
           />
+          <div className="relative">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <input
+              type="number"
+              step="0.01"
+              value={unitPriceInput}
+              onChange={(e) => handleUnitPriceChange(e.target.value)}
+              onBlur={handleUnitPriceBlur}
+              placeholder="单价"
+              className="w-full pl-10 pr-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            />
+          </div>
           <Input
             value={localItem.unit || ""}
             onChange={(e) => handleChange("unit", e.target.value || undefined)}
             placeholder="单位"
           />
+        </div>
+
+        {/* Person */}
+        <div>
           <Dropdown
             options={personOptions}
             value={localItem.personId?.toString() || ""}
