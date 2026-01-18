@@ -29,9 +29,10 @@ Analyze this receipt image and extract the following information in JSON format:
   "lineItems": [
     {
       "name": "Item name/description",
-      "amount": 1250,  // Item price in cents
-      "quantity": 2,
-      "unit": "pcs"
+      "unitPrice": 625,    // Price per unit in cents (if visible on receipt)
+      "quantity": 2,       // Quantity purchased
+      "unit": "pcs",       // Unit of measurement
+      "amount": 1250       // Total line item price in cents
     }
   ]
 }
@@ -39,6 +40,9 @@ Analyze this receipt image and extract the following information in JSON format:
 Rules:
 - Extract ALL line items (do NOT include tax as a line item)
 - Convert amounts to CENTS (multiply by 100)
+- If receipt shows unit price (e.g., "$3.99/kg", "$6.25 each"), extract it as unitPrice in cents
+- If only total amount is visible (no unit price shown), set unitPrice to null
+- Verify: unitPrice * quantity ≈ amount (allow small rounding differences)
 - If receipt shows subtotal and tax separately, extract both
 - If no tax visible, omit taxAmount or set to null
 - For Chinese receipts without tax, omit taxAmount
@@ -245,9 +249,21 @@ export const POST = withAuth(async (request, user) => {
     // Fallback to OpenAI if needed:
     // const receiptData = await analyzeReceiptWithOpenAI(base64Image, file.type);
 
-    // Standardize item names (automatically converts to Chinese)
+    // Map unitPrice to unitPriceCents and standardize item names
     if (receiptData.lineItems && receiptData.lineItems.length > 0) {
-      receiptData.lineItems = await standardizeItemNames(receiptData.lineItems);
+      // Map unitPrice to unitPriceCents before standardization
+      const itemsWithUnitPrice = receiptData.lineItems.map((item: {
+        name: string;
+        amount: number;
+        quantity?: number;
+        unit?: string;
+        unitPrice?: number;
+      }) => ({
+        ...item,
+        unitPriceCents: item.unitPrice || null,
+      }));
+
+      receiptData.lineItems = await standardizeItemNames(itemsWithUnitPrice);
     }
 
     // Add tax as special line item if present
