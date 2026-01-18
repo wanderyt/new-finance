@@ -26,6 +26,7 @@ interface ReceiptAnalysisResult {
     amount: number;
     quantity?: number;
     unit?: string;
+    unitPriceCents?: number;
     notes?: string;
   }>;
   totalAmount: number;
