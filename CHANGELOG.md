@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-01-17
+
+### Added
+- **Unit Price Field**: New unit price input field for line items in transaction editor
+  - Display and edit price per unit (e.g., $/kg, $/piece) for each line item
+  - Auto-calculate unit price when quantity or total amount changes
+  - Manual override capability for user-entered unit prices
+  - Reorganized line item layout to 4 rows for better organization
+  - Person dropdown moved to dedicated row for improved UX
+- **Receipt Analysis Enhancement**: AI now extracts unit prices directly from receipts
+  - Updated AI prompt to extract unitPrice field from receipt images
+  - Handles receipts with explicit unit pricing (e.g., "$3.99/kg")
+  - Validates unit price calculations against total amounts
+  - Falls back to null when unit price not visible on receipt
+- **Complete Data Flow**: Unit price flows end-to-end from receipt to database
+  - Unit price extracted by AI analysis
+  - Displayed in receipt analysis dialog for review
+  - Editable in line item editor
+  - Stored in database with fin_items records
+
+### Changed
+- **Line Item Editor Layout**: Restructured from 3-row to 4-row layout
+  - Row 1: Item Name | Total Amount (unchanged)
+  - Row 2: Quantity | Unit Price (new) | Unit
+  - Row 3: Person (moved from row 2)
+  - Row 4: Notes (unchanged)
+
+### Technical
+- Added `unitPriceCents` to receipt analysis interfaces
+- Enhanced AI prompt with unit price extraction rules
+- Added auto-calculation logic with manual override support
+- Improved receipt analysis dialog data mapping
+
 ## [1.5.0] - 2026-01-16
 
 ### Fixed
