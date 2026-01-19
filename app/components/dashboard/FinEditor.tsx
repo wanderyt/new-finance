@@ -29,6 +29,8 @@ const FinEditor = ({
   const [pendingData, setPendingData] = useState<CreateFinRequest | UpdateFinRequest | FormData | null>(null);
   const [currentFinData, setCurrentFinData] = useState<FinData | undefined>(existingFin);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [preservedFormData, setPreservedFormData] = useState<{ date: string; city: string } | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   // Sync current fin data when existingFin changes
   useEffect(() => {
@@ -40,6 +42,7 @@ const FinEditor = ({
     if (!isOpen) {
       setHasUnsavedChanges(false);
       setIsSubmitting(false);
+      setPreservedFormData(null);
     }
   }, [isOpen]);
 
@@ -53,7 +56,7 @@ const FinEditor = ({
     onClose();
   };
 
-  const handleSubmit = async (data: CreateFinRequest | UpdateFinRequest | FormData) => {
+  const handleSubmit = async (data: CreateFinRequest | UpdateFinRequest | FormData, saveAndCreateAnother = false) => {
     // Check if this is an update to a scheduled transaction
     const isUpdate = data instanceof FormData ? false : "finId" in data;
     if (isUpdate && existingFin?.isScheduled && existingFin?.scheduleRuleId) {
@@ -65,10 +68,10 @@ const FinEditor = ({
     }
 
     // Proceed with normal submission
-    await executeSubmit(data);
+    await executeSubmit(data, undefined, saveAndCreateAnother);
   };
 
-  const executeSubmit = async (data: CreateFinRequest | UpdateFinRequest | FormData, scope?: "single" | "all") => {
+  const executeSubmit = async (data: CreateFinRequest | UpdateFinRequest | FormData, scope?: "single" | "all", saveAndCreateAnother = false) => {
     setIsSubmitting(true);
 
     try {
@@ -78,6 +81,36 @@ const FinEditor = ({
 
       const endpoint = isUpdate ? "/api/fin/update" : "/api/fin/create";
       const method = isUpdate ? "PATCH" : "POST";
+
+      // Extract date and city for preserving when creating another
+      let dateToPreserve: string | undefined;
+      let cityToPreserve: string | undefined;
+      if (saveAndCreateAnother && !isUpdate) {
+        // Helper to convert ISO date to local datetime-local format
+        const toLocalDatetimeString = (isoDate: string) => {
+          const date = new Date(isoDate);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          const hours = String(date.getHours()).padStart(2, "0");
+          const minutes = String(date.getMinutes()).padStart(2, "0");
+          return `${year}-${month}-${day}T${hours}:${minutes}`;
+        };
+
+        if (data instanceof FormData) {
+          // Data is stored as JSON string under "data" key
+          const dataStr = data.get("data") as string;
+          if (dataStr) {
+            const parsedData = JSON.parse(dataStr) as CreateFinRequest;
+            // Convert ISO date back to local datetime-local format
+            dateToPreserve = toLocalDatetimeString(parsedData.date);
+            cityToPreserve = parsedData.city;
+          }
+        } else {
+          dateToPreserve = toLocalDatetimeString((data as CreateFinRequest).date);
+          cityToPreserve = (data as CreateFinRequest).city;
+        }
+      }
 
       // Prepare body and headers
       let body: BodyInit;
@@ -119,7 +152,21 @@ const FinEditor = ({
       if (result.success) {
         setHasUnsavedChanges(false);
         onSuccess?.(result.data);
-        onClose();
+
+        if (saveAndCreateAnother && dateToPreserve && cityToPreserve) {
+          // Preserve date and city for next record
+          setPreservedFormData({
+            date: dateToPreserve,
+            city: cityToPreserve,
+          });
+          // Reset the current fin data to null (create mode)
+          setCurrentFinData(undefined);
+          // Increment form key to force form reset
+          setFormKey(prev => prev + 1);
+          // Don't close the editor
+        } else {
+          onClose();
+        }
       } else {
         throw new Error(result.error || "Failed to save transaction");
       }
@@ -241,6 +288,7 @@ const FinEditor = ({
       <BottomSheet isOpen={isOpen} onClose={handleClose}>
         <div className="relative">
           <FinEditorForm
+            key={formKey}
             type={type}
             existingFin={currentFinData}
             onSubmit={handleSubmit}
@@ -248,6 +296,7 @@ const FinEditor = ({
             onDelete={existingFin ? handleDelete : undefined}
             isSubmitting={isSubmitting}
             onReceiptUpdate={handleReceiptUpdate}
+            preservedFormData={preservedFormData}
           />
 
           {/* Loading Overlay */}
