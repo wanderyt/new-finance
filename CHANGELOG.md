@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-01-18
+
+### Added
+- **Time/Date Display**: Expense tiles now show transaction time in Chinese weekday and date format (e.g., "周一 @ 1月18日")
+  - Replaces previous format with more intuitive date display
+  - Shows weekday and month/day for quick reference
+  - Converts from UTC to local time automatically
+- **New Income Category**: Added "商户 <> 返现" (Merchant Cashback) category
+  - New executable script `yarn db:add-merchant-cashback` to add category to database
+  - Categorized as income type for tracking merchant cashback/rebates
+  - Works in both local and Docker environments
+- **Save and Create Another**: New "再记一笔" button for quick consecutive entries
+  - Saves current transaction and keeps editor open with fresh form
+  - Preserves date/time and city from previous entry for faster data entry
+  - Only visible when creating new records (not when editing)
+  - Ideal for recording multiple transactions from same time/location
+
+### Fixed
+- **Historical View Timestamps**: Fixed January 2026 records not appearing in historical view
+  - Changed from UTC-based grouping to local time-based grouping
+  - Records now correctly grouped by local month/day instead of UTC date
+  - Prevents timezone edge cases where records appear in wrong month
+- **Quantity Field Editability**: Fixed qty field in line item editor not displaying or accepting input
+  - Added proper state management with useRef to prevent re-render issues
+  - Field now properly displays and preserves entered values
+  - Auto-calculation of unit price still works correctly after qty input
+
+### Technical
+- Enhanced ExpenseTile component with local date formatting
+- Updated FinEditor to preserve form data for "save and create another" flow
+- Fixed Redux selectors to use local time for month/day grouping
+- Added internal update tracking to LineItemEditor to prevent state reset loops
+
 ## [1.6.0] - 2026-01-17
 
 ### Added
