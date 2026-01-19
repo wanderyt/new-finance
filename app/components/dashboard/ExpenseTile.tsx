@@ -25,6 +25,17 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
     cny: `¥${(fin.amountCnyCents / 100).toFixed(2)}`,
   };
 
+  // Format date as "周一 @ 12月5日"
+  const date = new Date(
+    fin.isScheduled && fin.scheduledOn ? fin.scheduledOn : fin.date
+  );
+  const weekday = new Intl.DateTimeFormat("zh-CN", {
+    weekday: "short",
+  }).format(date);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const timeString = `${weekday} @ ${month}月${day}日`;
+
   return (
     <div
       onClick={() => onClick?.(fin)}
@@ -52,9 +63,11 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
           </div>
         )}
 
-        {/* Place & Badges */}
+        {/* Place, Time & Badges */}
         <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-500">
           {fin.place && <span>{fin.place}</span>}
+          {fin.place && <span className="text-zinc-400 dark:text-zinc-600">•</span>}
+          <span>{timeString}</span>
           {fin.isScheduled && (
             <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">
               周期

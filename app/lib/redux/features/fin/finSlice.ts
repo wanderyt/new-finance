@@ -1024,8 +1024,10 @@ export const selectHistoryGroupedByMonth = createSelector(
 
     fins.forEach((fin) => {
       const date = fin.isScheduled && fin.scheduledOn ? fin.scheduledOn : fin.date;
-      const monthKey = date.substring(0, 7);
-      const dayKey = date.substring(0, 10);
+      // Convert to local time before extracting month/day keys
+      const localDate = new Date(date);
+      const monthKey = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}`;
+      const dayKey = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
 
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, new Map());
@@ -1101,6 +1103,7 @@ export const selectChartsComparisonMonth2 = (state: RootState) => state.fin.char
 export const selectAvailableMonths = createSelector([selectFins], (fins): string[] => {
   const months = new Set<string>();
   fins.forEach((fin) => {
+    // Date constructor already converts to local time
     const date = new Date(fin.date);
     const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     months.add(month);
@@ -1112,6 +1115,7 @@ export const selectAvailableMonths = createSelector([selectFins], (fins): string
 export const selectAvailableYears = createSelector([selectFins], (fins): string[] => {
   const years = new Set<string>();
   fins.forEach((fin) => {
+    // Date constructor already converts to local time
     const date = new Date(fin.date);
     years.add(String(date.getFullYear()));
   });

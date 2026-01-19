@@ -38,11 +38,12 @@ interface ReceiptAnalysisResult {
 interface FinEditorFormProps {
   type: "expense" | "income";
   existingFin?: FinData;
-  onSubmit: (data: CreateFinRequest | UpdateFinRequest | FormData) => Promise<void>;
+  onSubmit: (data: CreateFinRequest | UpdateFinRequest | FormData, saveAndCreateAnother?: boolean) => Promise<void>;
   onCancel: () => void;
   onDelete?: () => Promise<void>;
   isSubmitting?: boolean;
   onReceiptUpdate?: (finId: string) => Promise<void>;
+  preservedFormData?: { date: string; city: string } | null;
 }
 
 const FinEditorForm = ({
@@ -53,6 +54,7 @@ const FinEditorForm = ({
   onDelete,
   isSubmitting = false,
   onReceiptUpdate,
+  preservedFormData,
 }: FinEditorFormProps) => {
   // Helper function to convert UTC date to local datetime-local format
   const toLocalDatetimeString = (utcDate: string | Date) => {
@@ -67,10 +69,12 @@ const FinEditorForm = ({
 
   // Form state
   // For scheduled transactions, use scheduledOn; otherwise use date
+  // If preservedFormData exists, use it for date and city
   const [date, setDate] = useState(
-    existingFin
+    preservedFormData?.date ||
+    (existingFin
       ? toLocalDatetimeString(existingFin.isScheduled && existingFin.scheduledOn ? existingFin.scheduledOn : existingFin.date)
-      : toLocalDatetimeString(new Date())
+      : toLocalDatetimeString(new Date()))
   );
   const isScheduledTransaction = Boolean(existingFin?.isScheduled && existingFin?.scheduleRuleId);
   const [merchant, setMerchant] = useState(existingFin?.merchant || "");
@@ -85,7 +89,7 @@ const FinEditorForm = ({
     existingFin?.subcategory || ""
   );
   const [place, setPlace] = useState(existingFin?.place || "");
-  const [city, setCity] = useState(existingFin?.city || "");
+  const [city, setCity] = useState(preservedFormData?.city || existingFin?.city || "");
   const [tags, setTags] = useState<string[]>([]);
   const [isScheduled, setIsScheduled] = useState(
     existingFin?.isScheduled || false
@@ -247,7 +251,7 @@ const FinEditorForm = ({
   };
 
   // Handle form submission
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent, saveAndCreateAnother = false) => {
     e.preventDefault();
 
     if (!isValid()) {
@@ -273,7 +277,7 @@ const FinEditorForm = ({
         lineItems: lineItems.length > 0 ? lineItems : undefined,
       };
 
-      await onSubmit(updateData);
+      await onSubmit(updateData, saveAndCreateAnother);
     } else {
       // Build FormData to include receipt file
       const formData = new FormData();
@@ -302,8 +306,13 @@ const FinEditorForm = ({
         formData.append("receipt", receiptFile);
       }
 
-      await onSubmit(formData);
+      await onSubmit(formData, saveAndCreateAnother);
     }
+  };
+
+  // Handler for "save and create another" button
+  const handleSaveAndCreateAnother = async (e: FormEvent) => {
+    await handleSubmit(e, true);
   };
 
   // Handle receipt upload
@@ -767,6 +776,19 @@ const FinEditorForm = ({
             className="flex-1 !bg-red-100 dark:!bg-red-900/30 !text-red-700 dark:!text-red-300 hover:!bg-red-200 dark:hover:!bg-red-900/50"
           >
             删除
+          </Button>
+        )}
+
+        {!existingFin && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleSaveAndCreateAnother}
+            disabled={!isValid() || isSubmitting}
+            className="flex-1"
+          >
+            再记一笔
           </Button>
         )}
 

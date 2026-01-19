@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Input from "../ui-kit/Input";
 import Dropdown from "../ui-kit/Dropdown";
 
@@ -37,19 +37,34 @@ const LineItemEditor = ({
   const [amountInput, setAmountInput] = useState<string>(
     (item.originalAmountCents / 100).toFixed(2)
   );
+  const [qtyInput, setQtyInput] = useState<string>(
+    item.qty !== undefined ? item.qty.toString() : ""
+  );
   const [unitPriceInput, setUnitPriceInput] = useState<string>(
     item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : ""
   );
 
+  // Sync with external changes only (not our own updates)
+  // Use a ref to track if we just updated
+  const isInternalUpdate = useRef(false);
+
   useEffect(() => {
+    // Skip if this was triggered by our own handleChange
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
+
     setLocalItem(item);
     setAmountInput((item.originalAmountCents / 100).toFixed(2));
+    setQtyInput(item.qty !== undefined && item.qty !== null ? String(item.qty) : "");
     setUnitPriceInput(item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "");
   }, [item]);
 
   const handleChange = (field: keyof LineItem, value: any) => {
     const updated = { ...localItem, [field]: value };
     setLocalItem(updated);
+    isInternalUpdate.current = true;
     onChange(index, updated);
   };
 
@@ -75,6 +90,21 @@ const LineItemEditor = ({
       const unitPrice = totalCents / qty;
       setUnitPriceInput((unitPrice / 100).toFixed(2));
       handleChange("unitPriceCents", Math.round(unitPrice));
+    }
+  };
+
+  const handleQtyChange = (value: string) => {
+    setQtyInput(value);
+  };
+
+  const handleQtyBlur = () => {
+    const parsedQty = parseFloat(qtyInput);
+    const qty = !isNaN(parsedQty) && parsedQty !== 0 ? parsedQty : undefined;
+    console.log('handleQtyBlur:', { qtyInput, parsedQty, qty });
+    handleChange("qty", qty);
+    // Auto-calculate unit price when qty changes
+    if (qty && qty > 0) {
+      calculateUnitPrice(localItem.originalAmountCents, qty);
     }
   };
 
@@ -158,20 +188,18 @@ const LineItemEditor = ({
 
         {/* Quantity, unit price, and unit */}
         <div className="grid grid-cols-3 gap-2">
-          <Input
-            type="text"
-            inputMode="decimal"
-            value={localItem.qty || ""}
-            onChange={(e) => {
-              const qty = e.target.value ? parseFloat(e.target.value) : undefined;
-              handleChange("qty", qty);
-              // Auto-calculate unit price when qty changes
-              if (qty && qty > 0) {
-                calculateUnitPrice(localItem.originalAmountCents, qty);
-              }
-            }}
-            placeholder="数量"
-          />
+          <div>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={qtyInput}
+              onChange={(e) => handleQtyChange(e.target.value)}
+              onBlur={handleQtyBlur}
+              placeholder="数量"
+              className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            />
+            <div className="text-xs text-red-500 mt-1">Debug: qtyInput=[{qtyInput}] | item.qty={item.qty} | localItem.qty={localItem.qty}</div>
+          </div>
           <div className="relative">
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none"

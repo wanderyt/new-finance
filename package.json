@@ -1,6 +1,6 @@
 {
   "name": "new-finance",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "packageManager": "yarn@4.5.3",
   "engines": {
@@ -16,6 +16,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
+    "db:add-merchant-cashback": "tsx scripts/add-merchant-cashback-category.ts",
     "db:cleanup-schedules": "tsx scripts/cleanup-schedule-rules.ts",
     "db:reset-fin-data": "tsx scripts/reset-fin-data.ts",
     "db:sync-to-main": "cp db/finance.db ../new-finance/db/finance.db && echo 'Database synced to main branch'",
