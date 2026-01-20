@@ -457,8 +457,18 @@ export const applyHistoryFiltersAsync = createAsyncThunk<
   { rejectValue: string }
 >("fin/applyHistoryFilters", async (filters, { rejectWithValue }) => {
   try {
+    // Check if we need to fetch all records for client-side filtering
+    const hasClientSideFilters = Boolean(
+      filters.keyword ||
+      (filters.categories && filters.categories.length > 0) ||
+      filters.amountRange?.min ||
+      filters.amountRange?.max
+    );
+
+    // If client-side filters are applied, fetch all records (no limit)
+    // Otherwise, use pagination (limit: 100)
     const queryParams = new URLSearchParams({
-      limit: "100",
+      limit: hasClientSideFilters ? "100" : "100",
       offset: "0",
     });
 
@@ -470,6 +480,32 @@ export const applyHistoryFiltersAsync = createAsyncThunk<
     if (dateFrom) queryParams.append("dateFrom", dateFrom);
     if (dateTo) queryParams.append("dateTo", dateTo);
 
+    // If we have client-side filters, fetch all records in batches
+    if (hasClientSideFilters) {
+      const allData: FinData[] = [];
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        queryParams.set("offset", offset.toString());
+
+        const response = await axios.get<ListFinResponse>(
+          `/api/fin/list?${queryParams.toString()}`,
+          { withCredentials: true }
+        );
+
+        allData.push(...response.data.data);
+        hasMore = response.data.pagination.hasMore;
+        offset += 100;
+      }
+
+      return {
+        data: allData,
+        hasMore: false, // No more pagination when all records are loaded
+      };
+    }
+
+    // No client-side filters, use normal pagination
     const response = await axios.get<ListFinResponse>(
       `/api/fin/list?${queryParams.toString()}`,
       { withCredentials: true }
@@ -483,6 +519,43 @@ export const applyHistoryFiltersAsync = createAsyncThunk<
     if (axios.isAxiosError(error) && error.response) {
       return rejectWithValue(
         error.response.data.error || "Failed to apply filters"
+      );
+    }
+    return rejectWithValue("Network error. Please try again.");
+  }
+});
+
+// Async thunk for fetching ALL records at once (for performance testing)
+// WARNING: This can return large datasets. Use with caution.
+export const fetchAllHistoryAsync = createAsyncThunk<
+  { data: FinData[]; hasMore: boolean },
+  SearchFilters,
+  { rejectValue: string }
+>("fin/fetchAllHistory", async (filters, { rejectWithValue }) => {
+  try {
+    const queryParams = new URLSearchParams();
+
+    if (filters.type !== "all") {
+      queryParams.append("type", filters.type);
+    }
+
+    const { dateFrom, dateTo } = calculateDateRange(filters.dateRange);
+    if (dateFrom) queryParams.append("dateFrom", dateFrom);
+    if (dateTo) queryParams.append("dateTo", dateTo);
+
+    const response = await axios.get<ListFinResponse>(
+      `/api/fin/list/all?${queryParams.toString()}`,
+      { withCredentials: true }
+    );
+
+    return {
+      data: response.data.data,
+      hasMore: false,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(
+        error.response.data.error || "Failed to fetch all history"
       );
     }
     return rejectWithValue("Network error. Please try again.");
@@ -862,6 +935,23 @@ const finSlice = createSlice({
       .addCase(applyHistoryFiltersAsync.rejected, (state, action) => {
         state.history.isLoading = false;
         state.history.error = action.payload || "Failed to apply filters";
+      });
+
+    // Fetch all history (performance testing)
+    builder
+      .addCase(fetchAllHistoryAsync.pending, (state) => {
+        state.history.isLoading = true;
+        state.history.error = null;
+      })
+      .addCase(fetchAllHistoryAsync.fulfilled, (state, action) => {
+        state.history.isLoading = false;
+        state.history.data = action.payload.data;
+        state.history.hasMore = false;
+        state.history.offset = 0;
+      })
+      .addCase(fetchAllHistoryAsync.rejected, (state, action) => {
+        state.history.isLoading = false;
+        state.history.error = action.payload || "Failed to fetch all history";
       });
 
     // Fetch persons

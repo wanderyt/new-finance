@@ -3,13 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
-  fetchHistoryAsync,
-  loadMoreHistoryAsync,
+  fetchAllHistoryAsync,
   selectHistoryGroupedByMonth,
   selectHistoryIsLoading,
-  selectHistoryHasMore,
   selectHistoryError,
   selectHistoryFilterCount,
+  selectHistoryFilters,
   toggleMonthExpanded,
 } from "@/app/lib/redux/features/fin/finSlice";
 import { FinData } from "@/app/lib/types/api";
@@ -25,26 +24,17 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
   const dispatch = useAppDispatch();
   const monthGroups = useAppSelector(selectHistoryGroupedByMonth);
   const isLoading = useAppSelector(selectHistoryIsLoading);
-  const hasMore = useAppSelector(selectHistoryHasMore);
   const error = useAppSelector(selectHistoryError);
   const filterCount = useAppSelector(selectHistoryFilterCount);
+  const filters = useAppSelector(selectHistoryFilters);
   const expandedMonths = useAppSelector((state) => state.fin.history.expandedMonths);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    dispatch(fetchHistoryAsync({ limit: 100, offset: 0 }));
-  }, [dispatch]);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
-
-    if (scrollPercentage > 0.8 && hasMore && !isLoading) {
-      dispatch(loadMoreHistoryAsync());
-    }
-  };
+    dispatch(fetchAllHistoryAsync(filters));
+  }, [dispatch, filters]);
 
   const handleMonthToggle = (monthKey: string) => {
     dispatch(toggleMonthExpanded(monthKey));
@@ -52,69 +42,87 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <svg
-          className="w-16 h-16 text-zinc-400 dark:text-zinc-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <p className="text-zinc-600 dark:text-zinc-400">{error}</p>
-        <button
-          onClick={() => dispatch(fetchHistoryAsync({ limit: 100, offset: 0 }))}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          重试
-        </button>
-      </div>
+      <>
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+          <svg
+            className="w-16 h-16 text-zinc-400 dark:text-zinc-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <p className="text-zinc-600 dark:text-zinc-400">{error}</p>
+          <button
+            onClick={() => dispatch(fetchAllHistoryAsync(filters))}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            重试
+          </button>
+        </div>
+        <FilterBottomSheet
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+        />
+      </>
     );
   }
 
   if (isLoading && monthGroups.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <Loading />
-      </div>
+      <>
+        <div className="flex items-center justify-center h-full">
+          <Loading />
+        </div>
+        <FilterBottomSheet
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+        />
+      </>
     );
   }
 
   if (monthGroups.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <svg
-          className="w-16 h-16 text-zinc-400 dark:text-zinc-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-          />
-        </svg>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          {filterCount > 0
-            ? "没有符合筛选条件的记录，请调整筛选条件"
-            : "暂无交易记录"}
-        </p>
-        {filterCount > 0 && (
-          <button
-            onClick={() => setIsFilterOpen(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+      <>
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+          <svg
+            className="w-16 h-16 text-zinc-400 dark:text-zinc-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            调整筛选
-          </button>
-        )}
-      </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+            />
+          </svg>
+          <p className="text-zinc-600 dark:text-zinc-400">
+            {filterCount > 0
+              ? "没有符合筛选条件的记录，请调整筛选条件"
+              : "暂无交易记录"}
+          </p>
+          {filterCount > 0 && (
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              调整筛选
+            </button>
+          )}
+        </div>
+        <FilterBottomSheet
+          isOpen={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+        />
+      </>
     );
   }
 
@@ -152,7 +160,6 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
 
       <div
         ref={scrollContainerRef}
-        onScroll={handleScroll}
         className="flex-1 overflow-y-auto"
       >
         {monthGroups.map((monthGroup) => (
@@ -171,9 +178,9 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
           </div>
         )}
 
-        {!hasMore && monthGroups.length > 0 && (
+        {!isLoading && monthGroups.length > 0 && (
           <div className="text-center py-4 text-zinc-500 dark:text-zinc-400 text-sm">
-            没有更多记录
+            共 {monthGroups.reduce((sum, group) => sum + group.days.reduce((daySum, day) => daySum + day.fins.length, 0), 0)} 条记录
           </div>
         )}
       </div>
