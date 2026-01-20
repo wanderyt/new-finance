@@ -342,7 +342,7 @@ function calculateDateRange(
 
     case "lastYear": {
       const startOfLastYear = new Date(now.getFullYear() - 1, 0, 1);
-      const endOfLastYear = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+      const endOfLastYear = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
       return {
         dateFrom: startOfLastYear.toISOString(),
         dateTo: endOfLastYear.toISOString(),
