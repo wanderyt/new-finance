@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   selectHistoryFilters,
   setHistoryFilters,
-  applyHistoryFiltersAsync,
+  fetchAllHistoryAsync,
   resetHistoryFilters,
 } from "@/app/lib/redux/features/fin/finSlice";
 import { SearchFilters } from "@/app/lib/types/api";
 import BottomSheet from "../ui-kit/BottomSheet";
 import Input from "../ui-kit/Input";
 import Button from "../ui-kit/Button";
+import Dropdown from "../ui-kit/Dropdown";
 import axios from "axios";
 
 interface FilterBottomSheetProps {
@@ -28,27 +29,27 @@ export default function FilterBottomSheet({
 
   const [keyword, setKeyword] = useState(currentFilters.keyword || "");
   const [type, setType] = useState<"all" | "expense" | "income">(
-    currentFilters.type
+    currentFilters.type,
   );
   const [datePreset, setDatePreset] = useState(currentFilters.dateRange.preset);
   const [customStart, setCustomStart] = useState(
-    currentFilters.dateRange.customStart || ""
+    currentFilters.dateRange.customStart || "",
   );
   const [customEnd, setCustomEnd] = useState(
-    currentFilters.dateRange.customEnd || ""
+    currentFilters.dateRange.customEnd || "",
   );
   const [minAmount, setMinAmount] = useState(
     currentFilters.amountRange?.min
       ? (currentFilters.amountRange.min / 100).toString()
-      : ""
+      : "",
   );
   const [maxAmount, setMaxAmount] = useState(
     currentFilters.amountRange?.max
       ? (currentFilters.amountRange.max / 100).toString()
-      : ""
+      : "",
   );
   const [categories, setCategories] = useState<string[]>(
-    currentFilters.categories || []
+    currentFilters.categories || [],
   );
   const [availableCategories, setAvailableCategories] = useState<
     Array<{ category: string; subcategory: string }>
@@ -58,7 +59,25 @@ export default function FilterBottomSheet({
   useEffect(() => {
     if (isOpen) {
       fetchCategories();
+      // Reset local state to match current filters when opening
+      setKeyword(currentFilters.keyword || "");
+      setType(currentFilters.type);
+      setDatePreset(currentFilters.dateRange.preset);
+      setCustomStart(currentFilters.dateRange.customStart || "");
+      setCustomEnd(currentFilters.dateRange.customEnd || "");
+      setMinAmount(
+        currentFilters.amountRange?.min
+          ? (currentFilters.amountRange.min / 100).toString()
+          : "",
+      );
+      setMaxAmount(
+        currentFilters.amountRange?.max
+          ? (currentFilters.amountRange.max / 100).toString()
+          : "",
+      );
+      setCategories(currentFilters.categories || []);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   const fetchCategories = async () => {
@@ -96,7 +115,7 @@ export default function FilterBottomSheet({
     };
 
     dispatch(setHistoryFilters(filters));
-    dispatch(applyHistoryFiltersAsync(filters));
+    dispatch(fetchAllHistoryAsync(filters));
     onClose();
   };
 
@@ -130,7 +149,7 @@ export default function FilterBottomSheet({
   };
 
   const uniqueCategories = Array.from(
-    new Set(availableCategories.map((c) => c.category))
+    new Set(availableCategories.map((c) => c.category)),
   );
 
   return (
@@ -190,17 +209,20 @@ export default function FilterBottomSheet({
           <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
             日期范围
           </label>
-          <select
-            value={datePreset}
-            onChange={(e) => setDatePreset(e.target.value as any)}
-            className="w-full px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
-          >
-            <option value="all">全部时间</option>
-            <option value="thisMonth">本月</option>
-            <option value="thisYear">今年</option>
-            <option value="lastYear">去年</option>
-            <option value="custom">自定义</option>
-          </select>
+          <div className="mb-2">
+            <Dropdown
+              value={datePreset}
+              onChange={(value) => setDatePreset(value as "all" | "thisMonth" | "thisYear" | "lastYear" | "custom")}
+              options={[
+                { value: "all", label: "全部时间" },
+                { value: "thisMonth", label: "本月" },
+                { value: "thisYear", label: "今年" },
+                { value: "lastYear", label: "去年" },
+                { value: "custom", label: "自定义" },
+              ]}
+              placeholder="选择日期范围"
+            />
+          </div>
 
           {datePreset === "custom" && (
             <div className="flex gap-2">
@@ -231,11 +253,14 @@ export default function FilterBottomSheet({
           <div className="max-h-48 overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-lg">
             {uniqueCategories.map((cat) => {
               const subcats = availableCategories.filter(
-                (c) => c.category === cat
+                (c) => c.category === cat,
               );
               const isExpanded = expandedCategories.includes(cat);
               return (
-                <div key={cat} className="border-b border-zinc-200 dark:border-zinc-700 last:border-0">
+                <div
+                  key={cat}
+                  className="border-b border-zinc-200 dark:border-zinc-700 last:border-0"
+                >
                   <button
                     onClick={() => toggleCategoryExpanded(cat)}
                     className="w-full flex items-center justify-between px-2 py-1.5 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
@@ -273,7 +298,10 @@ export default function FilterBottomSheet({
                               type="checkbox"
                               checked={isSelected}
                               onChange={() =>
-                                toggleCategory(subcat.category, subcat.subcategory)
+                                toggleCategory(
+                                  subcat.category,
+                                  subcat.subcategory,
+                                )
                               }
                               className="w-3 h-3 text-blue-600 rounded"
                             />

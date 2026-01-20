@@ -35,13 +35,13 @@ const LineItemEditor = ({
 }: LineItemEditorProps) => {
   const [localItem, setLocalItem] = useState<LineItem>(item);
   const [amountInput, setAmountInput] = useState<string>(
-    (item.originalAmountCents / 100).toFixed(2)
+    (item.originalAmountCents / 100).toFixed(2),
   );
   const [qtyInput, setQtyInput] = useState<string>(
-    item.qty !== undefined ? item.qty.toString() : ""
+    item.qty !== undefined ? item.qty.toString() : "",
   );
   const [unitPriceInput, setUnitPriceInput] = useState<string>(
-    item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : ""
+    item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "",
   );
 
   // Sync with external changes only (not our own updates)
@@ -57,8 +57,12 @@ const LineItemEditor = ({
 
     setLocalItem(item);
     setAmountInput((item.originalAmountCents / 100).toFixed(2));
-    setQtyInput(item.qty !== undefined && item.qty !== null ? String(item.qty) : "");
-    setUnitPriceInput(item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "");
+    setQtyInput(
+      item.qty !== undefined && item.qty !== null ? String(item.qty) : "",
+    );
+    setUnitPriceInput(
+      item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "",
+    );
   }, [item]);
 
   const handleChange = (field: keyof LineItem, value: any) => {
@@ -100,7 +104,6 @@ const LineItemEditor = ({
   const handleQtyBlur = () => {
     const parsedQty = parseFloat(qtyInput);
     const qty = !isNaN(parsedQty) && parsedQty !== 0 ? parsedQty : undefined;
-    console.log('handleQtyBlur:', { qtyInput, parsedQty, qty });
     handleChange("qty", qty);
     // Auto-calculate unit price when qty changes
     if (qty && qty > 0) {
@@ -198,7 +201,6 @@ const LineItemEditor = ({
               placeholder="数量"
               className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
             />
-            <div className="text-xs text-red-500 mt-1">Debug: qtyInput=[{qtyInput}] | item.qty={item.qty} | localItem.qty={localItem.qty}</div>
           </div>
           <div className="relative">
             <svg
@@ -237,10 +239,7 @@ const LineItemEditor = ({
             options={personOptions}
             value={localItem.personId?.toString() || ""}
             onChange={(value) =>
-              handleChange(
-                "personId",
-                value ? parseInt(value) : undefined
-              )
+              handleChange("personId", value ? parseInt(value) : undefined)
             }
             placeholder="人员"
           />
