@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-01-20
+
+### Added
+- **Fetch All API Endpoint**: New `/api/fin/list/all` endpoint for fetching all records without pagination
+  - Enables performance testing and comparison between single large request vs multiple paginated requests
+  - Returns all matching records in a single request for improved search performance
+  - Documented in new `docs/PERFORMANCE_TESTING.md` guide
+- **Redux Integration**: New `fetchAllHistoryAsync` thunk for fetching all records at once
+  - Simplified state management without pagination offset tracking
+  - Complete performance testing documentation included
+
+### Changed
+- **Search View Performance**: Refactored history view to fetch all records at once instead of paginated batches
+  - Removed infinite scroll logic - all data loaded on initial request
+  - Faster search and filtering with all records available client-side
+  - Shows total record count at bottom instead of "load more" button
+- **Styled Dropdown Component**: Replaced native select with custom Dropdown component for date range filter
+  - Consistent UI with currency dropdown in fin editor
+  - Better dark mode support and animations
+  - Improved keyboard navigation and accessibility
+
+### Fixed
+- **Filter Bottom Sheet Visibility**: Filter sheet now renders in all states (error, loading, empty results)
+  - Fixed issue where "调整筛选" button wouldn't work when no results were displayed
+  - Users can now always access filters to adjust search criteria
+- **Last Year Date Range**: Corrected date range calculation to exclude current year records
+  - Set end of last year to `23:59:59.999` instead of `23:59:59.000`
+  - Prevents records from January 1st, 2026 from incorrectly appearing in 2025 filter results
+  - Ensures precise date boundary handling in database queries
+- **LineItemEditor Cleanup**: Removed debug code and applied linter formatting
+  - Removed console.log statements and debug UI elements
+  - Improved code quality with proper formatting
+
+### Technical
+- New API route: `app/api/fin/list/all/route.ts`
+- Enhanced Redux slice with `fetchAllHistoryAsync` for non-paginated data fetching
+- Updated `HistoryView` component to use fetch all approach
+- Replaced native select elements with styled `Dropdown` component
+- Added comprehensive performance testing documentation
+
 ## [1.7.0] - 2026-01-18
 
 ### Added
