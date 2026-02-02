@@ -4,9 +4,11 @@ import { useAppDispatch, useAppSelector } from "@/app/lib/redux/hooks";
 import {
   fetchPriceTrend,
   selectPriceTrend,
+  fetchPurchaseHistory,
 } from "@/app/lib/redux/features/fin/finSlice";
 import { ItemSearchInput } from "./ItemSearchInput";
 import { ItemPriceTrendChart } from "./ItemPriceTrendChart";
+import { PurchaseHistoryList } from "./PurchaseHistoryList";
 
 export function ItemPriceTrendView() {
   const dispatch = useAppDispatch();
@@ -14,6 +16,7 @@ export function ItemPriceTrendView() {
 
   const handleItemSelect = (itemName: string) => {
     dispatch(fetchPriceTrend(itemName));
+    dispatch(fetchPurchaseHistory(itemName));
   };
 
   return (
@@ -70,6 +73,9 @@ export function ItemPriceTrendView() {
           </>
         )}
       </div>
+
+      {/* Purchase History List */}
+      <PurchaseHistoryList />
     </div>
   );
 }

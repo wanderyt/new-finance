@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-02-02
+
+### Added
+- **Purchase History List**: New purchase history section in price trends (价格趋势) page
+  - Shows all transactions containing queried item below the price trend chart
+  - Displays full transaction context: item details, merchant, date, category, and total amount
+  - Compact card-based layout matching existing UI patterns
+  - Infinite scroll pagination for efficient loading of large datasets
+  - Real-time data fetching when item is selected from autocomplete
+
+### Technical
+- New API route: `app/api/fin/items/purchase-history/route.ts` with pagination support
+- Redux state management for purchase history with async actions
+- `PurchaseHistoryList` component with IntersectionObserver for infinite scroll
+- Database queries joining `fin` and `finItems` tables for complete transaction data
+
 ## [1.8.0] - 2026-01-20
 
 ### Added
