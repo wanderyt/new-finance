@@ -35,6 +35,29 @@ interface AutocompleteItem {
   lastPurchased: string;
 }
 
+interface ItemDetail {
+  itemId: number;
+  name: string;
+  qty: number;
+  unitPriceCents: number | null;
+  originalAmountCents: number;
+  pricePerUnit: number;
+  totalPrice: number;
+}
+
+interface PurchaseHistoryRecord {
+  finId: string;
+  date: string;
+  merchant: string;
+  category: string;
+  subcategory: string;
+  type: string;
+  originalCurrency: string;
+  amountCadCents: number;
+  comment: string | null;
+  item: ItemDetail;
+}
+
 export interface FinState {
   fins: FinData[];
   currentFin: FinData | null;
@@ -85,6 +108,16 @@ export interface FinState {
     items: AutocompleteItem[];
     loading: boolean;
     error: string | null;
+  };
+
+  purchaseHistory: {
+    itemName: string | null;
+    records: PurchaseHistoryRecord[];
+    loading: boolean;
+    error: string | null;
+    hasMore: boolean;
+    offset: number;
+    total: number;
   };
 
   persons: PersonData[];
@@ -147,6 +180,16 @@ const initialState: FinState = {
     items: [],
     loading: false,
     error: null,
+  },
+
+  purchaseHistory: {
+    itemName: null,
+    records: [],
+    loading: false,
+    error: null,
+    hasMore: false,
+    offset: 0,
+    total: 0,
   },
 
   persons: [],
@@ -670,6 +713,70 @@ export const fetchItemAutocomplete = createAsyncThunk<
   }
 });
 
+// Async thunk for fetching purchase history
+export const fetchPurchaseHistory = createAsyncThunk<
+  {
+    itemName: string;
+    records: PurchaseHistoryRecord[];
+    hasMore: boolean;
+    total: number;
+  },
+  string,
+  { rejectValue: string }
+>("fin/fetchPurchaseHistory", async (itemName, { rejectWithValue }) => {
+  try {
+    const response = await axios.get(
+      `/api/fin/items/purchase-history?itemName=${encodeURIComponent(itemName)}&limit=20&offset=0`,
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(
+        error.response.data.error || "Failed to fetch purchase history"
+      );
+    }
+    return rejectWithValue("Network error. Please try again.");
+  }
+});
+
+// Async thunk for loading more purchase history (infinite scroll)
+export const loadMorePurchaseHistory = createAsyncThunk<
+  {
+    records: PurchaseHistoryRecord[];
+    hasMore: boolean;
+  },
+  void,
+  { state: RootState; rejectValue: string }
+>("fin/loadMorePurchaseHistory", async (_, { getState, rejectWithValue }) => {
+  try {
+    const state = getState();
+    const { itemName, offset, hasMore } = state.fin.purchaseHistory;
+
+    if (!hasMore || !itemName) {
+      return { records: [], hasMore: false };
+    }
+
+    const newOffset = offset + 20;
+    const response = await axios.get(
+      `/api/fin/items/purchase-history?itemName=${encodeURIComponent(itemName)}&limit=20&offset=${newOffset}`,
+      { withCredentials: true }
+    );
+
+    return {
+      records: response.data.records,
+      hasMore: response.data.hasMore,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      return rejectWithValue(
+        error.response.data.error || "Failed to load more purchase history"
+      );
+    }
+    return rejectWithValue("Network error. Please try again.");
+  }
+});
+
 const finSlice = createSlice({
   name: "fin",
   initialState,
@@ -784,6 +891,15 @@ const finSlice = createSlice({
     clearPersonItems: (state) => {
       state.charts.personItems = [];
       state.charts.personItemsError = null;
+    },
+
+    clearPurchaseHistory: (state) => {
+      state.purchaseHistory.itemName = null;
+      state.purchaseHistory.records = [];
+      state.purchaseHistory.hasMore = false;
+      state.purchaseHistory.offset = 0;
+      state.purchaseHistory.total = 0;
+      state.purchaseHistory.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -1013,6 +1129,41 @@ const finSlice = createSlice({
         state.itemAutocomplete.loading = false;
         state.itemAutocomplete.error = action.payload || "Failed to fetch autocomplete";
       });
+
+    // Fetch purchase history
+    builder
+      .addCase(fetchPurchaseHistory.pending, (state) => {
+        state.purchaseHistory.loading = true;
+        state.purchaseHistory.error = null;
+      })
+      .addCase(fetchPurchaseHistory.fulfilled, (state, action) => {
+        state.purchaseHistory.loading = false;
+        state.purchaseHistory.itemName = action.payload.itemName;
+        state.purchaseHistory.records = action.payload.records;
+        state.purchaseHistory.hasMore = action.payload.hasMore;
+        state.purchaseHistory.total = action.payload.total;
+        state.purchaseHistory.offset = 0;
+      })
+      .addCase(fetchPurchaseHistory.rejected, (state, action) => {
+        state.purchaseHistory.loading = false;
+        state.purchaseHistory.error = action.payload || "Failed to fetch purchase history";
+      });
+
+    // Load more purchase history
+    builder
+      .addCase(loadMorePurchaseHistory.pending, (state) => {
+        state.purchaseHistory.loading = true;
+      })
+      .addCase(loadMorePurchaseHistory.fulfilled, (state, action) => {
+        state.purchaseHistory.loading = false;
+        state.purchaseHistory.records.push(...action.payload.records);
+        state.purchaseHistory.hasMore = action.payload.hasMore;
+        state.purchaseHistory.offset += 20;
+      })
+      .addCase(loadMorePurchaseHistory.rejected, (state, action) => {
+        state.purchaseHistory.loading = false;
+        state.purchaseHistory.error = action.payload || "Failed to load more purchase history";
+      });
   },
 });
 
@@ -1035,6 +1186,7 @@ export const {
   clearChartsDrilldown,
   setChartsSelectedPerson,
   clearPersonItems,
+  clearPurchaseHistory,
 } = finSlice.actions;
 
 // Selectors
@@ -1460,5 +1612,12 @@ export const selectPersonCategoryData = createSelector(
 // Price trend selectors
 export const selectPriceTrend = (state: RootState) => state.fin.priceTrend;
 export const selectItemAutocomplete = (state: RootState) => state.fin.itemAutocomplete;
+
+// Purchase history selectors
+export const selectPurchaseHistory = (state: RootState) => state.fin.purchaseHistory;
+export const selectPurchaseHistoryRecords = (state: RootState) => state.fin.purchaseHistory.records;
+export const selectPurchaseHistoryLoading = (state: RootState) => state.fin.purchaseHistory.loading;
+export const selectPurchaseHistoryHasMore = (state: RootState) => state.fin.purchaseHistory.hasMore;
+export const selectPurchaseHistoryTotal = (state: RootState) => state.fin.purchaseHistory.total;
 
 export default finSlice.reducer;
