@@ -206,19 +206,20 @@ export const POST = withAuth(async (request, user) => {
       };
 
       // Calculate number of occurrences based on frequency
-      // daily/weekly/biweekly: 3 years, monthly: 10 years, annually: 10 years
+      // All frequencies: 3 years of records
       const occurrenceCount = {
         daily: 365 * 3, // 1095 occurrences
         weekly: 52 * 3, // 156 occurrences
         biweekly: 26 * 3, // 78 occurrences
-        monthly: 12 * 10, // 120 occurrences
-        annually: 10, // 10 occurrences
+        monthly: 12 * 3, // 36 occurrences
+        annually: 3, // 3 occurrences
       };
 
       const { interval, unit } = frequencyMap[body.frequency];
       const maxOccurrences = occurrenceCount[body.frequency];
       const baseDate = new Date(body.date);
       const recurringRecords = [];
+      const recurringLineItems = [];
 
       // Generate records for future occurrences
       for (let i = 1; i <= maxOccurrences; i++) {
@@ -309,10 +310,10 @@ export const POST = withAuth(async (request, user) => {
           isScheduled: true,
         });
 
-        // Insert line items for recurring records
+        // Collect line items for recurring records
         if (body.lineItems && body.lineItems.length > 0) {
-          await db.insert(finItems).values(
-            body.lineItems.map((item, index) => ({
+          recurringLineItems.push(
+            ...body.lineItems.map((item, index) => ({
               finId: nextFinId,
               lineNo: index + 1,
               name: item.name,
@@ -329,9 +330,14 @@ export const POST = withAuth(async (request, user) => {
         }
       }
 
-      // Insert all recurring records
+      // Insert all recurring records first
       if (recurringRecords.length > 0) {
         await db.insert(fin).values(recurringRecords);
+      }
+
+      // Then insert all line items for recurring records
+      if (recurringLineItems.length > 0) {
+        await db.insert(finItems).values(recurringLineItems);
       }
     }
 
