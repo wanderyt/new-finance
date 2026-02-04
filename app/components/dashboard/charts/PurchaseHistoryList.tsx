@@ -65,12 +65,15 @@ export function PurchaseHistoryList() {
       <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
         <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
           {records.map((record) => {
-            const date = new Date(record.date);
+            // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
+            const isoDate = record.date.includes('T') ? record.date : record.date.replace(' ', 'T') + 'Z';
+            const date = new Date(isoDate);
             const weekday = new Intl.DateTimeFormat("zh-CN", {
               weekday: "short",
+              timeZone: "UTC",
             }).format(date);
-            const month = date.getMonth() + 1;
-            const day = date.getDate();
+            const month = date.getUTCMonth() + 1;
+            const day = date.getUTCDate();
             const timeString = `${weekday} @ ${month}月${day}日`;
 
             return (

@@ -26,14 +26,16 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
   };
 
   // Format date as "周一 @ 12月5日"
-  const date = new Date(
-    fin.isScheduled && fin.scheduledOn ? fin.scheduledOn : fin.date
-  );
+  // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
+  const dateStr = fin.isScheduled && fin.scheduledOn ? fin.scheduledOn : fin.date;
+  const isoDate = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T') + 'Z';
+  const date = new Date(isoDate);
   const weekday = new Intl.DateTimeFormat("zh-CN", {
     weekday: "short",
+    timeZone: "UTC",
   }).format(date);
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
   const timeString = `${weekday} @ ${month}月${day}日`;
 
   return (

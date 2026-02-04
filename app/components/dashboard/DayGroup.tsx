@@ -10,9 +10,10 @@ interface DayGroupProps {
 export default function DayGroup({ dayGroup, onFinClick }: DayGroupProps) {
   const { date, fins, totalCents } = dayGroup;
 
-  const dayNumber = date.getDate();
+  const dayNumber = date.getUTCDate();
   const weekday = new Intl.DateTimeFormat("zh-CN", {
     weekday: "short",
+    timeZone: "UTC",
   }).format(date);
 
   const formattedTotal = (totalCents / 100).toFixed(2);
