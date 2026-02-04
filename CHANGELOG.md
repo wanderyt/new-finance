@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.1] - 2026-02-03
+
+### Fixed
+- **TypeScript Build Error**: Fixed type mismatch in purchase history API
+  - Made merchant, category, and subcategory fields nullable in PurchaseHistoryRecord interface
+  - Resolved build failure caused by incompatible types between database schema and TypeScript interface
+
+### Changed
+- **PR Workflow**: Enhanced create_pr command with build verification step
+  - Added mandatory `yarn build` check before version bump and PR creation
+  - Prevents creating PRs with broken builds
+  - Fails fast if build issues are detected
+
 ## [1.10.0] - 2026-02-03
 
 ### Fixed
