@@ -21,9 +21,9 @@ interface ItemDetail {
 interface PurchaseHistoryRecord {
   finId: string;
   date: string;
-  merchant: string;
-  category: string;
-  subcategory: string;
+  merchant: string | null;
+  category: string | null;
+  subcategory: string | null;
   type: string;
   originalCurrency: string;
   amountCadCents: number;
