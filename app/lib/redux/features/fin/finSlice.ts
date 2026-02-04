@@ -1266,10 +1266,12 @@ export const selectHistoryGroupedByMonth = createSelector(
 
     fins.forEach((fin) => {
       const date = fin.isScheduled && fin.scheduledOn ? fin.scheduledOn : fin.date;
-      // Convert to local time before extracting month/day keys
-      const localDate = new Date(date);
-      const monthKey = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}`;
-      const dayKey = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
+      // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" without timezone
+      // Convert to ISO 8601 with Z to parse as UTC
+      const isoDate = date.includes('T') ? date : date.replace(' ', 'T') + 'Z';
+      const utcDate = new Date(isoDate);
+      const monthKey = `${utcDate.getUTCFullYear()}-${String(utcDate.getUTCMonth() + 1).padStart(2, "0")}`;
+      const dayKey = `${utcDate.getUTCFullYear()}-${String(utcDate.getUTCMonth() + 1).padStart(2, "0")}-${String(utcDate.getUTCDate()).padStart(2, "0")}`;
 
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, new Map());
@@ -1345,9 +1347,10 @@ export const selectChartsComparisonMonth2 = (state: RootState) => state.fin.char
 export const selectAvailableMonths = createSelector([selectFins], (fins): string[] => {
   const months = new Set<string>();
   fins.forEach((fin) => {
-    // Date constructor already converts to local time
-    const date = new Date(fin.date);
-    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
+    const isoDate = fin.date.includes('T') ? fin.date : fin.date.replace(' ', 'T') + 'Z';
+    const date = new Date(isoDate);
+    const month = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
     months.add(month);
   });
   return Array.from(months).sort().reverse();
@@ -1357,9 +1360,10 @@ export const selectAvailableMonths = createSelector([selectFins], (fins): string
 export const selectAvailableYears = createSelector([selectFins], (fins): string[] => {
   const years = new Set<string>();
   fins.forEach((fin) => {
-    // Date constructor already converts to local time
-    const date = new Date(fin.date);
-    years.add(String(date.getFullYear()));
+    // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
+    const isoDate = fin.date.includes('T') ? fin.date : fin.date.replace(' ', 'T') + 'Z';
+    const date = new Date(isoDate);
+    years.add(String(date.getUTCFullYear()));
   });
   return Array.from(years).sort().reverse();
 });
@@ -1371,12 +1375,14 @@ export const selectChartsFilteredFins = createSelector(
     return fins.filter((fin) => {
       if (fin.type !== "expense") return false;
 
-      const finDate = new Date(fin.date);
+      // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
+      const isoDate = fin.date.includes('T') ? fin.date : fin.date.replace(' ', 'T') + 'Z';
+      const finDate = new Date(isoDate);
       if (viewMode === "month" && selectedMonth) {
-        const finMonth = `${finDate.getFullYear()}-${String(finDate.getMonth() + 1).padStart(2, "0")}`;
+        const finMonth = `${finDate.getUTCFullYear()}-${String(finDate.getUTCMonth() + 1).padStart(2, "0")}`;
         return finMonth === selectedMonth;
       } else if (viewMode === "year" && selectedYear) {
-        return String(finDate.getFullYear()) === selectedYear;
+        return String(finDate.getUTCFullYear()) === selectedYear;
       }
       return true;
     });
@@ -1473,16 +1479,20 @@ export const selectMonthComparisonData = createSelector(
       const daysInMonth = new Date(year, monthNum, 0).getDate();
       const monthFins = fins.filter((fin) => {
         if (fin.type !== "expense") return false;
-        const finDate = new Date(fin.date);
-        const finMonth = `${finDate.getFullYear()}-${String(finDate.getMonth() + 1).padStart(2, "0")}`;
+        // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
+        const isoDate = fin.date.includes('T') ? fin.date : fin.date.replace(' ', 'T') + 'Z';
+        const finDate = new Date(isoDate);
+        const finMonth = `${finDate.getUTCFullYear()}-${String(finDate.getUTCMonth() + 1).padStart(2, "0")}`;
         return finMonth === month;
       });
 
       // Group by day
       const dailyTotals: Record<number, number> = {};
       monthFins.forEach((fin) => {
-        const finDate = new Date(fin.date);
-        const day = finDate.getDate();
+        // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
+        const isoDate = fin.date.includes('T') ? fin.date : fin.date.replace(' ', 'T') + 'Z';
+        const finDate = new Date(isoDate);
+        const day = finDate.getUTCDate();
         dailyTotals[day] = (dailyTotals[day] || 0) + fin.amountCadCents;
       });
 
