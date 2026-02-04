@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2026-02-03
+
+### Fixed
+- **Scheduled Transaction Generation**: Fixed critical bug where only 1 scheduled fin record was created instead of multiple recurring records
+  - Root cause: Line items were being inserted before fin records existed, causing foreign key constraint errors that stopped the loop
+  - Solution: Collect line items in array during loop, then batch insert after all fin records are created
+  - Now correctly generates 3 years of scheduled records (36 for monthly, 3 for annually)
+- **Timezone Issues in History View**: Fixed date grouping bug where records appeared in wrong day/month sections
+  - Issue: SQLite stores dates as "YYYY-MM-DD HH:MM:SS" without timezone, JavaScript interpreted as local time instead of UTC
+  - Impact: Jan 1st records could appear in Dec 31st section (or Jan 2nd) depending on user's timezone
+  - Solution: Convert SQLite datetime format to ISO 8601 with Z suffix before parsing
+  - Updated all date parsing in Redux selectors (selectHistoryGroupedByMonth, selectAvailableMonths, selectAvailableYears, selectChartsFilteredFins) and UI components (DayGroup, ExpenseTile, PurchaseHistoryList)
+  - Now uses UTC methods consistently (getUTCDate, getUTCMonth, getUTCFullYear)
+
+### Changed
+- **Scheduled Record Occurrence Count**: Updated from 10 years to 3 years for all frequencies
+  - Monthly: 120 occurrences → 36 occurrences
+  - Annually: 10 occurrences → 3 occurrences
+  - Daily/weekly/biweekly remain at 3 years
+
 ## [1.9.0] - 2026-02-02
 
 ### Added
