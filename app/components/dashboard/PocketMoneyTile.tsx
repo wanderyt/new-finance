@@ -17,7 +17,8 @@ export default function PocketMoneyTile({
 
   const isManual =
     transaction.transaction_type === "bonus" ||
-    transaction.transaction_type === "deduction";
+    transaction.transaction_type === "deduction" ||
+    transaction.transaction_type === "expense";
   const isPositive = transaction.amount_cents > 0;
   const amountColor = isPositive
     ? "text-green-600 dark:text-green-400"
@@ -41,6 +42,11 @@ export default function PocketMoneyTile({
       icon: "⚠️",
       label: "惩罚",
       color: "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400",
+    },
+    expense: {
+      icon: "💸",
+      label: "花销",
+      color: "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400",
     },
     initial: {
       icon: "⭐",

@@ -337,7 +337,7 @@ export const pocketMoney = sqliteTable(
     personIdx: index("idx_pocket_money_person").on(table.personId),
     dateIdx: index("idx_pocket_money_date").on(table.transactionDate),
     typeIdx: index("idx_pocket_money_type").on(table.transactionType),
-    typeCheck: sql`CHECK (transaction_type IN ('initial','weekly_allowance','bonus','deduction'))`,
+    typeCheck: sql`CHECK (transaction_type IN ('initial','weekly_allowance','bonus','deduction','expense'))`,
   })
 );
 

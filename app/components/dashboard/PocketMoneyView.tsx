@@ -51,7 +51,7 @@ export default function PocketMoneyView() {
   };
 
   const handleSave = async (data: {
-    transaction_type: "bonus" | "deduction";
+    transaction_type: "bonus" | "deduction" | "expense";
     amount_cents: number;
     reason: string;
     transaction_date?: string;

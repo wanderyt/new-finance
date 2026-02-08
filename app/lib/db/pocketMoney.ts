@@ -28,7 +28,8 @@ export async function getAllPocketMoney(
       | "initial"
       | "weekly_allowance"
       | "bonus"
-      | "deduction",
+      | "deduction"
+      | "expense",
     reason: t.reason,
     created_at: t.createdAt,
     created_by: t.createdBy,
@@ -61,7 +62,8 @@ export async function getPocketMoneyById(
       | "initial"
       | "weekly_allowance"
       | "bonus"
-      | "deduction",
+      | "deduction"
+      | "expense",
     reason: t.reason,
     created_at: t.createdAt,
     created_by: t.createdBy,
@@ -114,7 +116,8 @@ export async function createPocketMoney(
       | "initial"
       | "weekly_allowance"
       | "bonus"
-      | "deduction",
+      | "deduction"
+      | "expense",
     reason: t.reason,
     created_at: t.createdAt,
     created_by: t.createdBy,
@@ -134,13 +137,14 @@ export async function updatePocketMoney(
     return null;
   }
 
-  // Only allow editing bonus or deduction types
+  // Only allow editing bonus, deduction, or expense types
   if (
     existing.transaction_type !== "bonus" &&
-    existing.transaction_type !== "deduction"
+    existing.transaction_type !== "deduction" &&
+    existing.transaction_type !== "expense"
   ) {
     throw new Error(
-      "Only bonus and deduction transactions can be edited. Automatic transactions (weekly_allowance, initial) are protected."
+      "Only bonus, deduction, and expense transactions can be edited. Automatic transactions (weekly_allowance, initial) are protected."
     );
   }
 
@@ -185,7 +189,8 @@ export async function updatePocketMoney(
       | "initial"
       | "weekly_allowance"
       | "bonus"
-      | "deduction",
+      | "deduction"
+      | "expense",
     reason: t.reason,
     created_at: t.createdAt,
     created_by: t.createdBy,
@@ -204,13 +209,14 @@ export async function deletePocketMoney(
     return false;
   }
 
-  // Only allow deleting bonus or deduction types
+  // Only allow deleting bonus, deduction, or expense types
   if (
     existing.transaction_type !== "bonus" &&
-    existing.transaction_type !== "deduction"
+    existing.transaction_type !== "deduction" &&
+    existing.transaction_type !== "expense"
   ) {
     throw new Error(
-      "Only bonus and deduction transactions can be deleted. Automatic transactions (weekly_allowance, initial) are protected."
+      "Only bonus, deduction, and expense transactions can be deleted. Automatic transactions (weekly_allowance, initial) are protected."
     );
   }
 

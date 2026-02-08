@@ -8,6 +8,13 @@
       "when": 1766720038906,
       "tag": "0000_cloudy_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1770579756673,
+      "tag": "0001_condemned_power_pack",
+      "breakpoints": true
     }
   ]
 }

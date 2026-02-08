@@ -74,10 +74,10 @@ export const PUT = withAuth(async (request, user) => {
     // Validate transaction_type if provided
     if (
       body.transaction_type &&
-      !["bonus", "deduction"].includes(body.transaction_type)
+      !["bonus", "deduction", "expense"].includes(body.transaction_type)
     ) {
       return badRequestResponse(
-        'Field "transaction_type" must be "bonus" or "deduction"'
+        'Field "transaction_type" must be "bonus", "deduction", or "expense"'
       );
     }
 
@@ -89,9 +89,9 @@ export const PUT = withAuth(async (request, user) => {
           'Field "amount_cents" must be positive for bonus transactions'
         );
       }
-      if (body.transaction_type === "deduction" && body.amount_cents >= 0) {
+      if ((body.transaction_type === "deduction" || body.transaction_type === "expense") && body.amount_cents >= 0) {
         return badRequestResponse(
-          'Field "amount_cents" must be negative for deduction transactions'
+          'Field "amount_cents" must be negative for deduction and expense transactions'
         );
       }
     }
