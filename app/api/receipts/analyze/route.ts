@@ -20,8 +20,9 @@ Analyze this receipt image and extract the following information in JSON format:
 
 {
   "merchant": "Store name",
+  "merchantType": "supermarket, restaurant, or other",
   "city": "City if visible on receipt",
-  "date": "ISO date string (YYYY-MM-DD)",
+  "date": "ISO date string with time (YYYY-MM-DDTHH:mm:ss)",
   "detectedCurrency": "CAD, USD, or CNY",
   "subtotalAmount": 2200,  // Subtotal before tax in cents (optional)
   "taxAmount": 286,        // Tax in cents (HST/GST/PST combined, optional)
@@ -40,6 +41,14 @@ Analyze this receipt image and extract the following information in JSON format:
 Rules:
 - Extract ALL line items (do NOT include tax as a line item)
 - Convert amounts to CENTS (multiply by 100)
+- IMPORTANT: Extract BOTH date AND time from receipt if available
+  - Format as ISO 8601: "YYYY-MM-DDTHH:mm:ss" (e.g., "2026-01-15T14:30:00")
+  - If only date is visible (no time), use "12:00:00" as default time
+  - If receipt shows "2:30 PM", convert to 24-hour format "14:30:00"
+- Identify merchantType based on context:
+  - "supermarket": grocery stores, markets (e.g., Walmart, T&T, Costco, No Frills)
+  - "restaurant": dining establishments, cafes, fast food (e.g., McDonald's, Tim Hortons, restaurants)
+  - "other": any other type of merchant
 - If receipt shows unit price (e.g., "$3.99/kg", "$6.25 each"), extract it as unitPrice in cents
 - If only total amount is visible (no unit price shown), set unitPrice to null
 - Verify: unitPrice * quantity ≈ amount (allow small rounding differences)
@@ -149,6 +158,67 @@ interface StandardizationResult {
   standardizedName: string;
   originalName: string;
   confidence: "high" | "medium" | "low";
+}
+
+/**
+ * Automatically determine category and subcategory based on merchant type and transaction time
+ */
+function determineCategory(
+  merchantType: string | undefined,
+  transactionDate: string | undefined
+): { category?: string; subcategory?: string } {
+  // Default to no category
+  if (!merchantType || !transactionDate) {
+    return {};
+  }
+
+  // Rule 1: Supermarket → "生活" / "买菜原料"
+  if (merchantType === "supermarket") {
+    return {
+      category: "生活",
+      subcategory: "买菜原料",
+    };
+  }
+
+  // Rule 2: Restaurant → category based on weekday/weekend, subcategory based on time
+  if (merchantType === "restaurant") {
+    try {
+      const date = new Date(transactionDate);
+
+      // Check if valid date
+      if (isNaN(date.getTime())) {
+        return {};
+      }
+
+      // Determine weekday vs weekend
+      const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      const category = isWeekend ? "周末" : "周中";
+
+      // Determine meal time based on hour (UTC)
+      const hour = date.getUTCHours();
+      let subcategory: string;
+
+      if (hour >= 5 && hour < 11) {
+        // 5:00 AM - 10:59 AM → Breakfast
+        subcategory = "早餐";
+      } else if (hour >= 11 && hour < 17) {
+        // 11:00 AM - 4:59 PM → Lunch
+        subcategory = "午餐";
+      } else {
+        // 5:00 PM - 4:59 AM → Dinner
+        subcategory = "晚餐";
+      }
+
+      return { category, subcategory };
+    } catch (error) {
+      console.error("Error determining category from date:", error);
+      return {};
+    }
+  }
+
+  // Rule 3: Other merchant types → no automatic categorization
+  return {};
 }
 
 async function standardizeItemNames(
@@ -293,9 +363,24 @@ export const POST = withAuth(async (request, user) => {
       );
     }
 
+    // Automatically determine category and subcategory
+    const { category, subcategory } = determineCategory(
+      receiptData.merchantType,
+      receiptData.date
+    );
+
+    // Log the auto-detected categories for debugging
+    if (category && subcategory) {
+      console.log(
+        `[Auto Category] ${receiptData.merchantType} → ${category}/${subcategory}`
+      );
+    }
+
     return NextResponse.json({
       success: true,
       ...receiptData,
+      suggestedCategory: category,
+      suggestedSubcategory: subcategory,
     });
   } catch (error) {
     console.error("Failed to analyze receipt:", error);

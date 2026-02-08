@@ -32,7 +32,10 @@ interface ReceiptAnalysisResult {
   totalAmount: number;
   detectedCurrency?: string;
   merchant?: string;
+  merchantType?: string;
   date?: string;
+  suggestedCategory?: string;
+  suggestedSubcategory?: string;
 }
 
 interface FinEditorFormProps {
@@ -347,6 +350,13 @@ const FinEditorForm = ({
         }
         if (result.totalAmount) {
           setAmount((result.totalAmount / 100).toFixed(2));
+        }
+        // Auto-populate category and subcategory if suggested
+        if (result.suggestedCategory) {
+          setCategory(result.suggestedCategory);
+        }
+        if (result.suggestedSubcategory) {
+          setSubcategory(result.suggestedSubcategory);
         }
       } else {
         const error = await response.json();
@@ -810,6 +820,13 @@ const FinEditorForm = ({
           result={analysisResult}
           onConfirm={(items) => {
             setLineItems(items);
+            // Auto-populate category and subcategory if suggested
+            if (analysisResult.suggestedCategory) {
+              setCategory(analysisResult.suggestedCategory);
+            }
+            if (analysisResult.suggestedSubcategory) {
+              setSubcategory(analysisResult.suggestedSubcategory);
+            }
             setShowAnalysisDialog(false);
           }}
           onCancel={() => setShowAnalysisDialog(false)}
