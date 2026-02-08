@@ -4,10 +4,11 @@ import ExpenseTile from "./ExpenseTile";
 
 interface DayGroupProps {
   dayGroup: DayGroupType;
-  onFinClick: (fin: FinData) => void;
+  onFinClick?: (fin: FinData) => void;
+  renderTile?: (fin: FinData) => React.ReactNode;
 }
 
-export default function DayGroup({ dayGroup, onFinClick }: DayGroupProps) {
+export default function DayGroup({ dayGroup, onFinClick, renderTile }: DayGroupProps) {
   const { date, fins, totalCents } = dayGroup;
 
   const dayNumber = date.getUTCDate();
@@ -35,9 +36,11 @@ export default function DayGroup({ dayGroup, onFinClick }: DayGroupProps) {
       </div>
 
       <div className="space-y-1 px-2 py-1">
-        {fins.map((fin) => (
-          <ExpenseTile key={fin.finId} fin={fin} onClick={onFinClick} />
-        ))}
+        {renderTile
+          ? fins.map((fin) => renderTile(fin))
+          : fins.map((fin) => (
+              <ExpenseTile key={fin.finId} fin={fin} onClick={onFinClick!} />
+            ))}
       </div>
     </div>
   );

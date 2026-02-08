@@ -316,3 +316,30 @@ export const finTags = sqliteTable(
 
 export type FinTag = typeof finTags.$inferSelect;
 export type NewFinTag = typeof finTags.$inferInsert;
+
+// ============ 11. Pocket Money ============
+export const pocketMoney = sqliteTable(
+  "pocket_money",
+  {
+    // @ts-expect-error - Drizzle ORM type inference issue
+    pocketMoneyId: integer("pocket_money_id").primaryKey(),
+    personId: integer("person_id")
+      .notNull()
+      .references(() => persons.personId, { onDelete: "cascade" }),
+    transactionDate: text("transaction_date").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    transactionType: text("transaction_type").notNull(),
+    reason: text("reason").notNull(),
+    createdAt: text("created_at").notNull(),
+    createdBy: text("created_by").notNull(),
+  },
+  (table) => ({
+    personIdx: index("idx_pocket_money_person").on(table.personId),
+    dateIdx: index("idx_pocket_money_date").on(table.transactionDate),
+    typeIdx: index("idx_pocket_money_type").on(table.transactionType),
+    typeCheck: sql`CHECK (transaction_type IN ('initial','weekly_allowance','bonus','deduction'))`,
+  })
+);
+
+export type PocketMoney = typeof pocketMoney.$inferSelect;
+export type NewPocketMoney = typeof pocketMoney.$inferInsert;

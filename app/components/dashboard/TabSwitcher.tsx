@@ -1,6 +1,6 @@
 interface TabSwitcherProps {
-  activeTab: "current" | "history";
-  onTabChange: (tab: "current" | "history") => void;
+  activeTab: "current" | "history" | "pocketMoney";
+  onTabChange: (tab: "current" | "history" | "pocketMoney") => void;
 }
 
 export default function TabSwitcher({
@@ -34,6 +34,19 @@ export default function TabSwitcher({
         `}
       >
         历史记录
+      </button>
+      <button
+        onClick={() => onTabChange("pocketMoney")}
+        className={`
+          flex-1 px-3 py-1.5 rounded-md font-medium text-xs transition-all
+          ${
+            activeTab === "pocketMoney"
+              ? "bg-blue-600 text-white shadow-sm"
+              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+          }
+        `}
+      >
+        零花钱
       </button>
     </div>
   );
