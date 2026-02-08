@@ -6,6 +6,7 @@ import FinEditor from "./FinEditor";
 import TabSwitcher from "./TabSwitcher";
 import HistoryView from "./HistoryView";
 import ChartsView from "./ChartsView";
+import PocketMoneyView from "./PocketMoneyView";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   selectAuthStatus,
@@ -28,7 +29,7 @@ export default function Dashboard() {
   const dispatch = useAppDispatch();
 
   // Tab state
-  const [activeTab, setActiveTab] = useState<"current" | "history">("current");
+  const [activeTab, setActiveTab] = useState<"current" | "history" | "pocketMoney">("current");
 
   // Editor state
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -291,9 +292,13 @@ export default function Dashboard() {
 
               </div>
             </>
-          ) : (
+          ) : activeTab === "history" ? (
             <div className="flex-1 overflow-hidden px-3 py-3">
               <HistoryView onFinClick={handleEditFin} />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-hidden px-3 py-3">
+              <PocketMoneyView />
             </div>
           )}
         </div>

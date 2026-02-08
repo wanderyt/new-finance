@@ -1,12 +1,14 @@
 import { configureStore } from "@reduxjs/toolkit";
 import authReducer from "./features/auth/authSlice";
 import finReducer from "./features/fin/finSlice";
+import pocketMoneyReducer from "./features/pocketMoney/pocketMoneySlice";
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
       auth: authReducer,
       fin: finReducer,
+      pocketMoney: pocketMoneyReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
   });

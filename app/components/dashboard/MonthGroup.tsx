@@ -8,7 +8,8 @@ interface MonthGroupProps {
   monthGroup: MonthGroupType;
   isExpanded: boolean;
   onToggle: () => void;
-  onFinClick: (fin: FinData) => void;
+  onFinClick?: (fin: FinData) => void;
+  renderTile?: (fin: FinData) => React.ReactNode;
 }
 
 export default function MonthGroup({
@@ -16,6 +17,7 @@ export default function MonthGroup({
   isExpanded,
   onToggle,
   onFinClick,
+  renderTile,
 }: MonthGroupProps) {
   const { monthKey, days, totalCents } = monthGroup;
 
@@ -68,6 +70,7 @@ export default function MonthGroup({
               key={day.dayKey}
               dayGroup={day}
               onFinClick={onFinClick}
+              renderTile={renderTile}
             />
           ))}
         </div>

@@ -305,3 +305,41 @@ export interface HistoricalDataItem {
   city?: string;
   detail?: string;
 }
+
+// ========== Pocket Money Types ==========
+
+// Pocket money transaction data structure
+export interface PocketMoneyData {
+  pocket_money_id: number;
+  person_id: number;
+  transaction_date: string; // ISO 8601
+  amount_cents: number; // Can be positive or negative
+  transaction_type: "initial" | "weekly_allowance" | "bonus" | "deduction";
+  reason: string;
+  created_at: string;
+  created_by: string;
+}
+
+// Create pocket money request
+export interface CreatePocketMoneyRequest {
+  transaction_type: "bonus" | "deduction";
+  amount_cents: number; // Will be positive for bonus, negative for deduction
+  reason: string;
+  transaction_date?: string; // Optional, defaults to now
+}
+
+// Update pocket money request
+export interface UpdatePocketMoneyRequest {
+  transaction_type?: "bonus" | "deduction";
+  amount_cents?: number;
+  reason?: string;
+  transaction_date?: string;
+}
+
+// Pocket money list response
+export interface PocketMoneyListResponse {
+  success: true;
+  balance: number;
+  transactions: PocketMoneyData[];
+  total: number;
+}

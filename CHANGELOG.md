@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-02-08
+
+### Added
+- **Pocket Money Tracking UI**: Complete system for managing Robin's pocket money
+  - New "零花钱" (Pocket Money) tab in dashboard
+  - Balance display card showing current pocket money total
+  - Transaction list grouped by month and day
+  - Create/edit/delete manual transactions (rewards and punishments)
+  - Automatic transactions (weekly allowance, initial balance) are protected from editing
+  - Database schema with pocket_money table
+  - Three API endpoints: list, create, update/delete
+  - Redux state management with async thunks
+  - All UI text in Chinese
+- **Automatic Category Recognition for Receipts**: AI-powered category suggestions
+  - Enhanced AI prompt to extract both date AND time from receipts
+  - Merchant type identification: supermarket, restaurant, or other
+  - Smart category rules:
+    - Supermarket → "生活" / "买菜原料"
+    - Restaurant → Category based on weekday ("周中") or weekend ("周末")
+    - Restaurant → Subcategory based on meal time: "早餐" (5-11am), "午餐" (11am-5pm), "晚餐" (5pm-5am)
+  - Green notification banner showing auto-detected category
+  - Auto-populate category and subcategory fields in form
+
+### Fixed
+- TypeScript build errors in pocket money create route (removed non-existent email property)
+- TypeScript build errors in pocket money editor dialog (changed description to message prop)
+- Drizzle ORM type inference issues in schema definitions
+
 ## [1.10.1] - 2026-02-03
 
 ### Fixed
