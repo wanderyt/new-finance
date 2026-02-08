@@ -25,7 +25,7 @@ Transaction ledger for all pocket money changes.
 | `person_id` | INTEGER | Foreign key to `persons.person_id` |
 | `transaction_date` | TEXT | ISO 8601 datetime (UTC) |
 | `amount_cents` | INTEGER | Amount in cents (positive for additions, negative for deductions) |
-| `transaction_type` | TEXT | One of: 'initial', 'weekly_allowance', 'bonus', 'deduction' |
+| `transaction_type` | TEXT | One of: 'initial', 'weekly_allowance', 'bonus', 'deduction', 'expense' |
 | `reason` | TEXT | Description of transaction |
 | `created_at` | TEXT | Timestamp when record was created |
 | `created_by` | TEXT | Who created the record ('system' or user identifier) |
@@ -37,7 +37,7 @@ Transaction ledger for all pocket money changes.
 
 **Constraints:**
 - Foreign key: `person_id` references `persons.person_id` (CASCADE on delete)
-- Check constraint: `transaction_type` must be in ('initial', 'weekly_allowance', 'bonus', 'deduction')
+- Check constraint: `transaction_type` must be in ('initial', 'weekly_allowance', 'bonus', 'deduction', 'expense')
 
 ### Table: `pocket_money_job_state`
 
@@ -95,6 +95,11 @@ Located in `/src/services/pocket-money.service.ts`
 - Deducts an amount (e.g., punishment)
 - Amount should be positive (will be stored as negative)
 - Example: `addDeduction(1, 500, 'Late for dinner')`
+
+**`addExpense(personId: number, amountCents: number, reason: string): Promise<void>`**
+- Records a daily expense (e.g., snack, toy)
+- Amount should be positive (will be stored as negative)
+- Example: `addExpense(1, 300, 'Bought ice cream')`
 
 **`getCurrentBalance(personId: number): Promise<number>`**
 - Calculates current balance from all transactions
@@ -636,10 +641,11 @@ Individual transaction display component:
   - 💵 Weekly Allowance (blue)
   - 🎁 Reward (green)
   - ⚠️ Punishment (red)
+  - 💸 Expense (orange)
   - ⭐ Initial Balance (purple)
 - Displays reason, date, and created_by
 - Amount with color coding (green for positive, red for negative)
-- Clickable for manual transactions (bonus/deduction only)
+- Clickable for manual transactions (bonus/deduction/expense only)
 - Non-clickable for automatic transactions (weekly_allowance, initial)
 
 #### 3. PocketMoneyEditorDialog
@@ -647,7 +653,7 @@ Individual transaction display component:
 
 Modal form for adding/editing transactions:
 - **Fields**:
-  - Transaction Type: Dropdown (Reward/Punishment)
+  - Transaction Type: Dropdown (Reward/Punishment/Expense)
   - Amount: Calculator input (always positive)
   - Reason: Textarea (required)
 - **Modes**:
@@ -674,13 +680,13 @@ Fetches all pocket money transactions for Robin (person_id = 1).
 ```
 
 #### POST /api/pocket-money/create
-Creates a new manual transaction (bonus or deduction).
+Creates a new manual transaction (bonus, deduction, or expense).
 
 **Request**:
 ```typescript
 {
-  transaction_type: 'bonus' | 'deduction',
-  amount_cents: number,   // Positive for bonus, negative for deduction
+  transaction_type: 'bonus' | 'deduction' | 'expense',
+  amount_cents: number,   // Positive for bonus, negative for deduction/expense
   reason: string,
   transaction_date?: string  // Optional, defaults to now
 }
@@ -695,8 +701,8 @@ Creates a new manual transaction (bonus or deduction).
 ```
 
 **Validation**:
-- Only 'bonus' or 'deduction' types allowed
-- Amount must be positive for bonus, negative for deduction
+- Only 'bonus', 'deduction', or 'expense' types allowed
+- Amount must be positive for bonus, negative for deduction/expense
 - Reason required (min 1 char)
 - Date must be valid ISO 8601 if provided
 
@@ -708,7 +714,7 @@ Updates an existing manual transaction.
 **Response**: Same as create
 
 **Restrictions**:
-- Only bonus/deduction transactions can be updated
+- Only bonus/deduction/expense transactions can be updated
 - Automatic transactions (weekly_allowance, initial) are protected
 - Returns 403 if attempting to edit protected transaction
 
@@ -724,7 +730,7 @@ Deletes a manual transaction.
 ```
 
 **Restrictions**:
-- Only bonus/deduction transactions can be deleted
+- Only bonus/deduction/expense transactions can be deleted
 - Automatic transactions are protected
 - Returns 403 if attempting to delete protected transaction
 
@@ -767,7 +773,7 @@ interface PocketMoneyData {
   person_id: number;
   transaction_date: string;  // ISO 8601
   amount_cents: number;      // Can be positive or negative
-  transaction_type: 'initial' | 'weekly_allowance' | 'bonus' | 'deduction';
+  transaction_type: 'initial' | 'weekly_allowance' | 'bonus' | 'deduction' | 'expense';
   reason: string;
   created_at: string;
   created_by: string;
@@ -775,7 +781,7 @@ interface PocketMoneyData {
 
 // Create request
 interface CreatePocketMoneyRequest {
-  transaction_type: 'bonus' | 'deduction';
+  transaction_type: 'bonus' | 'deduction' | 'expense';
   amount_cents: number;
   reason: string;
   transaction_date?: string;
@@ -783,7 +789,7 @@ interface CreatePocketMoneyRequest {
 
 // Update request (all fields optional)
 interface UpdatePocketMoneyRequest {
-  transaction_type?: 'bonus' | 'deduction';
+  transaction_type?: 'bonus' | 'deduction' | 'expense';
   amount_cents?: number;
   reason?: string;
   transaction_date?: string;
@@ -810,7 +816,7 @@ Functions:
 - `updatePocketMoney(pocketMoneyId, data)`: Update transaction (protected)
 - `deletePocketMoney(pocketMoneyId)`: Delete transaction (protected)
 
-All update/delete operations verify transaction type and throw errors for protected transactions.
+All update/delete operations verify transaction type and throw errors for protected transactions (weekly_allowance, initial). Only manual transactions (bonus, deduction, expense) can be edited or deleted.
 
 ### User Workflows
 
@@ -833,14 +839,23 @@ All update/delete operations verify transaction type and throw errors for protec
 6. Transaction appears in list with red amount
 7. Balance decreases
 
+#### Adding an Expense
+1. Click "Add Transaction" button
+2. Select "💸 Expense" from dropdown
+3. Enter amount (e.g., 3.00)
+4. Enter reason (e.g., "Bought ice cream")
+5. Click "Save"
+6. Transaction appears in list with orange badge and red amount
+7. Balance decreases
+
 #### Editing a Transaction
-1. Click on any bonus or deduction transaction in the list
+1. Click on any bonus, deduction, or expense transaction in the list
 2. Modify amount, reason, or type
 3. Click "Update"
 4. Transaction updates, balance recalculates
 
 #### Deleting a Transaction
-1. Click on a manual transaction
+1. Click on a manual transaction (bonus, deduction, or expense)
 2. Click "Delete" button
 3. Confirm deletion in dialog
 4. Transaction removed, balance recalculates
@@ -850,13 +865,14 @@ All update/delete operations verify transaction type and throw errors for protec
 ### Design Decisions
 
 1. **Robin Only**: UI hard-coded to person_id = 1 (Robin)
-2. **Manual Transactions**: Only bonus/deduction can be created via UI
+2. **Manual Transactions**: Only bonus/deduction/expense can be created via UI
 3. **Protected Transactions**: Automatic transactions (weekly_allowance, initial) cannot be edited/deleted
 4. **No Filters**: Simple chronological list without filtering
 5. **Amount Input**: Always positive; sign determined by transaction type
 6. **Balance Display**: Prominent card at top showing current total
 7. **Grouping**: Reuses MonthGroup/DayGroup components for consistency
 8. **Delete Confirmation**: Prevents accidental deletions
+9. **Expense vs Deduction**: Expense (💸) tracks daily spending, Deduction (⚠️) tracks punishments
 
 ### Testing the UI
 
@@ -865,11 +881,12 @@ All update/delete operations verify transaction type and throw errors for protec
 3. **Transaction List**: Verify all transactions visible, grouped by month/day
 4. **Add Reward**: Create $10 bonus, verify balance increases
 5. **Add Punishment**: Create $5 deduction, verify balance decreases
-6. **Edit Transaction**: Click manual transaction, modify, verify update
-7. **Delete Transaction**: Delete transaction, verify removal
-8. **Protected Transactions**: Try clicking weekly_allowance, verify not editable
-9. **Dark Mode**: Toggle dark mode, verify styling
-10. **Error Handling**: Submit empty form, verify validation errors
+6. **Add Expense**: Create $3 expense, verify balance decreases and orange badge shows
+7. **Edit Transaction**: Click manual transaction, modify, verify update
+8. **Delete Transaction**: Delete transaction, verify removal
+9. **Protected Transactions**: Try clicking weekly_allowance, verify not editable
+10. **Dark Mode**: Toggle dark mode, verify styling
+11. **Error Handling**: Submit empty form, verify validation errors
 
 ### Future UI Enhancements
 

@@ -14,7 +14,7 @@ interface PocketMoneyEditorDialogProps {
   onClose: () => void;
   transaction: PocketMoneyData | null;
   onSave: (data: {
-    transaction_type: "bonus" | "deduction";
+    transaction_type: "bonus" | "deduction" | "expense";
     amount_cents: number;
     reason: string;
     transaction_date?: string;
@@ -32,7 +32,7 @@ export default function PocketMoneyEditorDialog({
   const isEditMode = transaction !== null;
 
   // Form state
-  const [transactionType, setTransactionType] = useState<"bonus" | "deduction">("bonus");
+  const [transactionType, setTransactionType] = useState<"bonus" | "deduction" | "expense">("bonus");
   const [amount, setAmount] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -42,7 +42,7 @@ export default function PocketMoneyEditorDialog({
   // Reset form when dialog opens/closes or transaction changes
   useEffect(() => {
     if (isOpen && transaction) {
-      setTransactionType(transaction.transaction_type as "bonus" | "deduction");
+      setTransactionType(transaction.transaction_type as "bonus" | "deduction" | "expense");
       setAmount(Math.abs(transaction.amount_cents / 100).toString());
       setReason(transaction.reason);
       setError(null);
@@ -72,7 +72,7 @@ export default function PocketMoneyEditorDialog({
       const amountCents =
         transactionType === "bonus"
           ? Math.round(parseFloat(amount) * 100)
-          : -Math.round(parseFloat(amount) * 100);
+          : -Math.round(parseFloat(amount) * 100); // negative for deduction and expense
 
       await onSave({
         transaction_type: transactionType,
@@ -119,10 +119,11 @@ export default function PocketMoneyEditorDialog({
             </label>
             <Dropdown
               value={transactionType}
-              onChange={(value) => setTransactionType(value as "bonus" | "deduction")}
+              onChange={(value) => setTransactionType(value as "bonus" | "deduction" | "expense")}
               options={[
                 { value: "bonus", label: "🎁 奖励" },
                 { value: "deduction", label: "⚠️ 惩罚" },
+                { value: "expense", label: "💸 花销" },
               ]}
               placeholder="选择类型"
             />
