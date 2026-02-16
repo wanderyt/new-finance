@@ -20,7 +20,7 @@ Analyze this receipt image and extract the following information in JSON format:
 
 {
   "merchant": "Store name",
-  "merchantType": "supermarket, restaurant, or other",
+  "merchantType": "supermarket, restaurant, parking, gas_station, clothing_store, utility, or other",
   "city": "City if visible on receipt",
   "date": "ISO date string with time (YYYY-MM-DDTHH:mm:ss)",
   "detectedCurrency": "CAD, USD, or CNY",
@@ -48,9 +48,13 @@ Rules:
 - Identify merchantType based on context:
   - "supermarket": grocery stores, markets (e.g., Walmart, T&T, Costco, No Frills)
   - "restaurant": dining establishments, cafes, fast food (e.g., McDonald's, Tim Hortons, restaurants)
+  - "parking": parking lots, parking meters, parking tickets
+  - "gas_station": gas stations, fuel stations (e.g., Shell, Esso, Petro-Canada)
+  - "clothing_store": clothing retailers, shoe stores, apparel shops
+  - "utility": utility bills (electricity, water, gas, internet, phone bills)
   - "other": any other type of merchant
 - If receipt shows unit price (e.g., "$3.99/kg", "$6.25 each"), extract it as unitPrice in cents
-- If only total amount is visible (no unit price shown), set unitPrice to null
+- If only total amount is visible (no unit price shown), set unitPrice to null (will be calculated as amount/quantity)
 - Verify: unitPrice * quantity ≈ amount (allow small rounding differences)
 - If receipt shows subtotal and tax separately, extract both
 - If no tax visible, omit taxAmount or set to null
@@ -161,6 +165,57 @@ interface StandardizationResult {
 }
 
 /**
+ * Determine category and subcategory for clothing items based on item names
+ * For children's items, defaults to adult categories - user can manually adjust to 骐骐/慢慢
+ */
+function determineCategoryFromClothingItems(
+  items: { name: string; [key: string]: unknown }[]
+): { category: string; subcategory: string } | null {
+  if (!items || items.length === 0) {
+    return null;
+  }
+
+  // Check if any item is shoes or clothes
+  const hasShoes = items.some(
+    (item) => item.name.includes("鞋") || item.name.toLowerCase().includes("shoe")
+  );
+  const hasClothes = items.some(
+    (item) =>
+      item.name.includes("衣") ||
+      item.name.includes("裤") ||
+      item.name.includes("外套") ||
+      item.name.includes("袜") ||
+      item.name.includes("帽") ||
+      item.name.toLowerCase().includes("shirt") ||
+      item.name.toLowerCase().includes("pant") ||
+      item.name.toLowerCase().includes("jacket") ||
+      item.name.toLowerCase().includes("coat")
+  );
+
+  // Default to adult categories
+  // Note: User can manually change to 骐骐/慢慢 if items are for children
+  if (hasShoes) {
+    return {
+      category: "生活",
+      subcategory: "鞋子",
+    };
+  }
+
+  if (hasClothes) {
+    return {
+      category: "生活",
+      subcategory: "衣服",
+    };
+  }
+
+  // If clothing store but no clear clothing items detected, default to 衣服
+  return {
+    category: "生活",
+    subcategory: "衣服",
+  };
+}
+
+/**
  * Automatically determine category and subcategory based on merchant type and transaction time
  */
 function determineCategory(
@@ -168,7 +223,7 @@ function determineCategory(
   transactionDate: string | undefined
 ): { category?: string; subcategory?: string } {
   // Default to no category
-  if (!merchantType || !transactionDate) {
+  if (!merchantType) {
     return {};
   }
 
@@ -181,7 +236,7 @@ function determineCategory(
   }
 
   // Rule 2: Restaurant → category based on weekday/weekend, subcategory based on time
-  if (merchantType === "restaurant") {
+  if (merchantType === "restaurant" && transactionDate) {
     try {
       const date = new Date(transactionDate);
 
@@ -190,13 +245,13 @@ function determineCategory(
         return {};
       }
 
-      // Determine weekday vs weekend
-      const dayOfWeek = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
+      // Determine weekday vs weekend (use local time)
+      const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const category = isWeekend ? "周末" : "周中";
 
-      // Determine meal time based on hour (UTC)
-      const hour = date.getUTCHours();
+      // Determine meal time based on hour (local time)
+      const hour = date.getHours();
       let subcategory: string;
 
       if (hour >= 5 && hour < 11) {
@@ -217,7 +272,36 @@ function determineCategory(
     }
   }
 
-  // Rule 3: Other merchant types → no automatic categorization
+  // Rule 3: Parking → "汽车周边" / "停车费"
+  if (merchantType === "parking") {
+    return {
+      category: "汽车周边",
+      subcategory: "停车费",
+    };
+  }
+
+  // Rule 4: Gas Station → "汽车周边" / "燃油"
+  if (merchantType === "gas_station") {
+    return {
+      category: "汽车周边",
+      subcategory: "燃油",
+    };
+  }
+
+  // Rule 5: Utility → "生活" / "水电煤气"
+  if (merchantType === "utility") {
+    return {
+      category: "生活",
+      subcategory: "水电煤气",
+    };
+  }
+
+  // Rule 6: Clothing Store → will be determined by line items (see determineCategoryFromItems)
+  if (merchantType === "clothing_store") {
+    return {}; // Will be set later based on items
+  }
+
+  // Rule 7: Other merchant types → no automatic categorization
   return {};
 }
 
@@ -322,16 +406,26 @@ export const POST = withAuth(async (request, user) => {
     // Map unitPrice to unitPriceCents and standardize item names
     if (receiptData.lineItems && receiptData.lineItems.length > 0) {
       // Map unitPrice to unitPriceCents before standardization
+      // If unitPrice is not provided, calculate it as amount / quantity
       const itemsWithUnitPrice = receiptData.lineItems.map((item: {
         name: string;
         amount: number;
         quantity?: number;
         unit?: string;
         unitPrice?: number;
-      }) => ({
-        ...item,
-        unitPriceCents: item.unitPrice || null,
-      }));
+      }) => {
+        let unitPriceCents = item.unitPrice;
+
+        // If unitPrice not provided but quantity is available, calculate it
+        if (!unitPriceCents && item.quantity && item.quantity > 0) {
+          unitPriceCents = Math.round(item.amount / item.quantity);
+        }
+
+        return {
+          ...item,
+          unitPriceCents: unitPriceCents || null,
+        };
+      });
 
       receiptData.lineItems = await standardizeItemNames(itemsWithUnitPrice);
     }
@@ -364,10 +458,24 @@ export const POST = withAuth(async (request, user) => {
     }
 
     // Automatically determine category and subcategory
-    const { category, subcategory } = determineCategory(
+    let { category, subcategory } = determineCategory(
       receiptData.merchantType,
       receiptData.date
     );
+
+    // For clothing stores, analyze items to determine category
+    if (receiptData.merchantType === "clothing_store" && receiptData.lineItems) {
+      const clothingCategory = determineCategoryFromClothingItems(
+        receiptData.lineItems
+      );
+      if (clothingCategory) {
+        category = clothingCategory.category;
+        subcategory = clothingCategory.subcategory;
+        console.log(
+          `[Auto Category] clothing_store items → ${category}/${subcategory} (defaults to adult, can manually adjust to 骐骐/慢慢 for children)`
+        );
+      }
+    }
 
     // Log the auto-detected categories for debugging
     if (category && subcategory) {

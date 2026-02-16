@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-02-15
+
+### Added
+- **Multi-Person Pocket Money Support**: Track allowances for multiple children (Robin and Luna)
+  - New person tabs in pocket money view for switching between Robin and Luna
+  - Filter pocket money transactions by selected person
+  - Added `isActive` field to PersonData type and persons API endpoint
+  - Updated pocket money API to accept `personId` parameter instead of hardcoded value
+  - Redux state management for person selection and data fetching
+  - Retry button now correctly uses selected person ID
+
+### Fixed
+- **Purchase History Category Display**: Category and subcategory fields now populate correctly when clicking purchase history tiles
+  - Pass complete data (category, subcategory, date, merchant, etc.) to fin editor instead of just finId
+  - Ensures category fields are properly pre-filled when opening editor from purchase history
+
+### Changed
+- **Enhanced Receipt Analysis**: Improved category detection with additional merchant types
+  - New merchant type mappings: parking → "汽车周边/停车费", gas station → "汽车周边/燃油"
+  - Clothing store → "生活/衣服", utility → "生活/水电煤气"
+  - Auto-calculate unit price when not provided (amount ÷ quantity)
+  - Fixed date/time parsing to use local timezone instead of UTC for category determination
+  - Display year suffix on fin tiles when year differs from current year
+
 ## [1.12.0] - 2026-02-08
 
 ### Added

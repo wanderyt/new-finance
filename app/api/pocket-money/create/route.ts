@@ -7,9 +7,6 @@ import {
   serverErrorResponse,
 } from "@/app/lib/middleware/auth";
 
-// Robin's person_id is hardcoded to 1
-const ROBIN_PERSON_ID = 1;
-
 /**
  * Validate date format - must be ISO 8601 with time in UTC timezone
  */
@@ -29,6 +26,9 @@ export const POST = withAuth(async (request, user) => {
     const body: CreatePocketMoneyRequest = await request.json();
 
     // Validate required fields
+    if (!body.person_id) {
+      return badRequestResponse('Field "person_id" is required');
+    }
     if (!body.transaction_type) {
       return badRequestResponse('Field "transaction_type" is required');
     }
@@ -72,7 +72,7 @@ export const POST = withAuth(async (request, user) => {
     const createdBy = user.username || `user_${user.userId}`;
     const transaction = await createPocketMoney(
       body,
-      ROBIN_PERSON_ID,
+      body.person_id,
       createdBy
     );
 
