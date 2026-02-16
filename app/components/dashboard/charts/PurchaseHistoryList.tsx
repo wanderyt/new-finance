@@ -85,10 +85,17 @@ export function PurchaseHistoryList({ onFinClick }: PurchaseHistoryListProps) {
 
             const handleClick = () => {
               if (onFinClick) {
-                // Create a minimal FinData object to pass to the click handler
-                // The handler will fetch the full details from the API
+                // Pass the available data to the click handler
                 onFinClick({
                   finId: record.finId,
+                  category: record.category,
+                  subcategory: record.subcategory,
+                  date: record.date,
+                  merchant: record.merchant,
+                  type: record.type,
+                  originalCurrency: record.originalCurrency,
+                  amountCadCents: record.amountCadCents,
+                  comment: record.comment,
                 } as FinData);
               }
             };
