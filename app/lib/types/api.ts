@@ -240,6 +240,7 @@ export interface PersonData {
   personId: number;
   name: string;
   isDefault: boolean;
+  isActive: boolean;
 }
 
 // ========== Fin Items with Parent Data Types ==========
@@ -322,6 +323,7 @@ export interface PocketMoneyData {
 
 // Create pocket money request
 export interface CreatePocketMoneyRequest {
+  person_id: number;
   transaction_type: "bonus" | "deduction" | "expense";
   amount_cents: number; // Will be positive for bonus, negative for deduction/expense
   reason: string;
@@ -330,6 +332,7 @@ export interface CreatePocketMoneyRequest {
 
 // Update pocket money request
 export interface UpdatePocketMoneyRequest {
+  person_id?: number;
   transaction_type?: "bonus" | "deduction" | "expense";
   amount_cents?: number;
   reason?: string;

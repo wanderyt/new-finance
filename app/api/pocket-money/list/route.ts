@@ -7,18 +7,29 @@ import type { PocketMoneyListResponse } from "@/app/lib/types/api";
 import {
   withAuth,
   serverErrorResponse,
+  badRequestResponse,
 } from "@/app/lib/middleware/auth";
-
-// Robin's person_id is hardcoded to 1
-const ROBIN_PERSON_ID = 1;
 
 export const GET = withAuth(async (request, user) => {
   try {
-    // Fetch all pocket money transactions for Robin
-    const transactions = await getAllPocketMoney(ROBIN_PERSON_ID);
+    // Get personId from query parameters
+    const { searchParams } = new URL(request.url);
+    const personIdParam = searchParams.get("personId");
+
+    if (!personIdParam) {
+      return badRequestResponse("personId parameter is required");
+    }
+
+    const personId = parseInt(personIdParam, 10);
+    if (isNaN(personId)) {
+      return badRequestResponse("personId must be a valid number");
+    }
+
+    // Fetch all pocket money transactions for the specified person
+    const transactions = await getAllPocketMoney(personId);
 
     // Calculate current balance
-    const balance = await calculateBalance(ROBIN_PERSON_ID);
+    const balance = await calculateBalance(personId);
 
     // Return success response
     return NextResponse.json(

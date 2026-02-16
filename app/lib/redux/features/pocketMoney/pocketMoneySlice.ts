@@ -34,10 +34,10 @@ const initialState: PocketMoneyState = {
 // Async thunk for fetching pocket money list
 export const fetchPocketMoneyAsync = createAsyncThunk(
   "pocketMoney/fetchList",
-  async (_, { rejectWithValue }) => {
+  async (personId: number, { rejectWithValue }) => {
     try {
       const response = await axios.get<PocketMoneyListResponse>(
-        "/api/pocket-money/list"
+        `/api/pocket-money/list?personId=${personId}`
       );
       return response.data;
     } catch (error: any) {

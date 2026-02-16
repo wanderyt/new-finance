@@ -12,15 +12,17 @@ export const GET = withAuth(async (request, user) => {
         personId: persons.personId,
         name: persons.name,
         isDefault: persons.isDefault,
+        isActive: persons.isActive,
       })
       .from(persons)
       .where(eq(persons.userId, user.userId))
       .orderBy(persons.personId);
 
-    // Convert isDefault from 0/1 to boolean
+    // Convert isDefault and isActive from 0/1 to boolean
     const formattedPersons = userPersons.map((p) => ({
       ...p,
       isDefault: Boolean(p.isDefault),
+      isActive: Boolean(p.isActive),
     }));
 
     return NextResponse.json({

@@ -14,6 +14,10 @@ import {
   updatePocketMoneyAsync,
   deletePocketMoneyAsync,
 } from "@/app/lib/redux/features/pocketMoney/pocketMoneySlice";
+import {
+  fetchPersonsAsync,
+  selectPersons,
+} from "@/app/lib/redux/features/fin/finSlice";
 import type { PocketMoneyData } from "@/app/lib/types/api";
 import MonthGroup from "./MonthGroup";
 import PocketMoneyTile from "./PocketMoneyTile";
@@ -27,14 +31,36 @@ export default function PocketMoneyView() {
   const isLoading = useAppSelector(selectPocketMoneyLoading);
   const error = useAppSelector(selectPocketMoneyError);
   const expandedMonths = useAppSelector(selectExpandedMonths);
+  const persons = useAppSelector(selectPersons);
 
+  // State for selected person (default to first person)
+  const [selectedPersonId, setSelectedPersonId] = useState<number | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<PocketMoneyData | null>(null);
 
+  // Fetch persons on mount
   useEffect(() => {
-    dispatch(fetchPocketMoneyAsync());
+    dispatch(fetchPersonsAsync());
   }, [dispatch]);
+
+  // Set default person when persons are loaded (Robin or Luna only)
+  useEffect(() => {
+    if (persons.length > 0 && selectedPersonId === null) {
+      // Find Robin or Luna as default
+      const childPerson = persons.find((p) => ['Robin', 'Luna'].includes(p.name) && p.isActive);
+      if (childPerson) {
+        setSelectedPersonId(childPerson.personId);
+      }
+    }
+  }, [persons, selectedPersonId]);
+
+  // Fetch pocket money when person changes
+  useEffect(() => {
+    if (selectedPersonId !== null) {
+      dispatch(fetchPocketMoneyAsync(selectedPersonId));
+    }
+  }, [dispatch, selectedPersonId]);
 
   const handleMonthToggle = (monthKey: string) => {
     dispatch(toggleMonthExpanded(monthKey));
@@ -56,17 +82,27 @@ export default function PocketMoneyView() {
     reason: string;
     transaction_date?: string;
   }) => {
+    if (!selectedPersonId) return;
+
     if (selectedTransaction) {
       // Update existing transaction
       await dispatch(
         updatePocketMoneyAsync({
           id: selectedTransaction.pocket_money_id,
-          data,
+          data: {
+            ...data,
+            person_id: selectedPersonId,
+          },
         })
       ).unwrap();
     } else {
       // Create new transaction
-      await dispatch(createPocketMoneyAsync(data)).unwrap();
+      await dispatch(
+        createPocketMoneyAsync({
+          ...data,
+          person_id: selectedPersonId,
+        })
+      ).unwrap();
     }
   };
 
@@ -92,7 +128,7 @@ export default function PocketMoneyView() {
         </svg>
         <p className="text-zinc-600 dark:text-zinc-400">{error}</p>
         <button
-          onClick={() => dispatch(fetchPocketMoneyAsync())}
+          onClick={() => selectedPersonId && dispatch(fetchPocketMoneyAsync(selectedPersonId))}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           重试
@@ -109,13 +145,37 @@ export default function PocketMoneyView() {
     );
   }
 
+  // Find the selected person's name
+  const selectedPerson = persons.find((p) => p.personId === selectedPersonId);
+
   return (
     <>
       <div className="flex flex-col h-full">
+        {/* Person Tabs */}
+        {persons.length > 0 && (
+          <div className="flex gap-2 mb-4">
+            {persons
+              .filter((person) => person.isActive && ['Robin', 'Luna'].includes(person.name))
+              .map((person) => (
+                <button
+                  key={person.personId}
+                  onClick={() => setSelectedPersonId(person.personId)}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedPersonId === person.personId
+                      ? "bg-blue-600 text-white"
+                      : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                  }`}
+                >
+                  {person.name}
+                </button>
+              ))}
+          </div>
+        )}
+
         {/* Balance Card */}
         <div className="mb-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
           <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-            当前余额
+            {selectedPerson?.name}的当前余额
           </div>
           <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
             ${(balance / 100).toFixed(2)}
