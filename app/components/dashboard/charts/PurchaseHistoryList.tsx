@@ -9,8 +9,13 @@ import {
   selectPurchaseHistoryHasMore,
   selectPurchaseHistoryTotal,
 } from "@/app/lib/redux/features/fin/finSlice";
+import { FinData } from "@/app/lib/types/api";
 
-export function PurchaseHistoryList() {
+interface PurchaseHistoryListProps {
+  onFinClick?: (fin: FinData) => void;
+}
+
+export function PurchaseHistoryList({ onFinClick }: PurchaseHistoryListProps) {
   const dispatch = useAppDispatch();
   const records = useAppSelector(selectPurchaseHistoryRecords) || [];
   const loading = useAppSelector(selectPurchaseHistoryLoading);
@@ -65,21 +70,38 @@ export function PurchaseHistoryList() {
       <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
         <div className="divide-y divide-zinc-200 dark:divide-zinc-700">
           {records.map((record) => {
-            // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
-            const isoDate = record.date.includes('T') ? record.date : record.date.replace(' ', 'T') + 'Z';
+            // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - parse as local time
+            const isoDate = record.date.includes('T') ? record.date : record.date.replace(' ', 'T');
             const date = new Date(isoDate);
             const weekday = new Intl.DateTimeFormat("zh-CN", {
               weekday: "short",
-              timeZone: "UTC",
             }).format(date);
-            const month = date.getUTCMonth() + 1;
-            const day = date.getUTCDate();
-            const timeString = `${weekday} @ ${month}月${day}日`;
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const year = date.getFullYear();
+            const currentYear = new Date().getFullYear();
+            const yearSuffix = year !== currentYear ? ` ${year}年` : '';
+            const timeString = `${weekday} @ ${month}月${day}日${yearSuffix}`;
+
+            const handleClick = () => {
+              if (onFinClick) {
+                // Create a minimal FinData object to pass to the click handler
+                // The handler will fetch the full details from the API
+                onFinClick({
+                  finId: record.finId,
+                } as FinData);
+              }
+            };
 
             return (
               <div
                 key={`${record.finId}-${record.item.itemId}`}
-                className="p-2 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors"
+                onClick={handleClick}
+                className={`p-2 transition-colors ${
+                  onFinClick
+                    ? "hover:bg-zinc-50 dark:hover:bg-zinc-900/50 cursor-pointer"
+                    : "hover:bg-zinc-50 dark:hover:bg-zinc-900/50"
+                }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   {/* Left Side - Transaction Details */}

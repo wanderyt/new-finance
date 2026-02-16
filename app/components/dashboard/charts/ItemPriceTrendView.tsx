@@ -6,11 +6,16 @@ import {
   selectPriceTrend,
   fetchPurchaseHistory,
 } from "@/app/lib/redux/features/fin/finSlice";
+import { FinData } from "@/app/lib/types/api";
 import { ItemSearchInput } from "./ItemSearchInput";
 import { ItemPriceTrendChart } from "./ItemPriceTrendChart";
 import { PurchaseHistoryList } from "./PurchaseHistoryList";
 
-export function ItemPriceTrendView() {
+interface ItemPriceTrendViewProps {
+  onFinClick?: (fin: FinData) => void;
+}
+
+export function ItemPriceTrendView({ onFinClick }: ItemPriceTrendViewProps) {
   const dispatch = useAppDispatch();
   const { data, loading, error } = useAppSelector(selectPriceTrend);
 
@@ -75,7 +80,7 @@ export function ItemPriceTrendView() {
       </div>
 
       {/* Purchase History List */}
-      <PurchaseHistoryList />
+      <PurchaseHistoryList onFinClick={onFinClick} />
     </div>
   );
 }

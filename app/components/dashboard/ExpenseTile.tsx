@@ -25,18 +25,20 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
     cny: `¥${(fin.amountCnyCents / 100).toFixed(2)}`,
   };
 
-  // Format date as "周一 @ 12月5日"
-  // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
+  // Format date as "周一 @ 12月5日" or "周一 @ 12月5日 2025年" if not current year
+  // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - parse as local time
   const dateStr = fin.isScheduled && fin.scheduledOn ? fin.scheduledOn : fin.date;
-  const isoDate = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T') + 'Z';
+  const isoDate = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
   const date = new Date(isoDate);
   const weekday = new Intl.DateTimeFormat("zh-CN", {
     weekday: "short",
-    timeZone: "UTC",
   }).format(date);
-  const month = date.getUTCMonth() + 1;
-  const day = date.getUTCDate();
-  const timeString = `${weekday} @ ${month}月${day}日`;
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+  const currentYear = new Date().getFullYear();
+  const yearSuffix = year !== currentYear ? ` ${year}年` : '';
+  const timeString = `${weekday} @ ${month}月${day}日${yearSuffix}`;
 
   return (
     <div

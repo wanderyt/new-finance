@@ -257,7 +257,7 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
         {viewMode === "person" && <PersonAnalysisView />}
 
         {/* Price Trend View */}
-        {viewMode === "price-trend" && <ItemPriceTrendView />}
+        {viewMode === "price-trend" && <ItemPriceTrendView onFinClick={onFinClick} />}
       </div>
     </BottomSheet>
   );
