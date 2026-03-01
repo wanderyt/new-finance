@@ -3,13 +3,14 @@ import { promises as fs } from "fs";
 import path from "path";
 import { createHash } from "crypto";
 import { db } from "@/app/lib/db/drizzle";
-import { receipts } from "@/app/lib/db/schema";
+import { receipts, fin } from "@/app/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import {
   withAuth,
   badRequestResponse,
   serverErrorResponse,
 } from "@/app/lib/middleware/auth";
+import { buildReceiptFileName } from "@/app/lib/utils/receipt-storage";
 
 // Derive upload directory from DATABASE_PATH
 function getUploadDir(): string {
@@ -63,38 +64,64 @@ export const PUT = withAuth(async (request, user) => {
     // Calculate SHA256 hash
     const hash = createHash("sha256").update(buffer).digest("hex");
 
-    // Get file extension
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const fileName = `${hash}.${ext}`;
     const uploadDir = getUploadDir();
-    const filePath = path.join(uploadDir, fileName);
 
-    // Check if file already exists (deduplication)
-    try {
-      await fs.access(filePath);
-      console.log(`Receipt file already exists: ${filePath}`);
-    } catch {
-      // File doesn't exist, write it
+    // Dedup: check if this exact file content already exists in the DB
+    const [existingByHash] = await db
+      .select()
+      .from(receipts)
+      .where(eq(receipts.sha256, hash))
+      .limit(1);
+
+    let newFilePath: string;
+
+    if (existingByHash) {
+      // Same content already stored — reuse existing file path
+      console.log(`Receipt file already exists (dedup): ${existingByHash.filePath}`);
+      newFilePath = existingByHash.filePath;
+    } else {
+      // Look up associated fin record to get metadata for descriptive naming
+      let metadata: { merchant?: string | null; date?: string | null; amountCents?: number | null } | undefined;
+      if (existingReceipt.finId) {
+        const [finRecord] = await db
+          .select({ merchant: fin.merchant, date: fin.date, amountCents: fin.originalAmountCents })
+          .from(fin)
+          .where(eq(fin.finId, existingReceipt.finId))
+          .limit(1);
+        if (finRecord) {
+          metadata = {
+            merchant: finRecord.merchant,
+            date: finRecord.date,
+            amountCents: finRecord.amountCents,
+          };
+        }
+      }
+
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const fileName = await buildReceiptFileName(metadata, hash, ext, uploadDir);
+      const filePath = path.join(uploadDir, fileName);
+
       await fs.mkdir(uploadDir, { recursive: true });
       await fs.writeFile(filePath, buffer);
-      console.log(`Saved receipt file: ${filePath}`);
+      console.log(`Saved replacement receipt file: ${filePath}`);
+
+      newFilePath = `db/uploads/receipts/${fileName}`;
     }
 
-    // Delete old file if different from new one
+    // Delete old file if it's different from the new one and not referenced by other receipts
     const oldFileName = path.basename(existingReceipt.filePath);
-    const oldFilePath = path.join(uploadDir, oldFileName);
+    const newFileName = path.basename(newFilePath);
 
-    if (oldFileName !== fileName && existingReceipt.sha256) {
+    if (oldFileName !== newFileName && existingReceipt.sha256) {
       try {
-        // Check if old file is used by other receipts before deleting
         const otherReceipts = await db
           .select()
           .from(receipts)
           .where(eq(receipts.filePath, existingReceipt.filePath))
-          .limit(2); // Get up to 2 to check if more than one exists
+          .limit(2);
 
-        // Only delete if this is the only receipt using this file
         if (otherReceipts.length === 1 && otherReceipts[0].receiptId === receiptId) {
+          const oldFilePath = path.join(uploadDir, oldFileName);
           await fs.unlink(oldFilePath);
           console.log(`Deleted old receipt file: ${oldFilePath}`);
         }
@@ -108,7 +135,7 @@ export const PUT = withAuth(async (request, user) => {
     const [updatedReceipt] = await db
       .update(receipts)
       .set({
-        filePath: `db/uploads/receipts/${fileName}`,
+        filePath: newFilePath,
         mimeType: file.type,
         sha256: hash,
         uploadedAt: new Date().toISOString(),

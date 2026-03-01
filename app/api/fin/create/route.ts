@@ -187,6 +187,11 @@ export const POST = withAuth(async (request, user) => {
           file: receiptFile,
           userId: user.userId,
           finId,
+          metadata: {
+            merchant: body.merchant,
+            date: body.date,
+            amountCents: body.originalAmountCents,
+          },
         });
         console.log(`Receipt saved for fin ${finId}`);
       } catch (error) {
