@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-03-01
+
+### Added
+- **Product Name Autocomplete**: Typing in the item name field in the line item editor now shows matching historical product names in a dropdown
+  - Debounced search (300ms) fetches suggestions from purchase history as you type
+  - Dropdown appears only when the input is focused, not on initial render
+  - Shows purchase frequency count next to each suggestion
+
+- **Human-readable Receipt File Names**: Receipt images are now saved with descriptive filenames based on analysis results
+  - Format: `{YYYYMMDD}_{merchant}_{amount}.{ext}` (e.g. `20240315_costco_125.99.jpg`)
+  - Applies to both new uploads and receipt replacements
+  - Deduplication switched to SHA256 DB lookup for correctness with descriptive names
+  - Collision-safe: appends short hash suffix when names would conflict
+
+### Fixed
+- **Line Item Editor Crash**: Fixed `TypeError: Cannot read properties of null (reading 'toString')` when opening historical fin records with line items that have no quantity set
+
 ## [1.13.0] - 2026-02-15
 
 ### Added
