@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Input from "../ui-kit/Input";
 import Dropdown from "../ui-kit/Dropdown";
+
+interface AutocompleteItem {
+  name: string;
+  count: number;
+}
 
 export interface LineItem {
   name: string;
@@ -38,11 +43,15 @@ const LineItemEditor = ({
     (item.originalAmountCents / 100).toFixed(2),
   );
   const [qtyInput, setQtyInput] = useState<string>(
-    item.qty !== undefined ? item.qty.toString() : "",
+    item.qty != null ? item.qty.toString() : "",
   );
   const [unitPriceInput, setUnitPriceInput] = useState<string>(
     item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "",
   );
+  const [autocompleteItems, setAutocompleteItems] = useState<AutocompleteItem[]>([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const nameContainerRef = useRef<HTMLDivElement>(null);
+  const isNameFocused = useRef(false);
 
   // Sync with external changes only (not our own updates)
   // Use a ref to track if we just updated
@@ -65,12 +74,56 @@ const LineItemEditor = ({
     );
   }, [item]);
 
+  // Debounced autocomplete fetch — only runs while the name input is focused
+  useEffect(() => {
+    const name = localItem.name;
+    if (!isNameFocused.current || !name || name.trim().length === 0) {
+      setAutocompleteItems([]);
+      setShowAutocomplete(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      if (!isNameFocused.current) return;
+      try {
+        const res = await fetch(`/api/fin/items/autocomplete?q=${encodeURIComponent(name)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setAutocompleteItems(data.items ?? []);
+          setShowAutocomplete(true);
+        }
+      } catch {
+        // silently ignore
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [localItem.name]);
+
+  // Close autocomplete on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (nameContainerRef.current && !nameContainerRef.current.contains(e.target as Node)) {
+        setShowAutocomplete(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleChange = (field: keyof LineItem, value: any) => {
     const updated = { ...localItem, [field]: value };
     setLocalItem(updated);
     isInternalUpdate.current = true;
     onChange(index, updated);
   };
+
+  const handleNameSelect = useCallback((name: string) => {
+    setShowAutocomplete(false);
+    const updated = { ...localItem, name };
+    setLocalItem(updated);
+    isInternalUpdate.current = true;
+    onChange(index, updated);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localItem, index, onChange]);
 
   const handleAmountChange = (value: string) => {
     setAmountInput(value);
@@ -156,12 +209,42 @@ const LineItemEditor = ({
       <div className="space-y-2">
         {/* Item name and amount */}
         <div className="grid grid-cols-2 gap-2">
-          <Input
-            value={localItem.name}
-            onChange={(e) => handleChange("name", e.target.value)}
-            placeholder="项目名称"
-            required
-          />
+          <div className="relative" ref={nameContainerRef}>
+            <Input
+              value={localItem.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              onFocus={() => {
+                isNameFocused.current = true;
+                if (localItem.name.trim().length > 0) {
+                  fetch(`/api/fin/items/autocomplete?q=${encodeURIComponent(localItem.name)}`)
+                    .then((r) => r.json())
+                    .then((d) => { setAutocompleteItems(d.items ?? []); setShowAutocomplete(true); })
+                    .catch(() => {});
+                }
+              }}
+              onBlur={() => {
+                isNameFocused.current = false;
+                setShowAutocomplete(false);
+              }}
+              placeholder="项目名称"
+              required
+            />
+            {showAutocomplete && autocompleteItems.length > 0 && (
+              <div className="absolute z-20 w-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                {autocompleteItems.map((ac) => (
+                  <button
+                    key={ac.name}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); handleNameSelect(ac.name); }}
+                    className="w-full px-3 py-1.5 text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 flex justify-between items-center"
+                  >
+                    <span className="text-xs font-medium truncate">{ac.name}</span>
+                    <span className="text-xs text-zinc-400 ml-2 shrink-0">{ac.count}次</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="relative">
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none"
