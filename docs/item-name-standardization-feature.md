@@ -2,7 +2,7 @@
 
 ## Overview
 
-Automatic standardization of receipt item names from English to Chinese using Google Gemini 2.5 Flash. This feature enhances the existing receipt analysis by transforming extracted item names (e.g., "Large Jumbo Eggs" → "鸡蛋") while preserving original names in the notes field.
+Automatic, context-aware standardization of receipt item names from English to Chinese using Google Gemini 2.5 Flash. The standardization behavior adapts based on merchant type — grocery items are generalized to category names (e.g., "Large Jumbo Eggs" → "鸡蛋"), while restaurant dishes, book titles, and music products preserve their specific identities (e.g., "Kung Pao Chicken" → "宫保鸡丁"). Original names are preserved in the notes field.
 
 ## User Requirements
 
@@ -23,14 +23,15 @@ Receipt Upload → Gemini Vision Analysis → Gemini Text Standardization → Us
 ### Processing Pipeline
 
 1. User uploads receipt image
-2. **Gemini 2.5 Flash (Vision)** extracts items with English names
-3. **NEW: Gemini 2.5 Flash (Text)** standardizes all items in single batch call
+2. **Gemini 2.5 Flash (Vision)** extracts items with English names + `merchantType`
+3. **Gemini 2.5 Flash Lite (Text)** standardizes items using context-aware prompt based on `merchantType`
 4. Transform: `name` = Chinese standardized, `notes` = English original
 5. ReceiptAnalysisDialog displays results
 6. User confirms → finItems table stores both fields
 
 ### Design Principles
 
+- **Context-aware**: Standardization rules adapt to merchant type (supermarket, restaurant, bookstore, music store, clothing store, etc.)
 - **Graceful degradation**: Standardization failures never block receipt analysis
 - **Fallback**: If standardization fails, return original English names (no notes field)
 - **Single API provider**: Both steps use Gemini, simplifying setup
@@ -46,46 +47,90 @@ Receipt Upload → Gemini Vision Analysis → Gemini Text Standardization → Us
 
 ```typescript
 async function standardizeItemNames(
-  items: { name: string; amount: number; quantity?: number; unit?: string }[]
+  items: { name: string; amount: number; quantity?: number; unit?: string }[],
+  merchantType?: string
 ): Promise<{ name: string; amount: number; quantity?: number; unit?: string; notes?: string }[]>
 ```
 
 **Key Features**:
-- Uses Gemini 2.5 Flash with temperature 0.3 (consistency)
+- Uses Gemini 2.5 Flash Lite with temperature 0.3 (consistency)
 - Batch processes all items in single API call
 - Returns standardized names with original names in notes field
+- **Context-aware**: Uses `merchantType` to select appropriate standardization rules
 - Graceful error handling (returns original items on failure)
 
 ### 2. Prompt Engineering
 
 **Location**: `/app/api/receipts/analyze/route.ts`
 
-**Constant**: `ITEM_STANDARDIZATION_PROMPT`
+**Function**: `buildStandardizationPrompt(merchantType: string)`
 
-**Prompt Strategy**:
+Replaced the static `ITEM_STANDARDIZATION_PROMPT` constant with a function that builds a context-aware prompt based on merchant type. This ensures item names are standardized appropriately for different receipt contexts.
+
+**Common Rules** (all merchant types):
 - Use everyday Chinese (家常话) not formal terms
-- Keep names short and concise (2-4 characters preferred)
-- Use generic category names (e.g., "鸡蛋" not "有机鸡蛋")
-- Preserve original qualifiers in notes field
-- Few-shot learning with examples
+- For items already in Chinese: keep as-is if standardized, otherwise simplify
+- For unknown items: keep original name
+- Preserve original names in notes field
+- Few-shot learning with context-specific examples
 
-**Examples**:
-- "Large Jumbo Eggs 18ct" → name: "鸡蛋", notes: "Large Jumbo Eggs 18ct"
-- "Organic Whole Milk 2L" → name: "牛奶", notes: "Organic Whole Milk 2L"
-- "Honey Crisp Apples 3lb" → name: "苹果", notes: "Honey Crisp Apples 3lb"
-- "Tide Laundry Detergent" → name: "洗衣液", notes: "Tide Laundry Detergent"
+**Merchant-Type-Specific Strategies**:
+
+#### Supermarket (default)
+Generalize to category-level names. Strip brands, sizes, organic labels.
+- "Large Jumbo Eggs 18ct" → "鸡蛋"
+- "Organic Whole Milk 2L" → "牛奶"
+- "Honey Crisp Apples 3lb" → "苹果"
+- "Tide Laundry Detergent" → "洗衣液"
+- "Kirkland Toilet Paper 30pk" → "卫生纸"
+
+#### Restaurant
+Preserve specific dish names. Translate to proper Chinese dish names, not generic ingredients.
+- "Kung Pao Chicken" → "宫保鸡丁" (NOT "鸡")
+- "Mapo Tofu" → "麻婆豆腐"
+- "Iced Caramel Latte Grande" → "焦糖拿铁"
+- "Fish & Chips" → "炸鱼薯条"
+- "Spring Roll (2pc)" → "春卷"
+
+#### Bookstore
+Preserve book titles. Use well-known Chinese titles when available, otherwise keep original language.
+- "The Great Gatsby" → "了不起的盖茨比"
+- "Harry Potter and the Philosopher's Stone" → "哈利波特与魔法石"
+- "Introduction to Algorithms 4th Ed" → "算法导论"
+- "Moleskine Classic Notebook" → "笔记本" (stationery gets generalized)
+
+#### Music Store
+Preserve specific product names — instruments, music books, and accessories have important identities.
+- "RCM Celebration Series Repertoire 9" → "RCM Repertoire 9"
+- "RCM Celebration Series Etudes 9" → "RCM Etudes 9"
+- "RCM Piano Technique Book" → "RCM钢琴技巧"
+- "Yamaha U1 Upright Piano" → "立式钢琴"
+- "Guitar Strings Set" → "吉他弦"
+
+#### Clothing Store
+Generalize to clothing category names. Strip brands and specific styles.
+- "Nike Air Max 90" → "运动鞋"
+- "Levi's 501 Original Jeans" → "牛仔裤"
+- "Canada Goose Parka" → "羽绒服"
+- "Uniqlo Cotton T-Shirt" → "T恤"
+
+#### Other / Default
+Use reasonable judgment. Generalize commodity items, preserve meaningful specific names.
+- "Regular Unleaded 87" → "汽油"
+- "Underground Parking 2hrs" → "停车费"
+- "iPhone 15 Pro Max 256GB" → "iPhone 15 Pro"
 
 ### 3. Integration Point
 
-**Location**: `/app/api/receipts/analyze/route.ts` after line 126
+**Location**: `/app/api/receipts/analyze/route.ts`
 
 ```typescript
 // After Gemini analysis
 const receiptData = await analyzeReceiptWithGemini(base64Image, file.type);
 
-// NEW: Standardize item names
+// Standardize item names with merchant-type context
 if (receiptData.lineItems && receiptData.lineItems.length > 0) {
-  receiptData.lineItems = await standardizeItemNames(receiptData.lineItems);
+  receiptData.lineItems = await standardizeItemNames(itemsWithUnitPrice, receiptData.merchantType);
 }
 ```
 
@@ -102,6 +147,34 @@ if (receiptData.lineItems && receiptData.lineItems.length > 0) {
   </span>
 )}
 ```
+
+### 5. Auto-Category by Merchant Type
+
+**Location**: `/app/api/receipts/analyze/route.ts` — `determineCategory()`
+
+The system automatically assigns category/subcategory based on detected `merchantType`:
+
+| Merchant Type | Category | Subcategory |
+|---------------|----------|-------------|
+| supermarket | 生活 | 买菜原料 |
+| restaurant | 周中/周末 (by day) | 早餐/午餐/晚餐 (by time) |
+| parking | 汽车周边 | 停车费 |
+| gas_station | 汽车周边 | 燃油 |
+| utility | 生活 | 水电煤气 |
+| bookstore | 生活 | 书 |
+| music_store | 生活 | 学习 |
+| clothing_store | 生活 | 衣服/鞋子 (by items) |
+| other | — | — |
+
+### 6. Datetime Handling
+
+**Problem**: Gemini returns naive ISO datetime strings (e.g., `"2026-04-16T14:47:00"`) representing receipt local time. JavaScript's `new Date()` interprets naive ISO strings as UTC, causing timezone shifts.
+
+**Solution**: Avoid parsing Gemini's datetime through `new Date(isoString)`. Instead:
+
+- **Form population** (`FinEditorForm.tsx`): Use `result.date.slice(0, 16)` directly for the `datetime-local` input, since both the Gemini output and the input expect the same `YYYY-MM-DDTHH:mm` format in local time.
+- **Dialog display** (`ReceiptAnalysisDialog.tsx`): Use `result.date.replace("T", " ")` to display the raw local time.
+- **Category determination** (`route.ts`): Parse the datetime string with regex to extract year/month/day/hour components directly, then use `new Date(year, month, day)` constructor (which interprets as local time) for weekday detection.
 
 ## Database Schema
 
@@ -171,20 +244,36 @@ if (process.env.ENABLE_ITEM_STANDARDIZATION !== "true") {
 
 ### Test Cases
 
-1. **Happy path**: Upload English receipt
-   - ✅ Verify items standardized to Chinese
+1. **Supermarket receipt** (regression test):
+   - ✅ Verify grocery items generalized to category names (e.g., "鸡蛋", "牛奶")
    - ✅ Check original names in notes field
    - ✅ Confirm amounts/quantities preserved
 
-2. **Edge case**: Already Chinese receipt
+2. **Restaurant receipt**:
+   - ✅ Verify dish names preserved specifically (e.g., "宫保鸡丁" not "鸡")
+   - ✅ English dish names translated to proper Chinese dish names
+   - ✅ Chinese dish names kept as-is
+
+3. **Bookstore receipt**:
+   - ✅ Verify book titles preserved (e.g., "了不起的盖茨比")
+   - ✅ Stationery items generalized (e.g., "笔记本")
+   - ✅ Auto-category set to "生活"/"书"
+
+4. **Music store receipt** (e.g., Long & McQuade):
+   - ✅ Verify music book names preserved (e.g., "RCM Repertoire 9" not "书")
+   - ✅ Instrument names kept specific
+   - ✅ Generic accessories generalized
+   - ✅ Auto-category set to "生活"/"学习"
+
+5. **Edge case**: Already Chinese receipt
    - ✅ Verify Chinese names preserved as-is
 
-3. **Error handling**: Invalid API key
+6. **Error handling**: Invalid API key
    - ✅ Verify receipt analysis still works
    - ✅ Check no errors shown to user
    - ✅ Items retain original English names
 
-4. **Performance**: Large receipt (15+ items)
+7. **Performance**: Large receipt (15+ items)
    - ✅ Total time < 5 seconds
    - ✅ All items standardized correctly
 
@@ -249,20 +338,29 @@ try {
 - History-based personalization (learn user's preferred names)
 - Confidence scoring with UI indicators
 
+## Supported Merchant Types
+
+`supermarket`, `restaurant`, `parking`, `gas_station`, `clothing_store`, `utility`, `bookstore`, `music_store`, `other`
+
 ## Critical Files Modified
 
 1. **`/app/api/receipts/analyze/route.ts`** (Primary changes)
-   - Add `ITEM_STANDARDIZATION_PROMPT` constant
-   - Add `standardizeItemNames()` function
-   - Integrate call after Gemini analysis
+   - `buildStandardizationPrompt(merchantType)` — context-aware prompt builder
+   - `standardizeItemNames(items, merchantType)` — standardization with merchant context
+   - `determineCategory(merchantType, date)` — auto-category assignment
+   - `RECEIPT_ANALYSIS_PROMPT` — vision prompt with merchant type detection
 
-2. **`/app/components/dashboard/LineItemEditor.tsx`** (UI enhancement)
-   - Update notes field display
-   - Add helper text showing original name
+2. **`/app/components/dashboard/FinEditorForm.tsx`** (Date handling)
+   - Uses `result.date.slice(0, 16)` to avoid UTC conversion for datetime-local input
 
-3. **`.env`** (Configuration - optional)
+3. **`/app/components/dashboard/ReceiptAnalysisDialog.tsx`** (Date display)
+   - Displays raw local time from Gemini without Date parsing
+
+4. **`/app/components/dashboard/LineItemEditor.tsx`** (UI enhancement)
+   - Shows original name in notes field
+
+5. **`.env`** (Configuration - optional)
    - Verify `GOOGLE_GEMINI_API_KEY` exists
-   - Optional: Add `ENABLE_ITEM_STANDARDIZATION` flag
 
 ## References
 
