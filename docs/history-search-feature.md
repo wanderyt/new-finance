@@ -6,8 +6,8 @@ The History/Search feature provides users with a comprehensive view of all histo
 
 ### Key Features
 
-1. **Hierarchical Grouping**: Transactions organized by month (collapsible) and day
-2. **Summary Totals**: Display expense totals at both month and day levels
+1. **Hierarchical Grouping**: Transactions organized by year (with summary), month (collapsible), and day
+2. **Summary Totals**: Display expense/income/balance totals at year level, and net totals at month and day levels
 3. **Advanced Filtering**: Search by keyword, date range, category, and amount
 4. **Infinite Scroll**: Efficient loading of historical data in batches
 5. **Tab Navigation**: Seamless switching between current month view and history
@@ -121,20 +121,27 @@ Dashboard.tsx
     │   └── FilterButton (with badge)
     │
     ├── ScrollContainer (infinite scroll)
-    │   ├── MonthGroup[] (collapsible)
-    │   │   ├── MonthHeader
-    │   │   │   ├── Month Label ("01 2026")
-    │   │   │   ├── Total Amount (red)
-    │   │   │   └── Chevron Icon
+    │   ├── YearGroup[]
+    │   │   ├── YearHeader
+    │   │   │   ├── Year Label ("2026 年")
+    │   │   │   ├── Expense Total ("支出:" red)
+    │   │   │   ├── Income Total ("收入:" green)
+    │   │   │   └── Balance ("结余:" green if positive, red if negative)
     │   │   │
-    │   │   └── DayGroup[] (when expanded)
-    │   │       ├── DayHeader
-    │   │       │   ├── Day + Weekday ("19 周日")
-    │   │       │   └── Day Total (gray)
+    │   │   └── MonthGroup[] (collapsible)
+    │   │       ├── MonthHeader
+    │   │       │   ├── Month Label ("01 2026")
+    │   │       │   ├── Total Label + Amount ("支出:" red / "结余:" green)
+    │   │       │   └── Chevron Icon
     │   │       │
-    │   │       └── ExpenseTile[]
+    │   │       └── DayGroup[] (when expanded)
+    │   │           ├── DayHeader
+    │   │           │   ├── Day + Weekday ("19 周日")
+    │   │           │   └── Day Total (gray)
+    │   │           │
+    │   │           └── ExpenseTile[]
     │   │
-    │   └── LoadMoreSpinner
+    │   └── RecordCount ("共 N 条记录")
     │
     └── FilterBottomSheet (modal)
         ├── Keyword Input
@@ -153,8 +160,9 @@ User clicks History tab
   → dispatch(fetchHistoryAsync({ limit: 100, offset: 0 }))
   → API: GET /api/fin/list?limit=100&offset=0&dateTo=[now]
   → Redux: Store data in state.fin.history.data
-  → Selector: selectHistoryGroupedByMonth groups data
-  → Render: MonthGroup components with grouped data
+  → Selector: selectHistoryGroupedByMonth groups data by month
+  → Selector: selectHistoryGroupedByYear wraps month groups into year groups with totals
+  → Render: YearGroup (with summary header) containing MonthGroup components
 ```
 
 #### 2. Filter Application
@@ -505,6 +513,135 @@ export const selectHistoryGroupedByMonth = createSelector(
 );
 ```
 
+#### selectHistoryGroupedByYear
+
+Groups month groups by year and calculates separate expense and income totals for each year.
+
+```typescript
+interface YearSummary {
+  year: string;              // "2026"
+  totalExpenseCents: number; // Sum of all expense amountCadCents in the year
+  totalIncomeCents: number;  // Sum of all income amountCadCents in the year
+  months: MonthGroup[];      // Month groups within this year
+}
+
+export const selectHistoryGroupedByYear = createSelector(
+  [selectHistoryGroupedByMonth],
+  (monthGroups): YearSummary[] => {
+    const yearMap = new Map<string, MonthGroup[]>();
+
+    // Group months by year
+    monthGroups.forEach((mg) => {
+      const year = mg.monthKey.split("-")[0];
+      if (!yearMap.has(year)) {
+        yearMap.set(year, []);
+      }
+      yearMap.get(year)!.push(mg);
+    });
+
+    // Calculate per-year expense and income totals
+    return Array.from(yearMap.entries())
+      .map(([year, months]) => {
+        let totalExpenseCents = 0;
+        let totalIncomeCents = 0;
+
+        months.forEach((mg) => {
+          mg.days.forEach((day) => {
+            day.fins.forEach((fin) => {
+              if (fin.type === "expense") {
+                totalExpenseCents += fin.amountCadCents;
+              } else {
+                totalIncomeCents += fin.amountCadCents;
+              }
+            });
+          });
+        });
+
+        return { year, totalExpenseCents, totalIncomeCents, months };
+      })
+      .sort((a, b) => b.year.localeCompare(a.year)); // Newest first
+  }
+);
+```
+
+**Note:** `HistoryView` consumes `selectHistoryGroupedByYear` (not `selectHistoryGroupedByMonth` directly). The year selector builds on the month selector, so memoization is preserved — recalculation only happens when the underlying month groups change.
+
+## Monthly Total Label Design
+
+### Overview
+
+The `MonthGroup` component displays a summary label next to each month header indicating the net financial result for that month. The label and color dynamically change based on whether the month has a net surplus or net expense.
+
+### Label Logic
+
+| Condition | Label | Color |
+|-----------|-------|-------|
+| Net expense (spent more than earned) | 支出: | Red (`text-red-600`) |
+| Net surplus (earned more than spent) | 结余: | Green (`text-green-600`) |
+
+The displayed amount is always a positive number (`Math.abs(totalCents)`), with the label conveying the direction.
+
+### Sign Convention Difference
+
+The `MonthGroup` component is shared between two views that use opposite sign conventions for `totalCents`:
+
+| View | Positive `totalCents` means | Negative `totalCents` means |
+|------|----------------------------|----------------------------|
+| **HistoryView** | Net expense (expenses > income) | Net surplus (income > expenses) |
+| **PocketMoneyView** | Net surplus (allowance remaining) | Net expense (spent more than received) |
+
+To handle this, `MonthGroup` accepts a `surplusWhenPositive` prop:
+
+```typescript
+interface MonthGroupProps {
+  // ...other props
+  surplusWhenPositive?: boolean; // default: false
+}
+```
+
+- **`surplusWhenPositive={false}`** (default, used by HistoryView): `totalCents < 0` → surplus
+- **`surplusWhenPositive={true}`** (used by PocketMoneyView): `totalCents > 0` → surplus
+
+### Implementation
+
+```typescript
+const isSurplus = surplusWhenPositive ? totalCents > 0 : totalCents < 0;
+const formattedTotal = (Math.abs(totalCents) / 100).toFixed(2);
+
+// Label: isSurplus ? "结余:" : "支出:"
+// Color: isSurplus ? green : red
+```
+
+## Year Summary Header Design
+
+### Overview
+
+Each year group displays a summary header bar above its month groups, showing three financial metrics for the year: total expense, total income, and balance (income minus expense).
+
+### Layout
+
+The year header is a horizontal bar with:
+- **Left side**: Year label (e.g., "2026 年") in bold
+- **Right side**: Three metric pairs, each with a label and color-coded value
+
+### Metrics
+
+| Metric | Label | Color | Calculation |
+|--------|-------|-------|-------------|
+| Expense | 支出: | Red (`text-red-600`) | Sum of `amountCadCents` for all `type === "expense"` fins |
+| Income | 收入: | Green (`text-green-600`) | Sum of `amountCadCents` for all `type === "income"` fins |
+| Balance | 结余: | Green if ≥ 0, Red if < 0 | `totalIncomeCents - totalExpenseCents` |
+
+### Difference from Monthly Totals
+
+Unlike `MonthGroup` which uses a single net `totalCents` (expense positive, income negative), the year summary tracks expense and income separately. This provides a clearer financial overview at the year level.
+
+### Styling
+
+- Background: `bg-zinc-100 dark:bg-zinc-800` with `rounded-lg`
+- Spacing: `px-3 py-2` padding, `mb-2` margin below
+- All amounts displayed in dollars (divided by 100) with 2 decimal places
+
 ## Filter Implementation
 
 ### Date Range Calculation
@@ -652,6 +789,8 @@ Group: "2026-01-19" (correct local date)
 - [ ] Month expand/collapse
 - [ ] Day grouping displays correctly
 - [ ] Totals calculated correctly (month and day)
+- [ ] Year summary header displays correct expense, income, and balance
+- [ ] Year grouping correctly groups months by year
 - [ ] ExpenseTile click opens FinEditor
 - [ ] Filter bottom sheet opens/closes
 - [ ] Keyword filter works
@@ -752,3 +891,5 @@ Group: "2026-01-19" (correct local date)
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-01-08 | 1.0.0 | Initial documentation for history/search feature |
+| 2026-04-16 | 1.1.0 | Added monthly total label design: dynamic "支出:"/"结余:" labels with `surplusWhenPositive` prop for cross-view compatibility |
+| 2026-04-16 | 1.2.0 | Added year summary: year-level grouping with expense/income/balance totals, `YearSummary` type, `selectHistoryGroupedByYear` selector |
