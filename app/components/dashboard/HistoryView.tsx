@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   fetchAllHistoryAsync,
-  selectHistoryGroupedByMonth,
+  selectHistoryGroupedByYear,
   selectHistoryIsLoading,
   selectHistoryError,
   selectHistoryFilterCount,
@@ -22,7 +22,7 @@ interface HistoryViewProps {
 
 export default function HistoryView({ onFinClick }: HistoryViewProps) {
   const dispatch = useAppDispatch();
-  const monthGroups = useAppSelector(selectHistoryGroupedByMonth);
+  const yearGroups = useAppSelector(selectHistoryGroupedByYear);
   const isLoading = useAppSelector(selectHistoryIsLoading);
   const error = useAppSelector(selectHistoryError);
   const filterCount = useAppSelector(selectHistoryFilterCount);
@@ -73,7 +73,7 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
     );
   }
 
-  if (isLoading && monthGroups.length === 0) {
+  if (isLoading && yearGroups.length === 0) {
     return (
       <>
         <div className="flex items-center justify-center h-full">
@@ -87,7 +87,7 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
     );
   }
 
-  if (monthGroups.length === 0) {
+  if (yearGroups.length === 0) {
     return (
       <>
         <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -162,14 +162,50 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto"
       >
-        {monthGroups.map((monthGroup) => (
-          <MonthGroup
-            key={monthGroup.monthKey}
-            monthGroup={monthGroup}
-            isExpanded={expandedMonths.includes(monthGroup.monthKey)}
-            onToggle={() => handleMonthToggle(monthGroup.monthKey)}
-            onFinClick={onFinClick}
-          />
+        {yearGroups.map((yearGroup) => (
+          <div key={yearGroup.year} className="mb-3">
+            {/* Year Summary Header */}
+            <div className="flex items-center justify-between px-3 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg mb-2">
+              <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                {yearGroup.year} 年
+              </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">支出:</span>
+                  <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+                    {(yearGroup.totalExpenseCents / 100).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">收入:</span>
+                  <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                    {(yearGroup.totalIncomeCents / 100).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">结余:</span>
+                  <span className={`text-xs font-semibold ${
+                    yearGroup.totalIncomeCents - yearGroup.totalExpenseCents >= 0
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-red-600 dark:text-red-400"
+                  }`}>
+                    {((yearGroup.totalIncomeCents - yearGroup.totalExpenseCents) / 100).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Month Groups within this year */}
+            {yearGroup.months.map((monthGroup) => (
+              <MonthGroup
+                key={monthGroup.monthKey}
+                monthGroup={monthGroup}
+                isExpanded={expandedMonths.includes(monthGroup.monthKey)}
+                onToggle={() => handleMonthToggle(monthGroup.monthKey)}
+                onFinClick={onFinClick}
+              />
+            ))}
+          </div>
         ))}
 
         {isLoading && (
@@ -178,9 +214,9 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
           </div>
         )}
 
-        {!isLoading && monthGroups.length > 0 && (
+        {!isLoading && yearGroups.length > 0 && (
           <div className="text-center py-4 text-zinc-500 dark:text-zinc-400 text-sm">
-            共 {monthGroups.reduce((sum, group) => sum + group.days.reduce((daySum, day) => daySum + day.fins.length, 0), 0)} 条记录
+            共 {yearGroups.reduce((sum, yg) => sum + yg.months.reduce((mSum, mg) => mSum + mg.days.reduce((dSum, day) => dSum + day.fins.length, 0), 0), 0)} 条记录
           </div>
         )}
       </div>

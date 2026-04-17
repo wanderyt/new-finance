@@ -11,6 +11,7 @@ import {
   SearchFilters,
   MonthGroup,
   DayGroup,
+  YearSummary,
   PersonData,
   FinItemWithParent,
   ListFinItemsResponse,
@@ -1308,6 +1309,43 @@ export const selectHistoryGroupedByMonth = createSelector(
         };
       })
       .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }
+);
+
+// Grouped history selector (groups by year, then by month)
+export const selectHistoryGroupedByYear = createSelector(
+  [selectHistoryGroupedByMonth],
+  (monthGroups): YearSummary[] => {
+    const yearMap = new Map<string, MonthGroup[]>();
+
+    monthGroups.forEach((mg) => {
+      const year = mg.monthKey.split("-")[0];
+      if (!yearMap.has(year)) {
+        yearMap.set(year, []);
+      }
+      yearMap.get(year)!.push(mg);
+    });
+
+    return Array.from(yearMap.entries())
+      .map(([year, months]) => {
+        let totalExpenseCents = 0;
+        let totalIncomeCents = 0;
+
+        months.forEach((mg) => {
+          mg.days.forEach((day) => {
+            day.fins.forEach((fin) => {
+              if (fin.type === "expense") {
+                totalExpenseCents += fin.amountCadCents;
+              } else {
+                totalIncomeCents += fin.amountCadCents;
+              }
+            });
+          });
+        });
+
+        return { year, totalExpenseCents, totalIncomeCents, months };
+      })
+      .sort((a, b) => b.year.localeCompare(a.year));
   }
 );
 

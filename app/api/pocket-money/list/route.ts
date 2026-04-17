@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   getAllPocketMoney,
   calculateBalance,
+  calculateRedPocketBalance,
 } from "@/app/lib/db/pocketMoney";
 import type { PocketMoneyListResponse } from "@/app/lib/types/api";
 import {
@@ -28,14 +29,16 @@ export const GET = withAuth(async (request, user) => {
     // Fetch all pocket money transactions for the specified person
     const transactions = await getAllPocketMoney(personId);
 
-    // Calculate current balance
+    // Calculate current balance (excluding red_pocket) and red_pocket balance separately
     const balance = await calculateBalance(personId);
+    const redPocketBalance = await calculateRedPocketBalance(personId);
 
     // Return success response
     return NextResponse.json(
       {
         success: true,
         balance,
+        red_pocket_balance: redPocketBalance,
         transactions,
         total: transactions.length,
       } as PocketMoneyListResponse,

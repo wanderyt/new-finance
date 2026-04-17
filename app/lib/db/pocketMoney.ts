@@ -1,6 +1,6 @@
 import { db } from "./drizzle";
 import { pocketMoney } from "./schema";
-import { eq, and, desc, sum } from "drizzle-orm";
+import { eq, and, desc, sum, ne } from "drizzle-orm";
 import type {
   PocketMoneyData,
   CreatePocketMoneyRequest,
@@ -29,7 +29,8 @@ export async function getAllPocketMoney(
       | "weekly_allowance"
       | "bonus"
       | "deduction"
-      | "expense",
+      | "expense"
+      | "red_pocket",
     reason: t.reason,
     created_at: t.createdAt,
     created_by: t.createdBy,
@@ -63,7 +64,8 @@ export async function getPocketMoneyById(
       | "weekly_allowance"
       | "bonus"
       | "deduction"
-      | "expense",
+      | "expense"
+      | "red_pocket",
     reason: t.reason,
     created_at: t.createdAt,
     created_by: t.createdBy,
@@ -71,13 +73,35 @@ export async function getPocketMoneyById(
 }
 
 /**
- * Calculate current balance for a person
+ * Calculate current balance for a person (excluding red_pocket transactions)
  */
 export async function calculateBalance(personId: number): Promise<number> {
   const result = await db
     .select({ total: sum(pocketMoney.amountCents) })
     .from(pocketMoney)
-    .where(eq(pocketMoney.personId, personId));
+    .where(
+      and(
+        eq(pocketMoney.personId, personId),
+        ne(pocketMoney.transactionType, "red_pocket")
+      )
+    );
+
+  return result[0]?.total ? Number(result[0].total) : 0;
+}
+
+/**
+ * Calculate red pocket balance for a person
+ */
+export async function calculateRedPocketBalance(personId: number): Promise<number> {
+  const result = await db
+    .select({ total: sum(pocketMoney.amountCents) })
+    .from(pocketMoney)
+    .where(
+      and(
+        eq(pocketMoney.personId, personId),
+        eq(pocketMoney.transactionType, "red_pocket")
+      )
+    );
 
   return result[0]?.total ? Number(result[0].total) : 0;
 }
@@ -117,7 +141,8 @@ export async function createPocketMoney(
       | "weekly_allowance"
       | "bonus"
       | "deduction"
-      | "expense",
+      | "expense"
+      | "red_pocket",
     reason: t.reason,
     created_at: t.createdAt,
     created_by: t.createdBy,
@@ -137,14 +162,15 @@ export async function updatePocketMoney(
     return null;
   }
 
-  // Only allow editing bonus, deduction, or expense types
+  // Only allow editing bonus, deduction, expense, or red_pocket types
   if (
     existing.transaction_type !== "bonus" &&
     existing.transaction_type !== "deduction" &&
-    existing.transaction_type !== "expense"
+    existing.transaction_type !== "expense" &&
+    existing.transaction_type !== "red_pocket"
   ) {
     throw new Error(
-      "Only bonus, deduction, and expense transactions can be edited. Automatic transactions (weekly_allowance, initial) are protected."
+      "Only bonus, deduction, expense, and red_pocket transactions can be edited. Automatic transactions (weekly_allowance, initial) are protected."
     );
   }
 
@@ -190,7 +216,8 @@ export async function updatePocketMoney(
       | "weekly_allowance"
       | "bonus"
       | "deduction"
-      | "expense",
+      | "expense"
+      | "red_pocket",
     reason: t.reason,
     created_at: t.createdAt,
     created_by: t.createdBy,
@@ -209,14 +236,15 @@ export async function deletePocketMoney(
     return false;
   }
 
-  // Only allow deleting bonus, deduction, or expense types
+  // Only allow deleting bonus, deduction, expense, or red_pocket types
   if (
     existing.transaction_type !== "bonus" &&
     existing.transaction_type !== "deduction" &&
-    existing.transaction_type !== "expense"
+    existing.transaction_type !== "expense" &&
+    existing.transaction_type !== "red_pocket"
   ) {
     throw new Error(
-      "Only bonus, deduction, and expense transactions can be deleted. Automatic transactions (weekly_allowance, initial) are protected."
+      "Only bonus, deduction, expense, and red_pocket transactions can be deleted. Automatic transactions (weekly_allowance, initial) are protected."
     );
   }
 
