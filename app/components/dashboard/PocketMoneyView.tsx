@@ -5,6 +5,7 @@ import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   fetchPocketMoneyAsync,
   selectPocketMoneyBalance,
+  selectRedPocketBalance,
   selectPocketMoneyGroupedByMonth,
   selectPocketMoneyLoading,
   selectPocketMoneyError,
@@ -27,6 +28,7 @@ import Loading from "../ui-kit/Loading";
 export default function PocketMoneyView() {
   const dispatch = useAppDispatch();
   const balance = useAppSelector(selectPocketMoneyBalance);
+  const redPocketBalance = useAppSelector(selectRedPocketBalance);
   const monthGroups = useAppSelector(selectPocketMoneyGroupedByMonth);
   const isLoading = useAppSelector(selectPocketMoneyLoading);
   const error = useAppSelector(selectPocketMoneyError);
@@ -77,7 +79,7 @@ export default function PocketMoneyView() {
   };
 
   const handleSave = async (data: {
-    transaction_type: "bonus" | "deduction" | "expense";
+    transaction_type: "bonus" | "deduction" | "expense" | "red_pocket";
     amount_cents: number;
     reason: string;
     transaction_date?: string;
@@ -172,13 +174,23 @@ export default function PocketMoneyView() {
           </div>
         )}
 
-        {/* Balance Card */}
-        <div className="mb-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-            {selectedPerson?.name}的当前余额
+        {/* Balance Cards */}
+        <div className="mb-4 flex gap-3">
+          <div className="flex-1 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+              {selectedPerson?.name}的当前余额
+            </div>
+            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+              ${(balance / 100).toFixed(2)}
+            </div>
           </div>
-          <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-            ${(balance / 100).toFixed(2)}
+          <div className="flex-1 p-4 bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-900/20 dark:to-red-900/20 rounded-lg border border-rose-200 dark:border-rose-800">
+            <div className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+              🧧 红包余额
+            </div>
+            <div className="text-3xl font-bold text-rose-600 dark:text-rose-400">
+              ${(redPocketBalance / 100).toFixed(2)}
+            </div>
           </div>
         </div>
 
@@ -237,6 +249,7 @@ export default function PocketMoneyView() {
                   monthGroup={monthGroup}
                   isExpanded={expandedMonths.includes(monthGroup.monthKey)}
                   onToggle={() => handleMonthToggle(monthGroup.monthKey)}
+                  surplusWhenPositive
                   renderTile={(fin) => (
                     <PocketMoneyTile
                       key={(fin as any).pocket_money_id}

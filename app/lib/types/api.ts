@@ -233,6 +233,13 @@ export interface MonthGroup {
   totalCents: number;
 }
 
+export interface YearSummary {
+  year: string; // "2026"
+  totalExpenseCents: number;
+  totalIncomeCents: number;
+  months: MonthGroup[];
+}
+
 // ========== Person Types ==========
 
 // Person data structure (for dropdown and analysis)
@@ -315,7 +322,7 @@ export interface PocketMoneyData {
   person_id: number;
   transaction_date: string; // ISO 8601
   amount_cents: number; // Can be positive or negative
-  transaction_type: "initial" | "weekly_allowance" | "bonus" | "deduction" | "expense";
+  transaction_type: "initial" | "weekly_allowance" | "bonus" | "deduction" | "expense" | "red_pocket";
   reason: string;
   created_at: string;
   created_by: string;
@@ -324,8 +331,8 @@ export interface PocketMoneyData {
 // Create pocket money request
 export interface CreatePocketMoneyRequest {
   person_id: number;
-  transaction_type: "bonus" | "deduction" | "expense";
-  amount_cents: number; // Will be positive for bonus, negative for deduction/expense
+  transaction_type: "bonus" | "deduction" | "expense" | "red_pocket";
+  amount_cents: number; // Will be positive for bonus/red_pocket, negative for deduction/expense
   reason: string;
   transaction_date?: string; // Optional, defaults to now
 }
@@ -333,7 +340,7 @@ export interface CreatePocketMoneyRequest {
 // Update pocket money request
 export interface UpdatePocketMoneyRequest {
   person_id?: number;
-  transaction_type?: "bonus" | "deduction" | "expense";
+  transaction_type?: "bonus" | "deduction" | "expense" | "red_pocket";
   amount_cents?: number;
   reason?: string;
   transaction_date?: string;
@@ -343,6 +350,7 @@ export interface UpdatePocketMoneyRequest {
 export interface PocketMoneyListResponse {
   success: true;
   balance: number;
+  red_pocket_balance: number;
   transactions: PocketMoneyData[];
   total: number;
 }

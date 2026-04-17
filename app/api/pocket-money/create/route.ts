@@ -42,17 +42,17 @@ export const POST = withAuth(async (request, user) => {
       return badRequestResponse('Field "reason" is required and cannot be empty');
     }
 
-    // Validate transaction type (only bonus, deduction, or expense allowed for manual creation)
-    if (!["bonus", "deduction", "expense"].includes(body.transaction_type)) {
+    // Validate transaction type (only bonus, deduction, expense, or red_pocket allowed for manual creation)
+    if (!["bonus", "deduction", "expense", "red_pocket"].includes(body.transaction_type)) {
       return badRequestResponse(
-        'Field "transaction_type" must be "bonus", "deduction", or "expense". Automatic transaction types (weekly_allowance, initial) cannot be created manually.'
+        'Field "transaction_type" must be "bonus", "deduction", "expense", or "red_pocket". Automatic transaction types (weekly_allowance, initial) cannot be created manually.'
       );
     }
 
     // Validate amount based on transaction type
-    if (body.transaction_type === "bonus" && body.amount_cents <= 0) {
+    if ((body.transaction_type === "bonus" || body.transaction_type === "red_pocket") && body.amount_cents <= 0) {
       return badRequestResponse(
-        'Field "amount_cents" must be positive for bonus transactions'
+        'Field "amount_cents" must be positive for bonus and red_pocket transactions'
       );
     }
     if ((body.transaction_type === "deduction" || body.transaction_type === "expense") && body.amount_cents >= 0) {

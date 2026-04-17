@@ -17,6 +17,7 @@ import type {
 
 export interface PocketMoneyState {
   balance: number;
+  redPocketBalance: number;
   transactions: PocketMoneyData[];
   isLoading: boolean;
   error: string | null;
@@ -25,6 +26,7 @@ export interface PocketMoneyState {
 
 const initialState: PocketMoneyState = {
   balance: 0,
+  redPocketBalance: 0,
   transactions: [],
   isLoading: false,
   error: null,
@@ -145,6 +147,7 @@ const pocketMoneySlice = createSlice({
         (state, action: PayloadAction<PocketMoneyListResponse>) => {
           state.isLoading = false;
           state.balance = action.payload.balance;
+          state.redPocketBalance = action.payload.red_pocket_balance;
           state.transactions = action.payload.transactions;
         }
       )
@@ -164,8 +167,12 @@ const pocketMoneySlice = createSlice({
           state.isLoading = false;
           // Add new transaction to the list
           state.transactions.unshift(action.payload);
-          // Update balance
-          state.balance += action.payload.amount_cents;
+          // Update balance based on transaction type
+          if (action.payload.transaction_type === "red_pocket") {
+            state.redPocketBalance += action.payload.amount_cents;
+          } else {
+            state.balance += action.payload.amount_cents;
+          }
         }
       )
       .addCase(createPocketMoneyAsync.rejected, (state, action) => {
@@ -187,10 +194,25 @@ const pocketMoneySlice = createSlice({
             (t) => t.pocket_money_id === action.payload.pocket_money_id
           );
           if (index !== -1) {
-            // Calculate balance difference
-            const oldAmount = state.transactions[index].amount_cents;
+            const oldTransaction = state.transactions[index];
+            const oldAmount = oldTransaction.amount_cents;
             const newAmount = action.payload.amount_cents;
-            state.balance += newAmount - oldAmount;
+            const wasRedPocket = oldTransaction.transaction_type === "red_pocket";
+            const isRedPocket = action.payload.transaction_type === "red_pocket";
+
+            // Remove old amount from the appropriate balance
+            if (wasRedPocket) {
+              state.redPocketBalance -= oldAmount;
+            } else {
+              state.balance -= oldAmount;
+            }
+            // Add new amount to the appropriate balance
+            if (isRedPocket) {
+              state.redPocketBalance += newAmount;
+            } else {
+              state.balance += newAmount;
+            }
+
             // Update transaction
             state.transactions[index] = action.payload;
           }
@@ -215,8 +237,12 @@ const pocketMoneySlice = createSlice({
             (t) => t.pocket_money_id === action.payload
           );
           if (transaction) {
-            // Update balance
-            state.balance -= transaction.amount_cents;
+            // Update the appropriate balance
+            if (transaction.transaction_type === "red_pocket") {
+              state.redPocketBalance -= transaction.amount_cents;
+            } else {
+              state.balance -= transaction.amount_cents;
+            }
             // Remove transaction from list
             state.transactions = state.transactions.filter(
               (t) => t.pocket_money_id !== action.payload
@@ -241,6 +267,9 @@ export const {
 // Selectors
 export const selectPocketMoneyBalance = (state: RootState) =>
   state.pocketMoney.balance;
+
+export const selectRedPocketBalance = (state: RootState) =>
+  state.pocketMoney.redPocketBalance;
 
 export const selectPocketMoneyTransactions = (state: RootState) =>
   state.pocketMoney.transactions;
