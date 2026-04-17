@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-04-16
+
+### Added
+- **Year Summary in History View**: Transactions in the history tab are now grouped by year, with a summary header showing total expense, income, and balance for each year
+  - New `YearSummary` type and `selectHistoryGroupedByYear` Redux selector
+  - Year header displays expense (red), income (green), and balance (color-coded)
+  - Updated design documentation in `docs/history-search-feature.md`
+
+- **Red Pocket Transaction Type**: Added `red_pocket` as a new pocket money transaction type with separate balance tracking
+  - Dedicated red pocket balance card displayed alongside regular balance
+  - Balance updates correctly routed to the appropriate balance (regular vs red pocket)
+  - Database schema updated with new constraint for `red_pocket` type
+
+### Changed
+- **Monthly Total Labels**: `MonthGroup` component now dynamically shows "支出:" (expense) or "结余:" (surplus) with appropriate color coding via `surplusWhenPositive` prop
+
 ## [1.14.0] - 2026-03-01
 
 ### Added
