@@ -343,7 +343,10 @@ const FinEditorForm = ({
         if (result.merchant) setMerchant(result.merchant);
         if (result.city) setCity(result.city);
         if (result.date) {
-          setDate(new Date(result.date).toISOString().slice(0, 16));
+          // Gemini returns naive ISO datetime (no timezone) representing local time
+          // Use the string directly, slicing to YYYY-MM-DDTHH:mm for datetime-local input
+          // Avoid new Date() parsing which treats naive ISO strings as UTC
+          setDate(result.date.slice(0, 16));
         }
         if (result.detectedCurrency) {
           setCurrency(result.detectedCurrency as "CAD" | "USD" | "CNY");

@@ -20,7 +20,7 @@ Analyze this receipt image and extract the following information in JSON format:
 
 {
   "merchant": "Store name",
-  "merchantType": "supermarket, restaurant, parking, gas_station, clothing_store, utility, or other",
+  "merchantType": "supermarket, restaurant, parking, gas_station, clothing_store, utility, bookstore, music_store, or other",
   "city": "City if visible on receipt",
   "date": "ISO date string with time (YYYY-MM-DDTHH:mm:ss)",
   "detectedCurrency": "CAD, USD, or CNY",
@@ -52,6 +52,8 @@ Rules:
   - "gas_station": gas stations, fuel stations (e.g., Shell, Esso, Petro-Canada)
   - "clothing_store": clothing retailers, shoe stores, apparel shops
   - "utility": utility bills (electricity, water, gas, internet, phone bills)
+  - "bookstore": bookstores, book retailers (e.g., Indigo, Barnes & Noble, 新华书店)
+  - "music_store": music instrument stores, music shops (e.g., Long & McQuade, Guitar Center)
   - "other": any other type of merchant
 - If receipt shows unit price (e.g., "$3.99/kg", "$6.25 each"), extract it as unitPrice in cents
 - If only total amount is visible (no unit price shown), set unitPrice to null (will be calculated as amount/quantity)
@@ -65,20 +67,113 @@ Rules:
 - Return valid JSON only, no markdown
 `;
 
-const ITEM_STANDARDIZATION_PROMPT = `You are an expert at standardizing grocery item names from receipts. Convert English/mixed-language item names into standardized Chinese names for household finance tracking.
+function buildStandardizationPrompt(merchantType: string): string {
+  const preamble = `You are an expert at standardizing item names from receipts. Convert item names into standardized Chinese names for household finance tracking.
+
+General rules:
+- Use everyday Chinese (家常话), not formal terms
+- For items already in Chinese: keep as-is if standardized, otherwise simplify
+- For unknown items: keep original name`;
+
+  let contextRules: string;
+
+  switch (merchantType) {
+    case "restaurant":
+      contextRules = `
+Context: This is a RESTAURANT receipt. Preserve specific dish names — they are important for expense tracking.
 
 Rules:
-- Use everyday Chinese (家常话), not formal terms
+- Translate dish names to their proper Chinese dish names (NOT generic ingredient names)
+- Keep the dish identity: "Kung Pao Chicken" → "宫保鸡丁" (NOT "鸡")
+- For Chinese restaurant items already in Chinese, keep dish names as-is
+- For beverages: use the specific drink name (e.g., "拿铁" not "咖啡", "可乐" not "饮料")
+- For set meals / combos, keep the combo name
+- Strip portion sizes unless meaningful (e.g., "大份" is useful, "regular" is not)
+
+Examples:
+- "Kung Pao Chicken" → "宫保鸡丁"
+- "Mapo Tofu" → "麻婆豆腐"
+- "Iced Caramel Latte Grande" → "焦糖拿铁"
+- "Fish & Chips" → "炸鱼薯条"
+- "Spring Roll (2pc)" → "春卷"
+- "宫保鸡丁" → "宫保鸡丁"`;
+      break;
+
+    case "bookstore":
+      contextRules = `
+Context: This is a BOOKSTORE receipt. Preserve book/product titles — they are the primary identifier for tracking.
+
+Rules:
+- For books with well-known Chinese titles, use the Chinese title
+- For books without a well-known Chinese translation, keep the original language title
+- For stationery/accessories, generalize to category names (2-4 characters)
+- Keep author names out of the standardized name (just the title)
+
+Examples:
+- "The Great Gatsby" → "了不起的盖茨比"
+- "Harry Potter and the Philosopher's Stone" → "哈利波特与魔法石"
+- "Introduction to Algorithms 4th Ed" → "算法导论"
+- "Moleskine Classic Notebook" → "笔记本"
+- "Pilot G2 Gel Pen" → "签字笔"`;
+      break;
+
+    case "music_store":
+      contextRules = `
+Context: This is a MUSIC STORE receipt. Preserve specific product names — instruments, music books, and accessories have important identities.
+
+Rules:
+- Preserve specific product names and model identifiers
+- For music exam books (e.g., RCM, ABRSM), keep the full title including level/grade
+- For instruments, keep the type and model (strip brand)
+- For generic accessories (strings, picks, cables), generalize to category names (2-4 characters)
+- Translate to Chinese where natural, otherwise keep original name
+
+Examples:
+- "RCM Celebration Series Repertoire 9" → "RCM Repertoire 9"
+- "RCM Celebration Series Etudes 9" → "RCM Etudes 9"
+- "RCM Piano Technique Book" → "RCM钢琴技巧"
+- "Yamaha U1 Upright Piano" → "立式钢琴"
+- "Guitar Strings Set" → "吉他弦"
+- "Music Stand" → "谱架"`;
+      break;
+
+    case "clothing_store":
+      contextRules = `
+Context: This is a CLOTHING STORE receipt. Generalize to clothing category names.
+
+Rules:
+- Keep names short (2-4 characters preferred)
+- Use generic clothing category names, strip brands and specific styles
+- Distinguish between main categories: 上衣, 裤子, 外套, 鞋子, 袜子, 帽子, etc.
+
+Examples:
+- "Nike Air Max 90" → "运动鞋"
+- "Levi's 501 Original Jeans" → "牛仔裤"
+- "Canada Goose Parka" → "羽绒服"
+- "Uniqlo Cotton T-Shirt" → "T恤"`;
+      break;
+
+    case "supermarket":
+    default:
+      contextRules = `
+Context: This is a SUPERMARKET/GROCERY receipt. Generalize product names to category-level names for grocery tracking.
+
+Rules:
 - Keep names short and concise (2-4 characters preferred)
-- Use generic category names (e.g., "鸡蛋" not "有机鸡蛋")
-- For items already in Chinese: keep as-is if standardized, otherwise simplify
-- For unknown items: keep original name
+- Use generic category names — strip brands, sizes, organic labels
+- e.g., "鸡蛋" not "有机鸡蛋", "牛奶" not "全脂牛奶"
 
 Examples:
 - "Large Jumbo Eggs 18ct" → "鸡蛋"
 - "Organic Whole Milk 2L" → "牛奶"
 - "Honey Crisp Apples 3lb" → "苹果"
 - "Tide Laundry Detergent" → "洗衣液"
+- "Kirkland Toilet Paper 30pk" → "卫生纸"`;
+      break;
+  }
+
+  return `${preamble}
+${contextRules}
 
 Input format:
 {
@@ -96,6 +191,7 @@ Output format (JSON only, no markdown):
     }
   ]
 }`;
+}
 
 // async function analyzeReceiptWithOpenAI(base64Image: string, mimeType: string) {
 //   const response = await openai.chat.completions.create({
@@ -238,20 +334,31 @@ function determineCategory(
   // Rule 2: Restaurant → category based on weekday/weekend, subcategory based on time
   if (merchantType === "restaurant" && transactionDate) {
     try {
-      const date = new Date(transactionDate);
+      // Parse the naive datetime string directly to avoid UTC interpretation
+      // Gemini returns local time as "YYYY-MM-DDTHH:mm:ss"
+      const match = transactionDate.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if (!match) {
+        return {};
+      }
 
-      // Check if valid date
+      const [, yearStr, monthStr, dayStr, hourStr] = match;
+      const year = parseInt(yearStr);
+      const month = parseInt(monthStr) - 1; // 0-indexed
+      const day = parseInt(dayStr);
+      const hour = parseInt(hourStr);
+
+      // Use Date constructor with explicit components (interpreted as local time)
+      const date = new Date(year, month, day);
       if (isNaN(date.getTime())) {
         return {};
       }
 
-      // Determine weekday vs weekend (use local time)
+      // Determine weekday vs weekend
       const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
       const category = isWeekend ? "周末" : "周中";
 
-      // Determine meal time based on hour (local time)
-      const hour = date.getHours();
+      // Determine meal time based on hour from receipt
       let subcategory: string;
 
       if (hour >= 5 && hour < 11) {
@@ -301,12 +408,29 @@ function determineCategory(
     return {}; // Will be set later based on items
   }
 
-  // Rule 7: Other merchant types → no automatic categorization
+  // Rule 7: Bookstore → "生活" / "书"
+  if (merchantType === "bookstore") {
+    return {
+      category: "生活",
+      subcategory: "书",
+    };
+  }
+
+  // Rule 8: Music Store → "生活" / "学习"
+  if (merchantType === "music_store") {
+    return {
+      category: "生活",
+      subcategory: "学习",
+    };
+  }
+
+  // Rule 9: Other merchant types → no automatic categorization
   return {};
 }
 
 async function standardizeItemNames(
-  items: { name: string; amount: number; quantity?: number; unit?: string }[]
+  items: { name: string; amount: number; quantity?: number; unit?: string }[],
+  merchantType?: string
 ): Promise<
   {
     name: string;
@@ -338,7 +462,7 @@ async function standardizeItemNames(
       },
     });
 
-    const prompt = `${ITEM_STANDARDIZATION_PROMPT}
+    const prompt = `${buildStandardizationPrompt(merchantType || "supermarket")}
 
 Input:
 ${JSON.stringify({
@@ -427,7 +551,7 @@ export const POST = withAuth(async (request, user) => {
         };
       });
 
-      receiptData.lineItems = await standardizeItemNames(itemsWithUnitPrice);
+      receiptData.lineItems = await standardizeItemNames(itemsWithUnitPrice, receiptData.merchantType);
     }
 
     // Add tax as special line item if present
