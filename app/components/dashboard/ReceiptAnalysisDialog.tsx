@@ -133,7 +133,7 @@ const ReceiptAnalysisDialog = ({
             {result.date && (
               <p className="text-blue-800 dark:text-blue-200">
                 <span className="font-medium">Date:</span>{" "}
-                {new Date(result.date).toLocaleString()}
+                {result.date.replace("T", " ")}
               </p>
             )}
             {result.detectedCurrency && (

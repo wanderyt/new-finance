@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-04-16
+
+### Added
+- **Context-Aware Item Name Standardization**: Receipt item names are now standardized differently based on merchant type
+  - **Supermarket**: Generalizes to category names (e.g., "Large Jumbo Eggs" → "鸡蛋")
+  - **Restaurant**: Preserves specific dish names (e.g., "Kung Pao Chicken" → "宫保鸡丁")
+  - **Bookstore**: Preserves book titles with Chinese translations when available
+  - **Music Store**: Preserves specific product names (e.g., RCM exam books)
+  - **Clothing Store**: Generalizes to clothing category names
+  - Replaced static `ITEM_STANDARDIZATION_PROMPT` with `buildStandardizationPrompt(merchantType)`
+
+- **New Merchant Types**: Added `bookstore` and `music_store` to receipt analysis detection
+  - Bookstore auto-categorizes to "生活"/"书"
+  - Music store auto-categorizes to "生活"/"学习"
+
+### Fixed
+- **Receipt Datetime UTC Bug**: Fixed timezone shift where receipt times were incorrectly interpreted as UTC instead of local time
+  - Form date input now uses raw Gemini datetime string directly
+  - Dialog display avoids `new Date()` UTC interpretation
+  - Category determination parses datetime components directly instead of through Date constructor
+
 ## [1.15.0] - 2026-04-16
 
 ### Added
