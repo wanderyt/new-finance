@@ -19,6 +19,7 @@ export interface LineItem {
   category?: string;
   subcategory?: string;
   notes?: string;
+  brandName?: string;
 }
 
 interface LineItemEditorProps {
@@ -327,6 +328,12 @@ const LineItemEditor = ({
             placeholder="人员"
           />
         </div>
+
+        <Input
+          value={localItem.brandName || ""}
+          onChange={(e) => handleChange("brandName", e.target.value || undefined)}
+          placeholder="品牌 (e.g. Kirkland)"
+        />
 
         {/* Notes - show original name if available */}
         <div className="space-y-1">

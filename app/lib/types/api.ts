@@ -64,6 +64,7 @@ export interface FinLineItem {
   category?: string;
   subcategory?: string;
   notes?: string;
+  brandName?: string;
 }
 
 // Create Fin Request
@@ -267,6 +268,7 @@ export interface FinItemWithParent {
   category: string | null;
   subcategory: string | null;
   notes: string | null;
+  brandName: string | null;
 
   // From parent fin record
   parentFinId: string;

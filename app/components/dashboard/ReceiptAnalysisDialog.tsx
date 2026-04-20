@@ -12,6 +12,7 @@ export interface AnalyzedLineItem {
   unit?: string;
   unitPriceCents?: number; // Price per unit in cents (from AI or calculated)
   notes?: string; // Original name from receipt (before standardization)
+  brandName?: string;
 }
 
 interface ReceiptAnalysisResult {
@@ -52,6 +53,7 @@ const ReceiptAnalysisDialog = ({
       unit: item.unit,
       unitPriceCents: item.unitPriceCents,
       notes: item.notes, // Preserve original name from standardization
+      brandName: item.brandName,
       personId: defaultPerson?.personId,
     })) || [];
 
@@ -68,6 +70,7 @@ const ReceiptAnalysisDialog = ({
           unit: item.unit,
           unitPriceCents: item.unitPriceCents,
           notes: item.notes, // Preserve original name from standardization
+          brandName: item.brandName,
           personId: defaultPerson?.personId,
         }))
       );

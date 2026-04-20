@@ -184,6 +184,7 @@ export const PATCH = withAuth(async (request, user) => {
                 category: item.category || null,
                 subcategory: item.subcategory || null,
                 notes: item.notes || null,
+                brandName: item.brandName || null,
               }))
             );
           }
@@ -218,6 +219,7 @@ export const PATCH = withAuth(async (request, user) => {
               category: item.category || null,
               subcategory: item.subcategory || null,
               notes: item.notes || null,
+              brandName: item.brandName || null,
             }))
           );
         }

@@ -30,6 +30,7 @@ Analyze this receipt image and extract the following information in JSON format:
   "lineItems": [
     {
       "name": "Item name/description",
+      "brandName": "Brand name for packaged goods (e.g. Tide, Kirkland, PC Blue Menu) or null",
       "unitPrice": 625,    // Price per unit in cents (if visible on receipt)
       "quantity": 2,       // Quantity purchased
       "unit": "pcs",       // Unit of measurement
@@ -55,6 +56,13 @@ Rules:
   - "bookstore": bookstores, book retailers (e.g., Indigo, Barnes & Noble, 新华书店)
   - "music_store": music instrument stores, music shops (e.g., Long & McQuade, Guitar Center)
   - "other": any other type of merchant
+- Extract brandName for packaged grocery products — be aggressive, most packaged goods have a brand:
+  - If the brand name appears in the product description, extract it (e.g., "Kingsford Corn Starch" → "Kingsford", "Haday Soybean Paste" → "Haday", "Sunrise Medium Firm Tofu" → "Sunrise", "Oikos Pro 0%" → "Oikos", "Cheesestrings" → "Cheesestrings", "Carbonaut" → "Carbonaut")
+  - For Costco/wholesale receipts: items prefixed with "KS" are "Kirkland Signature" (e.g., "KS WATR500" → brandName: "Kirkland Signature"). For other Costco items where no brand is visible but the item is clearly a packaged good (dairy, eggs, meat, frozen food, dry goods, snacks, beverages, oils, nuts), default brandName to "Kirkland Signature"
+  - Packaged goods that always have a brand: dairy (milk, yogurt, cheese, butter), eggs, packaged snacks, frozen foods, beverages, cooking oils, canned/jarred goods, condiments, sauces, cleaning products, personal care — extract the brand even if abbreviated in the receipt
+- Set brandName to null only for: fresh produce sold loose (vegetables, fruits, herbs priced by weight), store-prepared deli/bakery items made in-store (e.g., rotisserie chicken, sushi trays, fresh buns), and bulk/loose items
+- Set brandName to null for all restaurant dishes
+- Set brandName to null for all non-supermarket merchant types
 - If receipt shows unit price (e.g., "$3.99/kg", "$6.25 each"), extract it as unitPrice in cents
 - If only total amount is visible (no unit price shown), set unitPrice to null (will be calculated as amount/quantity)
 - Verify: unitPrice * quantity ≈ amount (allow small rounding differences)
@@ -162,13 +170,22 @@ Rules:
 - Keep names short and concise (2-4 characters preferred)
 - Use generic category names — strip brands, sizes, organic labels
 - e.g., "鸡蛋" not "有机鸡蛋", "牛奶" not "全脂牛奶"
+- EXCEPTION — Bread & baked goods: preserve the specific type/filling/flavor, do NOT collapse to "面包". These are distinct products worth tracking separately.
+- EXCEPTION — Meat: preserve the specific cut or type (e.g., "猪肩肉" not "猪肉", "鸡腿" not "鸡肉")
 
 Examples:
 - "Large Jumbo Eggs 18ct" → "鸡蛋"
 - "Organic Whole Milk 2L" → "牛奶"
 - "Honey Crisp Apples 3lb" → "苹果"
 - "Tide Laundry Detergent" → "洗衣液"
-- "Kirkland Toilet Paper 30pk" → "卫生纸"`;
+- "Kirkland Toilet Paper 30pk" → "卫生纸"
+- "Raisin Plain Loaf" → "提子面包"  (NOT "面包")
+- "Fruit Basket Buns" → "水果餐包"  (NOT "面包")
+- "Dried Fish Seaweed Bun" → "鱼松海苔包"  (NOT "面包")
+- "Pork Floss Bread" → "肉松包"  (NOT "面包")
+- "Croissant" → "牛角包"  (NOT "面包")
+- "Pork Shoulder Butt Boneless" → "猪肩肉"  (NOT "猪肉")
+- "Ground Pork Lean" → "猪绞肉"  (NOT "猪肉")`;
       break;
   }
 
