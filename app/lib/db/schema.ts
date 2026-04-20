@@ -239,6 +239,7 @@ export const finItems = sqliteTable(
     category: text("category"),
     subcategory: text("subcategory"),
     notes: text("notes"),
+    brandName: text("brand_name"),
   },
   (table) => ({
     finIdx: index("idx_items_fin").on(table.finId),

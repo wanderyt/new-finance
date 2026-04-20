@@ -77,3 +77,72 @@ Before merging a PR, ensure:
 4. Bump the version using the appropriate `yarn version:*` script
 5. Commit the changelog and version bump
 6. Create/merge the PR
+
+## Design Docs
+
+**Before implementing any feature or making architectural decisions, read the relevant design doc(s) below.** They capture decisions, constraints, and implementation details that are not obvious from the code alone.
+
+### Core Architecture
+- [Authentication Flow](docs/authentication-flow.md) — session/cookie auth design, login flow
+- [Cookie Auth in Docker](docs/cookie-authentication-docker.md) — how auth cookies behave in Docker environments
+- [Redux Implementation Plan](docs/redux-implementation-plan.md) — state management structure and patterns
+- [Database Setup](docs/database-setup.md) — DB schema, connection, and setup
+
+### Features
+- [Receipt Analysis AI](docs/receipt-analysis-ai-implementation.md) — AI-powered receipt parsing implementation
+- [Item Name Standardization](docs/item-name-standardization-feature.md) — context-aware item name normalization logic
+- [Item Price Trend](docs/item-price-trend-feature.md) — price trend tracking per item
+- [Item Unit Price](docs/item-unit-price-feature.md) — unit price calculation and display
+- [Fin Editor](docs/fin-editor-feature.md) — financial record editor UX and logic
+- [Fin Auto-Populate](docs/fin-auto-populate-feature.md) — auto-fill behavior for fin records
+- [History Search](docs/history-search-feature.md) — search/filter design for transaction history
+- [Charts & Analytics](docs/charts-analytics-feature.md) — charting data model and rendering approach
+- [Pocket Money](docs/pocket-money-feature.md) — pocket money tracking feature design
+
+### API & Data
+- [Fin Create/Update API](docs/api-implementation-fin-create-update.md) — REST API contracts for financial records
+- [Fin Records Migration](docs/migration-fin-records.md) — data migration strategy and scripts
+
+### UI & Branding
+- [Dashboard UI Design](docs/dashboard-ui-design.md) — layout, component hierarchy, and UX patterns
+- [Branding](docs/branding.md) — colors, typography, logo usage
+
+### Infrastructure & Deployment
+- [Docker Deployment](docs/docker-deployment.md) — containerization and deployment setup
+- [Docker Hub Deployment](docs/docker-hub-deployment.md) — publishing images to Docker Hub
+- [Docker Startup Fixes](docs/docker-startup-fixes.md) — known startup issues and workarounds
+- [Synology Docker Permissions Fix](docs/synology-docker-permissions-fix.md) — NAS-specific permission issues
+- [Performance Testing](docs/PERFORMANCE_TESTING.md) — load testing approach and benchmarks
+
+## Keeping Design Docs Up to Date
+
+**Any time you change a feature, you must also update its design doc.** If the relevant doc doesn't exist yet, create one under `docs/`.
+
+### When to update an existing doc
+- A requirement or behavior changes (e.g. new edge case, revised logic, changed API contract)
+- A UX or data model decision is revised
+- A known limitation or workaround is added or resolved
+
+Update only the sections that changed — don't rewrite the whole doc. Reflect the current state accurately so future agents can rely on it.
+
+### When to create a new doc
+- The work introduces a brand new feature with non-obvious design decisions
+- Name the file `docs/<feature-name>-feature.md` (or `docs/<topic>.md` for infrastructure/API topics)
+- Add a one-line entry for it in the Design Docs section of this file
+
+### Doc structure (for new docs)
+```markdown
+# <Feature Name>
+
+## Overview
+What this feature does and why it exists.
+
+## Design Decisions
+Key choices made and the reasoning behind them.
+
+## Implementation Details
+How it works: data flow, key files, edge cases.
+
+## Known Limitations / Future Work
+Anything deferred or worth revisiting.
+```

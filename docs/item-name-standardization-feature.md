@@ -77,12 +77,22 @@ Replaced the static `ITEM_STANDARDIZATION_PROMPT` constant with a function that 
 **Merchant-Type-Specific Strategies**:
 
 #### Supermarket (default)
-Generalize to category-level names. Strip brands, sizes, organic labels.
+Generalize to category-level names. Strip brands, sizes, organic labels. Two exceptions preserve specificity:
+
+- **Bread & baked goods**: keep the filling/flavor type — do NOT collapse to "面包"
+- **Meat**: keep the cut or specific type — do NOT collapse to "猪肉" / "鸡肉"
+
+Examples:
 - "Large Jumbo Eggs 18ct" → "鸡蛋"
 - "Organic Whole Milk 2L" → "牛奶"
 - "Honey Crisp Apples 3lb" → "苹果"
 - "Tide Laundry Detergent" → "洗衣液"
 - "Kirkland Toilet Paper 30pk" → "卫生纸"
+- "Raisin Plain Loaf" → "提子面包" (NOT "面包")
+- "Pork Floss Bread" → "肉松包" (NOT "面包")
+- "Fruit Basket Buns" → "水果餐包" (NOT "面包")
+- "Pork Shoulder Butt Boneless" → "猪肩肉" (NOT "猪肉")
+- "Ground Pork Lean" → "猪绞肉" (NOT "猪肉")
 
 #### Restaurant
 Preserve specific dish names. Translate to proper Chinese dish names, not generic ingredients.
