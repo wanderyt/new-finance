@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.17.0] - 2026-04-19
+
+### Added
+- **Brand Name Extraction for Grocery Items**: AI receipt analysis now extracts `brandName` per line item for supermarket receipts
+  - Costco: items prefixed with `KS` → "Kirkland Signature"; unbranded packaged goods (dairy, eggs, nuts, frozen, dry goods) default to "Kirkland Signature"
+  - Other supermarkets (T&T, etc.): brand extracted from inline product descriptions (e.g., "Kingsford", "Haday", "Sunrise")
+  - Fresh produce, store-prepared deli/bakery items, and restaurant dishes → no brand
+- **Brand Name UI Field**: New 品牌 input field added to the product item panel (LineItemEditor) for manual editing
+- **Database Migration**: Added `brand_name` column to `fin_items` table (`drizzle/0003_add_brand_name_to_fin_items.sql`)
+
+### Changed
+- **Bread & Baked Goods Standardization**: Supermarket items now preserve specific bread type/filling instead of collapsing to generic "面包"
+  - "Raisin Plain Loaf" → "提子面包", "Pork Floss Bread" → "肉松包", "Fruit Basket Buns" → "水果餐包"
+- **Meat Standardization**: Preserves cut specificity — "Pork Shoulder Butt" → "猪肩肉" (not "猪肉"), "Ground Pork Lean" → "猪绞肉"
+- **Design Docs**: Added full design docs index to `CLAUDE.md` with maintenance guidelines; updated `receipt-analysis-ai-implementation.md` and `item-name-standardization-feature.md`
+
+### Fixed
+- **Brand Name in Recurring Scheduled Inserts**: `brandName` was missing from recurring transaction line item inserts in the create route
+- **Brand Name in Single-Occurrence Update**: `brandName` was missing from the single-occurrence update path in the update route
+
 ## [1.16.0] - 2026-04-16
 
 ### Added
