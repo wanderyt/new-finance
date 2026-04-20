@@ -559,3 +559,50 @@ This keeps costs minimal while providing excellent UX.
 - **Documentation:** 30 minutes
 
 **Total:** ~4-5 hours for complete, production-ready implementation
+
+---
+
+## Brand Name Extraction (Added 2026-04-19)
+
+### Overview
+
+For grocery/supermarket receipts, the AI now extracts a `brandName` field per line item alongside the standardized item name. This allows tracking which brand of a product was purchased (e.g., "Tide" for laundry detergent, "Kirkland" for Costco house-brand products).
+
+### Rules
+
+| Item type | `brandName` |
+|-----------|-------------|
+| Packaged good with brand in description (e.g., "Kingsford Corn Starch", "Oikos Pro 0%") | Brand extracted (e.g., `"Kingsford"`, `"Oikos"`) |
+| Costco item prefixed with "KS" (e.g., "KS WATR500") | `"Kirkland Signature"` |
+| Costco packaged good without visible brand (dairy, eggs, meat, nuts, oils, frozen, dry goods) | `"Kirkland Signature"` (default) |
+| Fresh produce sold loose / by weight (vegetables, fruits, herbs) | `null` |
+| Store-prepared deli/bakery items (rotisserie chicken, sushi trays, fresh buns) | `null` |
+| Restaurant dishes (any merchant type) | `null` |
+| Non-supermarket merchant types (restaurant, parking, gas, clothing, etc.) | `null` |
+
+### Implementation Details
+
+- `brandName` is added to the `RECEIPT_ANALYSIS_PROMPT` lineItems schema in `app/api/receipts/analyze/route.ts`
+- The standardization step (`standardizeItemNames`) uses `...item` spread, so `brandName` is automatically preserved without any changes to that function
+- `brandName` flows through: AI response → `AnalyzedLineItem` → `LineItem` → DB insert (`fin_items.brand_name`)
+- The UI renders a brand name input field (品牌) in `LineItemEditor`, below the person selector and above the notes field
+
+### Schema Change
+
+Migration: `drizzle/0003_add_brand_name_to_fin_items.sql`
+
+```sql
+ALTER TABLE fin_items ADD COLUMN brand_name TEXT;
+```
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `app/api/receipts/analyze/route.ts` | Added `brandName` to prompt schema + extraction rules |
+| `app/lib/db/schema.ts` | Added `brandName: text("brand_name")` to `finItems` |
+| `app/lib/types/api.ts` | Added `brandName?` to `FinLineItem` and `FinItemWithParent` |
+| `app/components/dashboard/LineItemEditor.tsx` | Added `brandName?` to `LineItem` interface + UI input field |
+| `app/components/dashboard/ReceiptAnalysisDialog.tsx` | Added `brandName?` to `AnalyzedLineItem`, passes through in item mapping |
+| `app/api/fin/create/route.ts` | Persists `brandName` on insert |
+| `app/api/fin/update/route.ts` | Persists `brandName` on update/re-insert |
