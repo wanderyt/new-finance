@@ -1266,13 +1266,17 @@ export const selectHistoryGroupedByMonth = createSelector(
     const monthMap = new Map<string, Map<string, FinData[]>>();
 
     fins.forEach((fin) => {
-      const date = fin.isScheduled && fin.scheduledOn ? fin.scheduledOn : fin.date;
-      // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" without timezone
-      // Convert to ISO 8601 with Z to parse as UTC
-      const isoDate = date.includes('T') ? date : date.replace(' ', 'T') + 'Z';
-      const utcDate = new Date(isoDate);
-      const monthKey = `${utcDate.getUTCFullYear()}-${String(utcDate.getUTCMonth() + 1).padStart(2, "0")}`;
-      const dayKey = `${utcDate.getUTCFullYear()}-${String(utcDate.getUTCMonth() + 1).padStart(2, "0")}-${String(utcDate.getUTCDate()).padStart(2, "0")}`;
+      const dateStr = fin.isScheduled && fin.scheduledOn ? fin.scheduledOn : fin.date;
+      // Dates are stored as UTC ISO strings. Parse and use local time components
+      // so records group by the calendar date the user sees, not the UTC date.
+      const normalized = dateStr.includes("T") ? dateStr : dateStr.replace(" ", "T") + "Z";
+      const date = new Date(normalized);
+      if (isNaN(date.getTime())) return;
+      const year = String(date.getFullYear());
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const monthKey = `${year}-${month}`;
+      const dayKey = `${year}-${month}-${day}`;
 
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, new Map());
@@ -1289,17 +1293,20 @@ export const selectHistoryGroupedByMonth = createSelector(
     return Array.from(monthMap.entries())
       .map(([monthKey, dayMap]) => {
         const days: DayGroup[] = Array.from(dayMap.entries())
-          .map(([dayKey, fins]) => ({
-            dayKey,
-            date: new Date(dayKey),
-            fins,
-            totalCents: fins.reduce(
-              (sum, fin) =>
-                sum +
-                (fin.type === "expense" ? fin.amountCadCents : -fin.amountCadCents),
-              0
-            ),
-          }))
+          .map(([dayKey, fins]) => {
+            const [dy, dm, dd] = dayKey.split("-").map(Number);
+            return {
+              dayKey,
+              date: new Date(dy, dm - 1, dd),
+              fins,
+              totalCents: fins.reduce(
+                (sum, fin) =>
+                  sum +
+                  (fin.type === "expense" ? fin.amountCadCents : -fin.amountCadCents),
+                0
+              ),
+            };
+          })
           .sort((a, b) => b.dayKey.localeCompare(a.dayKey));
 
         return {

@@ -298,10 +298,12 @@ export const selectPocketMoneyGroupedByMonth = createSelector(
     >();
 
     transactions.forEach((transaction) => {
-      const date = new Date(transaction.transaction_date);
-      // Use UTC methods to avoid timezone issues
-      const monthKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
-      const dayKey = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+      const utcDate = new Date(transaction.transaction_date);
+      const y = utcDate.getFullYear();
+      const m = utcDate.getMonth() + 1;
+      const d = utcDate.getDate();
+      const monthKey = `${y}-${String(m).padStart(2, "0")}`;
+      const dayKey = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
       if (!monthMap.has(monthKey)) {
         monthMap.set(monthKey, new Map());
@@ -310,7 +312,7 @@ export const selectPocketMoneyGroupedByMonth = createSelector(
       const dayMap = monthMap.get(monthKey)!;
       if (!dayMap.has(dayKey)) {
         dayMap.set(dayKey, {
-          date,
+          date: new Date(y, m - 1, d),
           transactions: [],
           totalCents: 0,
         });
