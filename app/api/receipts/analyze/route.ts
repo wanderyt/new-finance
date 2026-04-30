@@ -60,9 +60,12 @@ Rules:
   - If the brand name appears in the product description, extract it (e.g., "Kingsford Corn Starch" → "Kingsford", "Haday Soybean Paste" → "Haday", "Sunrise Medium Firm Tofu" → "Sunrise", "Oikos Pro 0%" → "Oikos", "Cheesestrings" → "Cheesestrings", "Carbonaut" → "Carbonaut")
   - For Costco/wholesale receipts: items prefixed with "KS" are "Kirkland Signature" (e.g., "KS WATR500" → brandName: "Kirkland Signature"). For other Costco items where no brand is visible but the item is clearly a packaged good (dairy, eggs, meat, frozen food, dry goods, snacks, beverages, oils, nuts), default brandName to "Kirkland Signature"
   - Packaged goods that always have a brand: dairy (milk, yogurt, cheese, butter), eggs, packaged snacks, frozen foods, beverages, cooking oils, canned/jarred goods, condiments, sauces, cleaning products, personal care — extract the brand even if abbreviated in the receipt
-- Set brandName to null only for: fresh produce sold loose (vegetables, fruits, herbs priced by weight), store-prepared deli/bakery items made in-store (e.g., rotisserie chicken, sushi trays, fresh buns), and bulk/loose items
-- Set brandName to null for all restaurant dishes
-- Set brandName to null for all non-supermarket merchant types
+- For SUPERMARKET/GROCERY fresh produce (vegetables, fruits, herbs): extract brand or premium variety name if it appears in the product name (e.g., "晴王葡萄" → brandName: "晴王"); otherwise set to null
+- For SUPERMARKET/GROCERY store-prepared/cooked food made in-store (rotisserie chicken, sushi trays, deli items, dim sum, ready-to-eat meals, cooked dishes): set brandName to the supermarket/merchant name (e.g., "T&T", "Costco")
+- For SUPERMARKET/GROCERY bulk/loose items with no identifiable brand: set brandName to null
+- For RESTAURANT receipts: set brandName to the restaurant/merchant name for every dish (e.g., if merchant is "Din Tai Fung", all dishes get brandName: "Din Tai Fung")
+- For GAS STATION and PARKING receipts: set brandName to the station or location name. If the payment was processed via a mobile app (e.g., SpotHero, PayByPhone, ParkWhiz), use the app name as brandName
+- For all other merchant types (clothing, utility, bookstore, music_store, other): set brandName to null
 - If receipt shows unit price (e.g., "$3.99/kg", "$6.25 each"), extract it as unitPrice in cents
 - If only total amount is visible (no unit price shown), set unitPrice to null (will be calculated as amount/quantity)
 - Verify: unitPrice * quantity ≈ amount (allow small rounding differences)
@@ -91,12 +94,13 @@ General rules:
 Context: This is a RESTAURANT receipt. Preserve specific dish names — they are important for expense tracking.
 
 Rules:
-- Translate dish names to their proper Chinese dish names (NOT generic ingredient names)
+- Prefer Chinese name: if the dish already has a Chinese name on the receipt, use that name directly
+- If only English name, translate to the proper Chinese dish name (NOT generic ingredient names)
 - Keep the dish identity: "Kung Pao Chicken" → "宫保鸡丁" (NOT "鸡")
-- For Chinese restaurant items already in Chinese, keep dish names as-is
 - For beverages: use the specific drink name (e.g., "拿铁" not "咖啡", "可乐" not "饮料")
 - For set meals / combos, keep the combo name
 - Strip portion sizes unless meaningful (e.g., "大份" is useful, "regular" is not)
+- If unsure of the correct Chinese dish name, keep the original English name
 
 Examples:
 - "Kung Pao Chicken" → "宫保鸡丁"
@@ -104,7 +108,8 @@ Examples:
 - "Iced Caramel Latte Grande" → "焦糖拿铁"
 - "Fish & Chips" → "炸鱼薯条"
 - "Spring Roll (2pc)" → "春卷"
-- "宫保鸡丁" → "宫保鸡丁"`;
+- "宫保鸡丁" → "宫保鸡丁" (kept as-is)
+- "葱爆羊肉" → "葱爆羊肉" (kept as-is)`;
       break;
 
     case "bookstore":
@@ -159,6 +164,41 @@ Examples:
 - "Levi's 501 Original Jeans" → "牛仔裤"
 - "Canada Goose Parka" → "羽绒服"
 - "Uniqlo Cotton T-Shirt" → "T恤"`;
+      break;
+
+    case "parking":
+      contextRules = `
+Context: This is a PARKING receipt.
+
+Rules:
+- Simplify to "停车费" for regular paid parking
+- For monthly/permit parking, use "月度停车"
+- For parking fines/violations, use "停车罚款"
+- Strip duration, zone numbers, time details, and location from the item name (location is tracked as brand)
+
+Examples:
+- "Underground Parking 2hrs" → "停车费"
+- "Hourly Parking Zone A" → "停车费"
+- "Monthly Permit Parking" → "月度停车"
+- "Parking Violation" → "停车罚款"`;
+      break;
+
+    case "gas_station":
+      contextRules = `
+Context: This is a GAS STATION receipt.
+
+Rules:
+- For fuel: keep the grade name only (Regular, Premium, Diesel) — strip "Unleaded", octane numbers, and volume
+- For car wash: keep the tier in Chinese (普通洗车, 高档洗车)
+- For convenience store items: use generic category names
+
+Examples:
+- "Regular Unleaded 87" → "Regular"
+- "Premium Unleaded 91" → "Premium"
+- "Diesel" → "柴油"
+- "Car Wash Basic" → "普通洗车"
+- "Car Wash Premium" → "高档洗车"
+- "Energy Drink" → "饮料"`;
       break;
 
     case "supermarket":
