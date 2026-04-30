@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.0] - 2026-04-30
+
+### Added
+- **Parking & Gas Station Receipt Context**: Receipt analysis now has dedicated item name standardization for parking (停车费, 月度停车, 停车罚款) and gas station (fuel grade, 普通洗车/高档洗车) merchant types
+- **Expanded Brand Name Rules**: Brand name extraction now covers restaurant dishes (set to merchant name), parking/gas station receipts (station or app name), and supermarket fresh produce (extracts premium variety names like 晴王)
+- **Store-Prepared Food Brand**: Supermarket in-store cooked/prepared items (rotisserie chicken, sushi trays, deli) now use the supermarket name as brand
+
+### Changed
+- **Restaurant Name Standardization**: Existing Chinese dish names on receipts are kept as-is without re-translation; falls back to original English name if correct Chinese translation is uncertain
+
+### Fixed
+- **History List Date Grouping**: Transactions near midnight were appearing in the wrong day group due to UTC vs local timezone mismatch; grouping now uses the browser's local calendar date
+
 ## [1.17.0] - 2026-04-19
 
 ### Added
