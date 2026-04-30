@@ -11,11 +11,8 @@ interface DayGroupProps {
 export default function DayGroup({ dayGroup, onFinClick, renderTile }: DayGroupProps) {
   const { date, fins, totalCents } = dayGroup;
 
-  const dayNumber = date.getUTCDate();
-  const weekday = new Intl.DateTimeFormat("zh-CN", {
-    weekday: "short",
-    timeZone: "UTC",
-  }).format(date);
+  const dayNumber = date.getDate();
+  const weekday = new Intl.DateTimeFormat("zh-CN", { weekday: "short" }).format(date);
 
   const formattedTotal = (totalCents / 100).toFixed(2);
 
