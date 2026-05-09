@@ -42,6 +42,7 @@ Dashboard → Charts Tab → Select Period → View Visualizations → [Optional
 4. **Compare Monthly Trends (Line Chart)**
    - System defaults to current month vs previous month comparison
    - User selects two different months from dropdowns
+   - Dropdowns only list months up to and including the current month — future months are filtered out via `selectAvailableMonthsForComparison`, so a stray future-dated fin record can't surface as a selectable option
    - Chart displays cumulative expense progression throughout each month
    - Hover over lines to see daily accumulated totals
 
@@ -105,7 +106,8 @@ export interface FinState {
 - `selectCategoryChartData` - Get aggregated category/subcategory data for bar chart
 - `selectMonthComparisonData` - Get daily accumulated totals for two months
 - `selectCategoryExpenseList` - Get transactions for selected category
-- `selectAvailableMonths` - Extract unique months from transactions
+- `selectAvailableMonths` - Extract unique months from transactions (used by `MonthYearFilter` for the category, person, and price-trend views)
+- `selectAvailableMonthsForComparison` - Same as `selectAvailableMonths`, but excludes any month later than the current month. Used by the **Month Comparison** view so users cannot pick a future month even if a (mis-dated) fin record exists there. Compared as `"YYYY-MM"` strings against the current UTC year/month, so the boundary moves automatically as the calendar advances.
 - `selectAvailableYears` - Extract unique years from transactions
 - `selectChartsDrilldownCategory` - Get current drill-down category (if any)
 - `selectChartsComparisonMonths` - Get selected months for comparison

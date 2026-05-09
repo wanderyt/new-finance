@@ -9,7 +9,7 @@ import {
   selectMonthComparisonData,
   selectChartsComparisonMonth1,
   selectChartsComparisonMonth2,
-  selectAvailableMonths,
+  selectAvailableMonthsForComparison,
   selectChartsFilteredFins,
   setChartsDrilldownCategory,
   setChartsCategoryForList,
@@ -47,7 +47,7 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
   const comparisonData = useAppSelector(selectMonthComparisonData);
   const month1 = useAppSelector(selectChartsComparisonMonth1);
   const month2 = useAppSelector(selectChartsComparisonMonth2);
-  const availableMonths = useAppSelector(selectAvailableMonths);
+  const availableMonths = useAppSelector(selectAvailableMonthsForComparison);
   const filteredFins = useAppSelector(selectChartsFilteredFins);
 
   // Handlers

@@ -1401,6 +1401,18 @@ export const selectAvailableMonths = createSelector([selectFins], (fins): string
   return Array.from(months).sort().reverse();
 });
 
+// Get available months for month-comparison: only current month and earlier.
+// Future months are excluded even if fin records exist on those dates, since
+// "comparing accumulation up to today" against a future month is not meaningful.
+export const selectAvailableMonthsForComparison = createSelector(
+  [selectAvailableMonths],
+  (months): string[] => {
+    const now = new Date();
+    const currentMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+    return months.filter((month) => month <= currentMonth);
+  }
+);
+
 // Get available years from fins data
 export const selectAvailableYears = createSelector([selectFins], (fins): string[] => {
   const years = new Set<string>();
