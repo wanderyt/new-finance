@@ -188,29 +188,7 @@ const FinEditorForm = ({
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.data.items) {
-            // Convert API items to LineItem format
-            const items: LineItem[] = data.data.items.map((item: {
-              name: string;
-              originalAmountCents: number;
-              qty?: number;
-              unit?: string;
-              unitPriceCents?: number;
-              personId?: number;
-              category?: string;
-              subcategory?: string;
-              notes?: string;
-            }) => ({
-              name: item.name,
-              originalAmountCents: item.originalAmountCents,
-              qty: item.qty,
-              unit: item.unit,
-              unitPriceCents: item.unitPriceCents,
-              personId: item.personId,
-              category: item.category,
-              subcategory: item.subcategory,
-              notes: item.notes,
-            }));
-            setLineItems(items);
+            setLineItems(data.data.items as LineItem[]);
           }
         })
         .catch(console.error);
