@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.1] - 2026-05-17
+
+### Fixed
+- **Brand Name Not Shown When Editing Fin Record**: The fin editor was missing `brandName` in its API→LineItem mapping, so brand names saved on existing fin records appeared empty in the editor; collapsed the identity map into a direct cast to prevent the same field-drift bug from recurring
+
 ## [1.18.0] - 2026-04-30
 
 ### Added
