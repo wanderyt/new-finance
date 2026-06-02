@@ -32,7 +32,7 @@ When a PR is merged into `main`, GitHub creates a push to `main`, and the workfl
 
 For the current `package.json`, that means:
 
-- `wanderyt/new-finance:1.18.1`
+- `wanderyt/new-finance:1.18.2`
 - `wanderyt/new-finance:latest`
 
 #### Required GitHub Secret
