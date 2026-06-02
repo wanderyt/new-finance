@@ -11,13 +11,44 @@ This guide shows how to deploy new-finance to your NAS using Docker Hub (no buil
 
 ---
 
-## One-Time Setup: Push to Docker Hub
+## One-Time Setup: Docker Hub Publishing
 
 ### Prerequisites
 - Docker Hub account (free): https://hub.docker.com/signup
-- Docker installed on your local machine
+- GitHub repository admin access to add Actions secrets
+- Docker installed on your local machine (manual fallback only)
 
-### Step 1: Build and Push Image
+### Automated Publishing with GitHub Actions (Recommended)
+
+The repository includes `.github/workflows/docker-publish.yml`.
+
+When a PR is merged into `main`, GitHub creates a push to `main`, and the workflow automatically:
+
+1. Reads the actual version from `package.json`
+2. Builds the Docker image from `Dockerfile`
+3. Pushes both tags to Docker Hub:
+   - `wanderyt/new-finance:<package-json-version>`
+   - `wanderyt/new-finance:latest`
+
+For the current `package.json`, that means:
+
+- `wanderyt/new-finance:1.18.2`
+- `wanderyt/new-finance:latest`
+
+#### Required GitHub Secret
+
+Create a Docker Hub access token, then add it to the GitHub repository:
+
+1. Docker Hub: Account Settings -> Security -> New Access Token
+2. GitHub repository: Settings -> Secrets and variables -> Actions
+3. Add repository secret:
+   - `DOCKERHUB_TOKEN` = your Docker Hub access token
+
+The workflow logs in as Docker Hub user `wanderyt`. If the Docker Hub account or image name changes, update `IMAGE_NAME` and the Docker login username in `.github/workflows/docker-publish.yml`.
+
+Because the version tag comes directly from `package.json`, bump the version before merging release PRs. If the version is not changed, the workflow will push over the existing version tag.
+
+### Manual Build and Push Image
 
 **Using the automated script:**
 
@@ -301,7 +332,16 @@ Once deployed, access your application:
 
 When you have a new version to deploy:
 
-### Step 1: Push New Image (on local machine)
+### Step 1: Publish New Image
+
+**Recommended:** merge the PR into `main`. The GitHub Actions workflow will build and push:
+
+- `wanderyt/new-finance:<package-json-version>`
+- `wanderyt/new-finance:latest`
+
+You can also run the workflow manually from the GitHub **Actions** tab using **Build and Publish Docker Image**.
+
+**Manual fallback (on local machine):**
 
 ```bash
 # Build and push both version and latest tags
@@ -412,8 +452,12 @@ docker-compose up -d
 
 ```bash
 # === ON LOCAL MACHINE ===
-# 1. Build and push (both version + latest tags)
+# 1. Manual fallback: build and push both version + latest tags
 ./scripts/push-to-docker-hub.sh
+
+# === ON GITHUB ACTIONS (RECOMMENDED) ===
+# Merge PR to main, or manually run "Build and Publish Docker Image".
+# The workflow pushes wanderyt/new-finance:<package-json-version> and :latest.
 
 # === ON NAS (Option 1: GUI) ===
 # Use Container Manager/Station (see sections above)

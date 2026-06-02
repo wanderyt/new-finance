@@ -142,6 +142,23 @@ This approach uses pre-built images from Docker Hub, compatible with NAS contain
 
 ### Step 1: Push Image to Docker Hub (One-Time Setup)
 
+#### Automated publishing with GitHub Actions (recommended)
+
+The repository includes `.github/workflows/docker-publish.yml`. After a PR is merged into `main`, GitHub Actions builds the image from `Dockerfile` and pushes it to Docker Hub as:
+
+- `wanderyt/new-finance:<package-json-version>`
+- `wanderyt/new-finance:latest`
+
+Required one-time setup:
+
+1. Create a Docker Hub access token for the `wanderyt` account.
+2. Add it to the GitHub repository as an Actions secret named `DOCKERHUB_TOKEN`.
+3. Bump `package.json` before merging release PRs so the immutable version tag reflects the release.
+
+The workflow can also be run manually from the GitHub Actions tab.
+
+#### Manual publishing fallback
+
 **On your local machine:**
 
 ```bash

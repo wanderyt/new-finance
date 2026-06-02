@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.18.2] - 2026-06-02
+
+### Added
+- **Automated Docker Hub Publishing**: GitHub Actions now builds the production Docker image after merges to `main` and pushes both `wanderyt/new-finance:<package-json-version>` and `wanderyt/new-finance:latest` to Docker Hub
+
 ## [1.18.1] - 2026-05-17
 
 ### Fixed
