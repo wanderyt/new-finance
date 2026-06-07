@@ -585,7 +585,8 @@ For grocery/supermarket receipts, the AI now extracts a `brandName` field per li
 - `brandName` is added to the `RECEIPT_ANALYSIS_PROMPT` lineItems schema in `app/api/receipts/analyze/route.ts`
 - The standardization step (`standardizeItemNames`) uses `...item` spread, so `brandName` is automatically preserved without any changes to that function
 - `brandName` flows through: AI response → `AnalyzedLineItem` → `LineItem` → DB insert (`fin_items.brand_name`)
-- The UI renders a brand name input field (品牌) in `LineItemEditor`, below the person selector and above the notes field
+- The UI renders a brand name searchable dropdown (品牌) in `LineItemEditor`, below the person selector and above the notes field
+- Brand dropdown options are loaded from `/api/fin/autocomplete`, which returns distinct `fin_items.brand_name` values for the signed-in user alongside merchant/place/city suggestions
 
 ### Schema Change
 
@@ -602,7 +603,10 @@ ALTER TABLE fin_items ADD COLUMN brand_name TEXT;
 | `app/api/receipts/analyze/route.ts` | Added `brandName` to prompt schema + extraction rules |
 | `app/lib/db/schema.ts` | Added `brandName: text("brand_name")` to `finItems` |
 | `app/lib/types/api.ts` | Added `brandName?` to `FinLineItem` and `FinItemWithParent` |
-| `app/components/dashboard/LineItemEditor.tsx` | Added `brandName?` to `LineItem` interface + UI input field |
+| `app/components/dashboard/LineItemEditor.tsx` | Added `brandName?` to `LineItem` interface + searchable brand dropdown |
 | `app/components/dashboard/ReceiptAnalysisDialog.tsx` | Added `brandName?` to `AnalyzedLineItem`, passes through in item mapping |
+| `app/components/dashboard/FinEditorForm.tsx` | Loads brand autocomplete options and passes them to line item dialogs |
+| `app/components/dashboard/LineItemsDialog.tsx` | Passes brand autocomplete options to line item editors |
+| `app/api/fin/autocomplete/route.ts` | Returns distinct item brand names for searchable brand dropdowns |
 | `app/api/fin/create/route.ts` | Persists `brandName` on insert |
 | `app/api/fin/update/route.ts` | Persists `brandName` on update/re-insert |
