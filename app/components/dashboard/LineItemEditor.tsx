@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Input from "../ui-kit/Input";
 import Dropdown from "../ui-kit/Dropdown";
+import SearchableSelect from "../ui-kit/SearchableSelect";
 
 interface AutocompleteItem {
   name: string;
@@ -28,6 +29,7 @@ interface LineItemEditorProps {
   onChange: (index: number, item: LineItem) => void;
   onRemove: (index: number) => void;
   persons?: Array<{ personId: number; name: string }>;
+  brandOptions?: Array<{ value: string; label: string }>;
   className?: string;
 }
 
@@ -37,6 +39,7 @@ const LineItemEditor = ({
   onChange,
   onRemove,
   persons = [],
+  brandOptions = [],
   className = "",
 }: LineItemEditorProps) => {
   const [localItem, setLocalItem] = useState<LineItem>(item);
@@ -65,23 +68,29 @@ const LineItemEditor = ({
       return;
     }
 
-    setLocalItem(item);
-    setAmountInput((item.originalAmountCents / 100).toFixed(2));
-    setQtyInput(
-      item.qty !== undefined && item.qty !== null ? String(item.qty) : "",
-    );
-    setUnitPriceInput(
-      item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "",
-    );
+    const timer = window.setTimeout(() => {
+      setLocalItem(item);
+      setAmountInput((item.originalAmountCents / 100).toFixed(2));
+      setQtyInput(
+        item.qty !== undefined && item.qty !== null ? String(item.qty) : "",
+      );
+      setUnitPriceInput(
+        item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "",
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [item]);
 
   // Debounced autocomplete fetch — only runs while the name input is focused
   useEffect(() => {
     const name = localItem.name;
     if (!isNameFocused.current || !name || name.trim().length === 0) {
-      setAutocompleteItems([]);
-      setShowAutocomplete(false);
-      return;
+      const timer = window.setTimeout(() => {
+        setAutocompleteItems([]);
+        setShowAutocomplete(false);
+      }, 0);
+      return () => window.clearTimeout(timer);
     }
     const timer = setTimeout(async () => {
       if (!isNameFocused.current) return;
@@ -110,7 +119,10 @@ const LineItemEditor = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleChange = (field: keyof LineItem, value: any) => {
+  const handleChange = <K extends keyof LineItem>(
+    field: K,
+    value: LineItem[K],
+  ) => {
     const updated = { ...localItem, [field]: value };
     setLocalItem(updated);
     isInternalUpdate.current = true;
@@ -123,7 +135,6 @@ const LineItemEditor = ({
     setLocalItem(updated);
     isInternalUpdate.current = true;
     onChange(index, updated);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localItem, index, onChange]);
 
   const handleAmountChange = (value: string) => {
@@ -329,9 +340,12 @@ const LineItemEditor = ({
           />
         </div>
 
-        <Input
+        <SearchableSelect
           value={localItem.brandName || ""}
-          onChange={(e) => handleChange("brandName", e.target.value || undefined)}
+          onChange={(value) =>
+            handleChange("brandName", value.trim() || undefined)
+          }
+          options={brandOptions}
           placeholder="品牌 (e.g. Kirkland)"
         />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Dialog from "../ui-kit/Dialog";
 import Button from "../ui-kit/Button";
 import LineItemEditor, { LineItem } from "./LineItemEditor";
@@ -11,6 +11,7 @@ interface LineItemsDialogProps {
   onConfirm: (lineItems: LineItem[]) => void;
   onCancel: () => void;
   persons?: Array<{ personId: number; name: string; isDefault?: boolean }>;
+  brandOptions?: Array<{ value: string; label: string }>;
 }
 
 const LineItemsDialog = ({
@@ -19,15 +20,9 @@ const LineItemsDialog = ({
   onConfirm,
   onCancel,
   persons = [],
+  brandOptions = [],
 }: LineItemsDialogProps) => {
   const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems);
-
-  // Update line items when dialog opens with new data
-  useEffect(() => {
-    if (isOpen) {
-      setLineItems(initialLineItems);
-    }
-  }, [isOpen, initialLineItems]);
 
   const handleLineItemChange = (index: number, item: LineItem) => {
     const updated = [...lineItems];
@@ -79,6 +74,7 @@ const LineItemsDialog = ({
               onChange={handleLineItemChange}
               onRemove={handleLineItemRemove}
               persons={persons}
+              brandOptions={brandOptions}
             />
           ))}
         </div>

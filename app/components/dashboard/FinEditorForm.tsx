@@ -28,6 +28,7 @@ interface ReceiptAnalysisResult {
     unit?: string;
     unitPriceCents?: number;
     notes?: string;
+    brandName?: string;
   }>;
   totalAmount: number;
   detectedCurrency?: string;
@@ -119,6 +120,7 @@ const FinEditorForm = ({
 
   // Line items dialog state
   const [showLineItemsDialog, setShowLineItemsDialog] = useState(false);
+  const [lineItemsDialogKey, setLineItemsDialogKey] = useState(0);
 
   // Historical data sheet state
   const [showHistoricalDataSheet, setShowHistoricalDataSheet] = useState(false);
@@ -132,6 +134,9 @@ const FinEditorForm = ({
     Array<{ value: string; label: string }>
   >([]);
   const [cityOptions, setCityOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [brandOptions, setBrandOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
   const [persons, setPersons] = useState<
@@ -166,6 +171,12 @@ const FinEditorForm = ({
             ...pinnedCities.map((c) => ({ value: c, label: c })),
             ...otherCities.map((c: string) => ({ value: c, label: c })),
           ]);
+          setBrandOptions(
+            (data.data.brands || []).map((brand: string) => ({
+              value: brand,
+              label: brand,
+            }))
+          );
         }
       })
       .catch(console.error);
@@ -595,7 +606,10 @@ const FinEditorForm = ({
 
         <button
           type="button"
-          onClick={() => setShowLineItemsDialog(true)}
+          onClick={() => {
+            setLineItemsDialogKey((key) => key + 1);
+            setShowLineItemsDialog(true);
+          }}
           className="px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center"
           title="管理明细项"
         >
@@ -812,11 +826,13 @@ const FinEditorForm = ({
           }}
           onCancel={() => setShowAnalysisDialog(false)}
           persons={persons}
+          brandOptions={brandOptions}
         />
       )}
 
       {/* Line Items Dialog */}
       <LineItemsDialog
+        key={lineItemsDialogKey}
         isOpen={showLineItemsDialog}
         lineItems={lineItems}
         onConfirm={(items) => {
@@ -825,6 +841,7 @@ const FinEditorForm = ({
         }}
         onCancel={() => setShowLineItemsDialog(false)}
         persons={persons}
+        brandOptions={brandOptions}
       />
 
       {/* Historical Data Selection Sheet */}

@@ -32,6 +32,7 @@ interface ReceiptAnalysisDialogProps {
   onConfirm: (lineItems: LineItem[]) => void;
   onCancel: () => void;
   persons?: Array<{ personId: number; name: string; isDefault?: boolean }>;
+  brandOptions?: Array<{ value: string; label: string }>;
 }
 
 const ReceiptAnalysisDialog = ({
@@ -40,6 +41,7 @@ const ReceiptAnalysisDialog = ({
   onConfirm,
   onCancel,
   persons = [],
+  brandOptions = [],
 }: ReceiptAnalysisDialogProps) => {
   // Find default person
   const defaultPerson = persons.find((p) => p.isDefault);
@@ -196,6 +198,7 @@ const ReceiptAnalysisDialog = ({
               onChange={handleLineItemChange}
               onRemove={handleLineItemRemove}
               persons={persons}
+              brandOptions={brandOptions}
             />
           ))}
         </div>

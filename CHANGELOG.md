@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.0] - 2026-06-07
+
+### Added
+- **Searchable Brand Dropdown**: The fin item panel brand field now uses the shared searchable dropdown pattern, with suggestions populated from the user's previously saved item brand names
+
+### Changed
+- **Autocomplete Data**: `/api/fin/autocomplete` now returns distinct item brands alongside merchant, place, and city suggestions for reuse in line item dialogs
+
 ## [1.18.2] - 2026-06-02
 
 ### Added
