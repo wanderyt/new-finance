@@ -1234,6 +1234,7 @@ export const selectFilteredHistory = createSelector(
           fin.category,
           fin.subcategory,
           fin.comment,
+          fin.itemSearchText,
         ].some((field) => field?.toLowerCase().includes(keyword));
 
         if (!matches) return false;

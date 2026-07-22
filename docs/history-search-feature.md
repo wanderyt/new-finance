@@ -72,7 +72,7 @@ interface FinState {
 
     // Filters
     searchFilters: {
-      keyword?: string;           // Search in merchant/category/comment
+      keyword?: string;           // Search in merchant/category/subcategory/comment + item names/notes
       type: "all" | "expense" | "income";
       dateRange: {
         preset: "thisMonth" | "thisYear" | "custom";
@@ -240,6 +240,10 @@ User clicks MonthHeader
 - **Server-side**: Date and type filters reduce network payload
 - **Client-side**: Complex filters (keyword, multiple categories) avoid API complexity
 - **Performance**: With 100-record batches, client-side filtering is fast
+
+**Keyword scope (item-aware)**
+
+The keyword matches record-level fields (`merchant`, `category`, `subcategory`, `comment`) **and** the record's line-item names + notes. Since `FinData` has no items array, `/api/fin/list/all` attaches a per-record `itemSearchText` — a `group_concat` of each `fin_items.name` + `fin_items.notes` (correlated subquery, no N+1). `selectFilteredHistory` in `finSlice.ts` includes `fin.itemSearchText` in its keyword `.some([...])` check. Example: a record with merchant "Levi's", item "Shorts", note "Boy shorts, size XL" matches "Levi", "Short", and "Size".
 
 ## Redux Implementation
 

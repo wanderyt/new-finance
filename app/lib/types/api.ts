@@ -156,6 +156,8 @@ export interface FinData {
   scheduleRuleId: number | null;
   scheduledOn: string | null;
   receipts?: ReceiptData[];
+  // Aggregated line-item names + notes for keyword search (from /api/fin/list/all)
+  itemSearchText?: string | null;
 }
 
 // Create Fin Response

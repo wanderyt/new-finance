@@ -329,7 +329,11 @@ const FinEditorForm = ({
         setShowAnalysisDialog(true);
 
         // Auto-populate form fields if detected
-        if (result.merchant) setMerchant(result.merchant);
+        if (result.merchant) {
+          setMerchant(result.merchant);
+          // Default the record's place to the store name when the user hasn't set one
+          setPlace((prev) => prev || result.merchant);
+        }
         if (result.city) setCity(result.city);
         if (result.date) {
           // Gemini returns naive ISO datetime (no timezone) representing local time

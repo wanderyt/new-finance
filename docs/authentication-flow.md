@@ -123,6 +123,80 @@ When ready for production authentication:
 
 ---
 
+## Service (headless) authentication — `X-Api-Key`
+
+Browsers authenticate with the `fin_plat` session cookie (above). **Non-browser
+callers** — specifically the `finance-db` MCP write tools that power the Todd
+receipt-intake agent — cannot hold a session cookie, so they authenticate with a
+shared secret instead.
+
+**How it works:** `withAuth` (`app/lib/middleware/auth.ts`) checks for an
+`X-Api-Key` header. If it equals the `FINANCE_MCP_KEY` env var, the request is
+treated as the single ledger owner (`user_id = 1`) — no cookie needed. The cookie
+path is still tried as a fallback, so the browser UI is unaffected. If
+`FINANCE_MCP_KEY` is unset, this path is disabled entirely.
+
+```
+finance-db MCP write tool ──(X-Api-Key: $FINANCE_MCP_KEY)──▶ /api/receipts/analyze
+                                                              /api/fin/create
+                              withAuth: header == FINANCE_MCP_KEY?  → user_id = 1
+```
+
+### Generating the key
+
+The key is any long random string (not derived from anything). Generate once:
+
+```bash
+openssl rand -hex 24        # 48 hex chars (what we use)
+# or: openssl rand -base64 32   |   uuidgen
+```
+
+### Where it lives (the two must match)
+
+1. **`new-finance/.env.local`** — the server that validates the header:
+   ```
+   FINANCE_MCP_KEY=<the value>
+   ```
+   (`.env*` is gitignored, so the real value is never committed — that's why this
+   doc records the *procedure*, not the secret.)
+2. **finance-db MCP registration** in the OpenClaw gateway
+   (`~/.openclaw/openclaw.json`), so the tools send it. See
+   `openclaw-manager/todd-workspace/DEPLOY.md`:
+   ```json
+   "env": {
+     "FINANCE_API_URL": "http://localhost:3000",
+     "FINANCE_MCP_KEY": "<the same value>"
+   }
+   ```
+   finance-db reads it in `src/mcp/config.ts` and sends it via
+   `apiKeyOrThrow()` in `src/mcp/tools/fin-write.ts`.
+
+### Verify it works
+
+With the app running:
+
+```bash
+# Should return the created record (201), not 401.
+curl -sS -X POST http://localhost:3000/api/fin/create \
+  -H "X-Api-Key: $FINANCE_MCP_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"date":"2026-01-15T14:30:00Z","originalCurrency":"CAD","originalAmountCents":1050,"merchant":"Test"}'
+
+# Wrong/missing key → 401 Unauthorized.
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST http://localhost:3000/api/fin/create \
+  -H "Content-Type: application/json" -d '{}'
+```
+
+### Security notes
+
+- The key grants **write** access to the ledger as `user_id = 1`. Treat it as a
+  secret; keep it in gitignored `.env.local` only.
+- Rotate by changing the value in **both** places and restarting the app + gateway.
+- Because it's a bare shared secret, keep the app bound to **localhost/LAN** — do
+  not expose these endpoints to the public internet.
+
+---
+
 ## Overview
 
 This document outlines the cookie-based authentication system for the new-finance application. The system uses session cookies for persistent authentication with login and verify API routes.
@@ -923,6 +997,12 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 SESSION_SECRET=<random-secret-key-for-dev>
 SESSION_MAX_AGE=604800  # 7 days
 COOKIE_SECURE=false      # Allow HTTP in dev
+
+# Headless (MCP) auth — see "Service (headless) authentication" above.
+# Sent as X-Api-Key by the finance-db MCP write tools; resolves to user_id=1.
+# Generate with: openssl rand -hex 24   (must match the gateway MCP env)
+GOOGLE_GEMINI_API_KEY=<gemini-api-key>   # receipt analysis
+FINANCE_MCP_KEY=<random-shared-secret>
 
 # .env.production (Production)
 NEXT_PUBLIC_API_URL=https://your-domain.com

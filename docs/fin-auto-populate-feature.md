@@ -219,6 +219,15 @@ FinEditorForm.handleHistoricalDataConfirm()
 Form fields populated with selected values
 ```
 
+## Place Default on Receipt Analysis (Added 2026-07-21)
+
+When a receipt is analyzed, `FinEditorForm.handleReceiptUpload` auto-populates the merchant
+from the AI result and, if the record's `place` is still empty, defaults `place` to that
+merchant name (`setPlace((prev) => prev || result.merchant)`). This keeps `place` visible and
+editable in the form. The historical-data location selection (`handleHistoricalDataConfirm`)
+still overrides `place` when the user picks a location from history — that path is unchanged
+and takes precedence when used.
+
 ## Edge Cases & Handling
 
 ### No Historical Data
