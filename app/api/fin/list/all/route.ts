@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
-import { fin } from "@/app/lib/db/schema";
-import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
+import { fin, finItems } from "@/app/lib/db/schema";
+import { eq, and, gte, lte, desc, sql, getTableColumns } from "drizzle-orm";
 import { ListFinResponse } from "@/app/lib/types/api";
 import {
   withAuth,
@@ -117,9 +117,20 @@ export const GET = withAuth(async (request, user) => {
       conditions.push(lte(fin.date, dateTo));
     }
 
-    // Fetch ALL records without limit
+    // Fetch ALL records without limit. Include a per-record aggregation of
+    // line-item names + notes (itemSearchText) so client-side keyword search
+    // can match against item details without a bulky items payload or N+1.
     const results = await db
-      .select()
+      .select({
+        ...getTableColumns(fin),
+        itemSearchText: sql<string | null>`(
+          SELECT group_concat(
+            coalesce(${finItems.name}, '') || ' ' || coalesce(${finItems.notes}, ''), ' '
+          )
+          FROM ${finItems}
+          WHERE ${finItems.finId} = ${fin.finId}
+        )`,
+      })
       .from(fin)
       .where(and(...conditions))
       .orderBy(desc(fin.date));

@@ -529,13 +529,7 @@ ${JSON.stringify({
     const result = await model.generateContent(prompt);
     const response = result.response;
 
-    // Get all candidates to check if response was complete
-    const candidates = response.candidates;
-    console.log("[Standardization] Finish reason:", candidates?.[0]?.finishReason);
-
     const text = response.text();
-    console.log("[Standardization] Response length:", text.length);
-    console.log("[Standardization] Full response:", text);
 
     // Since we specified responseMimeType: "application/json",
     // Gemini should return pure JSON without markdown wrapping
@@ -613,14 +607,45 @@ export const POST = withAuth(async (request, user) => {
 
     // Add tax as special line item if present
     if (receiptData.taxAmount && receiptData.taxAmount > 0) {
+      // If every branded item shares the same brand, inherit it on the tax item
+      // so brand-based analytics include tax. Mixed brands → leave tax unbranded.
+      const brands = [
+        ...new Set(
+          (receiptData.lineItems as Array<{ brandName?: string | null }>)
+            .map((i) => i.brandName?.trim())
+            .filter((b): b is string => !!b)
+        ),
+      ];
+      const sharedBrand = brands.length === 1 ? brands[0] : undefined;
+
       receiptData.lineItems.push({
         name: "税",
         amount: receiptData.taxAmount,
         quantity: 1,
         unit: null,
         notes: "Tax (HST/GST/PST combined)",
+        ...(sharedBrand ? { brandName: sharedBrand } : {}),
       });
     }
+
+    // Auto-populate line-item defaults:
+    //  - brandName falls back to the store/merchant name when the AI didn't identify a brand
+    //  - unitPriceCents falls back to the line amount when empty (notably the 税 tax line)
+    //  - unit falls back to "pcs" when empty
+    const merchantName = receiptData.merchant?.trim();
+    receiptData.lineItems = (
+      receiptData.lineItems as Array<{
+        amount: number;
+        unit?: string | null;
+        unitPriceCents?: number | null;
+        brandName?: string | null;
+      }>
+    ).map((item) => ({
+      ...item,
+      brandName: item.brandName?.trim() || merchantName || null,
+      unitPriceCents: item.unitPriceCents || item.amount,
+      unit: item.unit || "pcs",
+    }));
 
     // Validate total if both subtotal and tax present
     if (receiptData.subtotalAmount && receiptData.taxAmount) {
@@ -652,17 +677,7 @@ export const POST = withAuth(async (request, user) => {
       if (clothingCategory) {
         category = clothingCategory.category;
         subcategory = clothingCategory.subcategory;
-        console.log(
-          `[Auto Category] clothing_store items → ${category}/${subcategory} (defaults to adult, can manually adjust to 骐骐/慢慢 for children)`
-        );
       }
-    }
-
-    // Log the auto-detected categories for debugging
-    if (category && subcategory) {
-      console.log(
-        `[Auto Category] ${receiptData.merchantType} → ${category}/${subcategory}`
-      );
     }
 
     return NextResponse.json({

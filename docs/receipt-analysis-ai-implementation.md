@@ -588,6 +588,10 @@ For grocery/supermarket receipts, the AI now extracts a `brandName` field per li
 - The UI renders a brand name searchable dropdown (品牌) in `LineItemEditor`, below the person selector and above the notes field
 - Brand dropdown options are loaded from `/api/fin/autocomplete`, which returns distinct `fin_items.brand_name` values for the signed-in user alongside merchant/place/city suggestions
 
+#### Shared brand on the tax item
+
+When the tax line item (`name: "税"`) is auto-created in `app/api/receipts/analyze/route.ts`, it inherits a brand **only if every branded (non-tax) item on the receipt shares the same `brandName`** — the distinct set of non-empty brand names has exactly one entry. This keeps brand-based analytics inclusive of tax for single-brand receipts (e.g. a restaurant where every dish carries the merchant brand). When items span multiple brands (or none), the tax item is left unbranded. This applies to the receipt-AI flow only; manual brand edits in the line-items editor do not propagate to the tax item.
+
 ### Schema Change
 
 Migration: `drizzle/0003_add_brand_name_to_fin_items.sql`
@@ -610,3 +614,28 @@ ALTER TABLE fin_items ADD COLUMN brand_name TEXT;
 | `app/api/fin/autocomplete/route.ts` | Returns distinct item brand names for searchable brand dropdowns |
 | `app/api/fin/create/route.ts` | Persists `brandName` on insert |
 | `app/api/fin/update/route.ts` | Persists `brandName` on update/re-insert |
+
+---
+
+## Line-item auto-populate defaults (Added 2026-07-21)
+
+### Overview
+
+After the AI extraction and tax line-item assembly, a single normalization pass in
+`app/api/receipts/analyze/route.ts` fills in three fields so analyzed data is complete and
+consistent without manual cleanup. The pass runs **after** the tax line is appended, so it
+covers the synthetic `税` item too.
+
+### Defaults
+
+| Field | Rule |
+|-------|------|
+| `brandName` | Falls back to the **merchant/store name** when the AI didn't identify a brand (`item.brandName?.trim() \|\| merchant \|\| null`). Applies to **all** merchant types — this intentionally overrides the earlier per-type `null` rules from the Brand Name Extraction section for any still-unbranded item. |
+| `unitPriceCents` | Falls back to the **line amount** when empty (`item.unitPriceCents \|\| item.amount`). `\|\|` is used because items set this to `null` and the tax line leaves it `undefined`; `0` is never a valid unit price. Multi-qty items keep their already-computed `amount/quantity`. |
+| `unit` | Falls back to `"pcs"` when empty (`item.unit \|\| "pcs"`). |
+
+The **税 (tax)** line is the primary beneficiary: it previously had `unit: null` and no unit
+price, and now gets `unit: "pcs"` and `unitPriceCents = taxAmount` (consistent with `qty: 1`).
+
+These defaults flow unchanged through `AnalyzedLineItem` → `LineItem` → `fin_items` and remain
+editable in the ReceiptAnalysisDialog / line-items editor before save.

@@ -269,6 +269,16 @@ sequenceDiagram
     Dashboard->>User: Show updated list, close editor
 ```
 
+### Line Item Editing (controlled by `item` prop)
+
+`LineItemEditor` is a **controlled component**: the parent-owned `item` prop is the single source of truth for all structured fields. The component holds only raw string buffers for the amount / quantity / unit-price inputs (so in-progress typing formats nicely) plus autocomplete UI state.
+
+- Every edit builds `{ ...item, [field]: value }` and calls `onChange(index, ...)` — there is no duplicated `localItem` state and no `setTimeout`/`isInternalUpdate` prop-sync effect.
+- Blur handlers that touch two fields at once (amount → amount + unit price, qty → qty + unit price) build **one** merged object from the current `item` and emit a single `onChange`, so the recalculated unit price can't clobber the just-typed amount with a stale value. (This was the "amount reverts on reopen" bug.)
+- Each numeric buffer re-syncs from the prop only when its input is **not focused** (`amountFocused` / `qtyFocused` / `unitPriceFocused` refs), so genuine external updates are reflected without overwriting the user mid-typing.
+
+`LineItemsDialog` → `FinEditorForm.lineItems` (via `onConfirm`) remains the persistence path; reopening the dialog re-reads that state through `key={lineItemsDialogKey}`.
+
 ---
 
 ## Implementation Checklist

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type RefObject } from "react";
 import Input from "../ui-kit/Input";
 import Dropdown from "../ui-kit/Dropdown";
 import SearchableSelect from "../ui-kit/SearchableSelect";
@@ -8,6 +8,26 @@ import SearchableSelect from "../ui-kit/SearchableSelect";
 interface AutocompleteItem {
   name: string;
   count: number;
+}
+
+/**
+ * Re-sync a text buffer from a prop value when it changes and the input isn't
+ * focused, so external updates are reflected without clobbering mid-typing. The
+ * setState is deferred so it never runs synchronously inside the effect.
+ */
+function useDeferredSync<T>(
+  value: T,
+  isFocused: RefObject<boolean>,
+  setInput: (v: string) => void,
+  format: (v: T) => string,
+) {
+  useEffect(() => {
+    if (isFocused.current) return;
+    const timer = window.setTimeout(() => setInput(format(value)), 0);
+    return () => window.clearTimeout(timer);
+    // Only re-sync when the underlying value changes; setter/format are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
 }
 
 export interface LineItem {
@@ -42,7 +62,8 @@ const LineItemEditor = ({
   brandOptions = [],
   className = "",
 }: LineItemEditorProps) => {
-  const [localItem, setLocalItem] = useState<LineItem>(item);
+  // The `item` prop is the single source of truth for structured fields. Only
+  // the raw text buffers below are local, so in-progress typing isn't clobbered.
   const [amountInput, setAmountInput] = useState<string>(
     (item.originalAmountCents / 100).toFixed(2),
   );
@@ -57,34 +78,27 @@ const LineItemEditor = ({
   const nameContainerRef = useRef<HTMLDivElement>(null);
   const isNameFocused = useRef(false);
 
-  // Sync with external changes only (not our own updates)
-  // Use a ref to track if we just updated
-  const isInternalUpdate = useRef(false);
+  // Track focus per numeric field so external prop updates never overwrite the
+  // buffer while the user is mid-typing.
+  const amountFocused = useRef(false);
+  const qtyFocused = useRef(false);
+  const unitPriceFocused = useRef(false);
 
-  useEffect(() => {
-    // Skip if this was triggered by our own handleChange
-    if (isInternalUpdate.current) {
-      isInternalUpdate.current = false;
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setLocalItem(item);
-      setAmountInput((item.originalAmountCents / 100).toFixed(2));
-      setQtyInput(
-        item.qty !== undefined && item.qty !== null ? String(item.qty) : "",
-      );
-      setUnitPriceInput(
-        item.unitPriceCents ? (item.unitPriceCents / 100).toFixed(2) : "",
-      );
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [item]);
+  // Keep each numeric buffer in sync with the prop (our own commits set the same
+  // formatted value, so these only reflect genuine external changes).
+  useDeferredSync(item.originalAmountCents, amountFocused, setAmountInput, (c) =>
+    (c / 100).toFixed(2),
+  );
+  useDeferredSync(item.qty, qtyFocused, setQtyInput, (q) =>
+    q != null ? String(q) : "",
+  );
+  useDeferredSync(item.unitPriceCents, unitPriceFocused, setUnitPriceInput, (c) =>
+    c ? (c / 100).toFixed(2) : "",
+  );
 
   // Debounced autocomplete fetch — only runs while the name input is focused
   useEffect(() => {
-    const name = localItem.name;
+    const name = item.name;
     if (!isNameFocused.current || !name || name.trim().length === 0) {
       const timer = window.setTimeout(() => {
         setAutocompleteItems([]);
@@ -106,7 +120,7 @@ const LineItemEditor = ({
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [localItem.name]);
+  }, [item.name]);
 
   // Close autocomplete on click outside
   useEffect(() => {
@@ -123,43 +137,34 @@ const LineItemEditor = ({
     field: K,
     value: LineItem[K],
   ) => {
-    const updated = { ...localItem, [field]: value };
-    setLocalItem(updated);
-    isInternalUpdate.current = true;
-    onChange(index, updated);
+    onChange(index, { ...item, [field]: value });
   };
 
   const handleNameSelect = useCallback((name: string) => {
     setShowAutocomplete(false);
-    const updated = { ...localItem, name };
-    setLocalItem(updated);
-    isInternalUpdate.current = true;
-    onChange(index, updated);
-  }, [localItem, index, onChange]);
+    onChange(index, { ...item, name });
+  }, [item, index, onChange]);
 
   const handleAmountChange = (value: string) => {
     setAmountInput(value);
   };
 
   const handleAmountBlur = () => {
-    // Format to 2 decimal places and update cents on blur
+    amountFocused.current = false;
+    // Format to 2 decimal places and commit cents on blur
     const dollars = parseFloat(amountInput) || 0;
     const cents = Math.round(dollars * 100);
     setAmountInput(dollars.toFixed(2));
-    handleChange("originalAmountCents", cents);
 
-    // Auto-calculate unit price if quantity exists
-    if (localItem.qty && localItem.qty > 0) {
-      calculateUnitPrice(cents, localItem.qty);
-    }
-  };
-
-  const calculateUnitPrice = (totalCents: number, qty: number) => {
-    if (qty > 0) {
-      const unitPrice = totalCents / qty;
+    // Merge into a single update so the recalculated unit price doesn't clobber
+    // the new amount (both are derived from the same `item` snapshot).
+    const updated: LineItem = { ...item, originalAmountCents: cents };
+    if (item.qty && item.qty > 0) {
+      const unitPrice = Math.round(cents / item.qty);
+      updated.unitPriceCents = unitPrice;
       setUnitPriceInput((unitPrice / 100).toFixed(2));
-      handleChange("unitPriceCents", Math.round(unitPrice));
     }
+    onChange(index, updated);
   };
 
   const handleQtyChange = (value: string) => {
@@ -167,13 +172,18 @@ const LineItemEditor = ({
   };
 
   const handleQtyBlur = () => {
+    qtyFocused.current = false;
     const parsedQty = parseFloat(qtyInput);
     const qty = !isNaN(parsedQty) && parsedQty !== 0 ? parsedQty : undefined;
-    handleChange("qty", qty);
+
+    const updated: LineItem = { ...item, qty };
     // Auto-calculate unit price when qty changes
     if (qty && qty > 0) {
-      calculateUnitPrice(localItem.originalAmountCents, qty);
+      const unitPrice = Math.round(item.originalAmountCents / qty);
+      updated.unitPriceCents = unitPrice;
+      setUnitPriceInput((unitPrice / 100).toFixed(2));
     }
+    onChange(index, updated);
   };
 
   const handleUnitPriceChange = (value: string) => {
@@ -181,6 +191,7 @@ const LineItemEditor = ({
   };
 
   const handleUnitPriceBlur = () => {
+    unitPriceFocused.current = false;
     const dollars = parseFloat(unitPriceInput) || 0;
     const cents = Math.round(dollars * 100);
     setUnitPriceInput(dollars.toFixed(2));
@@ -223,12 +234,12 @@ const LineItemEditor = ({
         <div className="grid grid-cols-2 gap-2">
           <div className="relative" ref={nameContainerRef}>
             <Input
-              value={localItem.name}
+              value={item.name}
               onChange={(e) => handleChange("name", e.target.value)}
               onFocus={() => {
                 isNameFocused.current = true;
-                if (localItem.name.trim().length > 0) {
-                  fetch(`/api/fin/items/autocomplete?q=${encodeURIComponent(localItem.name)}`)
+                if (item.name.trim().length > 0) {
+                  fetch(`/api/fin/items/autocomplete?q=${encodeURIComponent(item.name)}`)
                     .then((r) => r.json())
                     .then((d) => { setAutocompleteItems(d.items ?? []); setShowAutocomplete(true); })
                     .catch(() => {});
@@ -276,6 +287,7 @@ const LineItemEditor = ({
               step="0.01"
               value={amountInput}
               onChange={(e) => handleAmountChange(e.target.value)}
+              onFocus={() => { amountFocused.current = true; }}
               onBlur={handleAmountBlur}
               placeholder="0.00"
               required
@@ -292,6 +304,7 @@ const LineItemEditor = ({
               inputMode="decimal"
               value={qtyInput}
               onChange={(e) => handleQtyChange(e.target.value)}
+              onFocus={() => { qtyFocused.current = true; }}
               onBlur={handleQtyBlur}
               placeholder="数量"
               className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
@@ -316,13 +329,14 @@ const LineItemEditor = ({
               step="0.01"
               value={unitPriceInput}
               onChange={(e) => handleUnitPriceChange(e.target.value)}
+              onFocus={() => { unitPriceFocused.current = true; }}
               onBlur={handleUnitPriceBlur}
               placeholder="单价"
               className="w-full pl-10 pr-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
             />
           </div>
           <Input
-            value={localItem.unit || ""}
+            value={item.unit || ""}
             onChange={(e) => handleChange("unit", e.target.value || undefined)}
             placeholder="单位"
           />
@@ -332,7 +346,7 @@ const LineItemEditor = ({
         <div>
           <Dropdown
             options={personOptions}
-            value={localItem.personId?.toString() || ""}
+            value={item.personId?.toString() || ""}
             onChange={(value) =>
               handleChange("personId", value ? parseInt(value) : undefined)
             }
@@ -341,7 +355,7 @@ const LineItemEditor = ({
         </div>
 
         <SearchableSelect
-          value={localItem.brandName || ""}
+          value={item.brandName || ""}
           onChange={(value) =>
             handleChange("brandName", value.trim() || undefined)
           }
@@ -352,13 +366,13 @@ const LineItemEditor = ({
         {/* Notes - show original name if available */}
         <div className="space-y-1">
           <Input
-            value={localItem.notes || ""}
+            value={item.notes || ""}
             onChange={(e) => handleChange("notes", e.target.value || undefined)}
             placeholder="备注"
           />
-          {localItem.notes && (
+          {item.notes && (
             <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              原始名称: {localItem.notes}
+              原始名称: {item.notes}
             </span>
           )}
         </div>

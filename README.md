@@ -20,6 +20,20 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment variables
+
+Set these in `.env.local` (gitignored):
+
+| Var | Purpose |
+|-----|---------|
+| `GOOGLE_GEMINI_API_KEY` | Receipt image analysis (`/api/receipts/analyze`) |
+| `FINANCE_MCP_KEY` | Shared secret for headless (MCP) callers, sent as `X-Api-Key` → `user_id=1`. Generate with `openssl rand -hex 24`. Must match the finance-db MCP registration. |
+
+The `X-Api-Key` / MCP write-tool auth is documented in
+[`docs/authentication-flow.md`](docs/authentication-flow.md) → "Service (headless)
+authentication", and the deploy steps in
+`openclaw-manager/todd-workspace/DEPLOY.md`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
