@@ -169,11 +169,12 @@ User clicks History tab
 
 ```
 User opens filter, configures, clicks Apply
-  → dispatch(applyHistoryFiltersAsync(filters))
+  → dispatch(setHistoryFilters(filters))
+  → HistoryView's effect sees new filters → dispatch(fetchAllHistoryAsync(filters))
   → Calculate dateFrom/dateTo from preset or custom range
-  → API: GET /api/fin/list?limit=100&offset=0&type=[type]&dateFrom=[date]&dateTo=[date]
-  → Redux: Replace state.fin.history.data, reset offset to 0
-  → Selector: Apply client-side filters (keyword, categories, amount)
+  → API: GET /api/fin/list/all?type=[type]&dateFrom=[date]&dateTo=[date]&keyword=[kw]
+  → Redux: Replace state.fin.history.data
+  → Selector: Apply remaining client-side filters (categories, amount)
   → Render: Updated MonthGroup list
 ```
 
@@ -231,19 +232,41 @@ User clicks MonthHeader
 |--------|-------------|
 | type | Server-side (API param) |
 | dateRange | Server-side (converted to dateFrom/dateTo) |
-| keyword | Client-side (filter in selector) |
+| keyword | Server-side (API param) |
 | categories | Client-side (filter in selector) |
 | amountRange | Client-side (filter in selector) |
 
 **Why Mixed Strategy?**
 
-- **Server-side**: Date and type filters reduce network payload
-- **Client-side**: Complex filters (keyword, multiple categories) avoid API complexity
-- **Performance**: With 100-record batches, client-side filtering is fast
+- **Server-side**: Date, type and keyword filters reduce network payload
+- **Client-side**: Category and amount filters avoid API complexity and re-filter instantly without a round trip
+- Keyword is applied from an explicit "应用筛选" button, so one request per apply — no debouncing needed
 
-**Keyword scope (item-aware)**
+**Keyword scope (item-aware, server-side)**
 
-The keyword matches record-level fields (`merchant`, `category`, `subcategory`, `comment`) **and** the record's line-item names + notes. Since `FinData` has no items array, `/api/fin/list/all` attaches a per-record `itemSearchText` — a `group_concat` of each `fin_items.name` + `fin_items.notes` (correlated subquery, no N+1). `selectFilteredHistory` in `finSlice.ts` includes `fin.itemSearchText` in its keyword `.some([...])` check. Example: a record with merchant "Levi's", item "Shorts", note "Boy shorts, size XL" matches "Levi", "Short", and "Size".
+The keyword matches record-level fields (`merchant`, `category`, `subcategory`, `comment`) **and** the names/notes of the record's line items. `/api/fin/list/all` accepts a `keyword` param and filters in SQL:
+
+```sql
+fin.merchant LIKE ? ESCAPE '\' OR ... OR
+fin.fin_id IN (SELECT fin_id FROM fin_items
+               WHERE name LIKE ? ESCAPE '\' OR notes LIKE ? ESCAPE '\')
+```
+
+Example: a record with merchant "Levi's", item "Shorts", note "Boy shorts, size XL" matches "Levi", "Short", and "Size".
+
+Three details matter here:
+
+1. **The item half is an uncorrelated subquery** over `fin_items` alone. Drizzle renders columns unqualified when a query has no joins, so a hand-written correlated subquery referencing `${fin.finId}` silently becomes `fin_id = fin_id` — always true. That exact bug shipped once and OOM'd the server (see "Keyword search history" below). Referencing no outer column makes the class of mistake impossible. Note that Drizzle's *query builder* does qualify correctly; only hand-written `sql` templates are affected.
+2. **Wildcards are escaped.** `%` and `_` in a keyword are escaped so they match literally, preserving the substring semantics users expect.
+3. **Case-insensitivity** comes from SQLite's `LIKE`, which is ASCII-only. That matches the previous `toLowerCase()` behavior for ASCII and is a no-op for CJK.
+
+**Keyword search history**
+
+Keyword search was originally client-side. To make it item-aware, `/api/fin/list/all` attached a per-record `itemSearchText` (`group_concat` of item names + notes) and `selectFilteredHistory` matched against it. That was replaced by server-side filtering because:
+
+- The aggregate was computed for all records on every history load, even when no keyword was set.
+- Filtering client-side meant shipping every record so the client could discard most of them. A "Costco" search now returns 75 KB instead of 6.18 MB.
+- The blob's `name + ' ' + notes` join let a keyword match across the boundary between two unrelated items. Per-field matching removes that false positive. (Reachable only with a keyword containing a space, and `FilterBottomSheet` already trims — so no practical behavior change; parity was verified across 12 keywords including CJK, mixed case and wildcard characters.)
 
 ## Redux Implementation
 
@@ -414,20 +437,8 @@ export const selectFilteredHistory = createSelector(
     (state: RootState) => state.fin.history.searchFilters,
   ],
   (data, filters) => {
+    // Note: type, dateRange and keyword are already applied server-side.
     return data.filter((fin) => {
-      // Keyword filter
-      if (filters.keyword) {
-        const keyword = filters.keyword.toLowerCase();
-        const matches = [
-          fin.merchant,
-          fin.category,
-          fin.subcategory,
-          fin.comment,
-        ].some((field) => field?.toLowerCase().includes(keyword));
-
-        if (!matches) return false;
-      }
-
       // Categories filter
       if (filters.categories && filters.categories.length > 0) {
         const finCat = `${fin.category}:${fin.subcategory}`;

@@ -587,6 +587,10 @@ export const fetchAllHistoryAsync = createAsyncThunk<
     if (dateFrom) queryParams.append("dateFrom", dateFrom);
     if (dateTo) queryParams.append("dateTo", dateTo);
 
+    // Keyword search runs server-side so it can match line-item names/notes
+    // without shipping an aggregated search blob for every record.
+    if (filters.keyword) queryParams.append("keyword", filters.keyword);
+
     const response = await axios.get<ListFinResponse>(
       `/api/fin/list/all?${queryParams.toString()}`,
       { withCredentials: true }
@@ -1223,23 +1227,11 @@ export const selectHistoryHasMore = (state: RootState) => state.fin.history.hasM
 export const selectHistoryFilters = (state: RootState) => state.fin.history.searchFilters;
 
 // Filtered history selector (applies client-side filters)
+// Note: type, date range and keyword are applied server-side by the fetch.
 export const selectFilteredHistory = createSelector(
   [selectHistoryData, selectHistoryFilters],
   (data, filters): FinData[] => {
     return data.filter((fin) => {
-      if (filters.keyword) {
-        const keyword = filters.keyword.toLowerCase();
-        const matches = [
-          fin.merchant,
-          fin.category,
-          fin.subcategory,
-          fin.comment,
-          fin.itemSearchText,
-        ].some((field) => field?.toLowerCase().includes(keyword));
-
-        if (!matches) return false;
-      }
-
       if (filters.categories && filters.categories.length > 0) {
         const finCat = `${fin.category}:${fin.subcategory}`;
         if (!filters.categories.includes(finCat)) return false;

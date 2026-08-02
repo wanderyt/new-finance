@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { fin, finItems } from "@/app/lib/db/schema";
-import { eq, and, gte, lte, desc, sql, getTableColumns } from "drizzle-orm";
+import { eq, and, or, gte, lte, desc, sql, inArray } from "drizzle-orm";
 import { ListFinResponse } from "@/app/lib/types/api";
 import {
   withAuth,
@@ -25,6 +25,46 @@ function isValidDateFormat(dateString: string): boolean {
   return !isNaN(date.getTime());
 }
 
+const MAX_KEYWORD_LENGTH = 200;
+
+/**
+ * Build a LIKE pattern for a substring match, escaping the SQL wildcards so a
+ * keyword containing "%" or "_" matches those characters literally.
+ */
+function likePattern(keyword: string): string {
+  return `%${keyword.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+}
+
+/**
+ * Match a keyword against the record's own text fields or the names/notes of
+ * any of its line items.
+ *
+ * The line-item half is an uncorrelated subquery over fin_items alone. That is
+ * deliberate: Drizzle renders columns unqualified when a query has no joins, so
+ * a hand-written correlated subquery referencing ${fin.finId} would collapse to
+ * `fin_id = fin_id` and match every row.
+ */
+function keywordCondition(keyword: string) {
+  const pattern = likePattern(keyword);
+  const matchesItem = db
+    .select({ finId: finItems.finId })
+    .from(finItems)
+    .where(
+      or(
+        sql`${finItems.name} LIKE ${pattern} ESCAPE '\\'`,
+        sql`${finItems.notes} LIKE ${pattern} ESCAPE '\\'`
+      )
+    );
+
+  return or(
+    sql`${fin.merchant} LIKE ${pattern} ESCAPE '\\'`,
+    sql`${fin.category} LIKE ${pattern} ESCAPE '\\'`,
+    sql`${fin.subcategory} LIKE ${pattern} ESCAPE '\\'`,
+    sql`${fin.comment} LIKE ${pattern} ESCAPE '\\'`,
+    inArray(fin.finId, matchesItem)
+  )!;
+}
+
 /**
  * GET /api/fin/list/all
  *
@@ -38,6 +78,8 @@ function isValidDateFormat(dateString: string): boolean {
  * - type: "expense" | "income" | "all" (default: "all")
  * - dateFrom: ISO 8601 date string with UTC timezone (optional)
  * - dateTo: ISO 8601 date string with UTC timezone (default: current date/time)
+ * - keyword: substring matched against merchant, category, subcategory and
+ *   comment, plus the names/notes of the record's line items (optional)
  *
  * Response:
  * {
@@ -60,6 +102,7 @@ export const GET = withAuth(async (request, user) => {
     const typeParam = searchParams.get("type");
     const dateFromParam = searchParams.get("dateFrom");
     const dateToParam = searchParams.get("dateTo");
+    const keywordParam = searchParams.get("keyword");
 
     // Validate type parameter (default: "all")
     let type: "expense" | "income" | "all" = "all";
@@ -101,6 +144,14 @@ export const GET = withAuth(async (request, user) => {
       );
     }
 
+    // Validate keyword parameter (optional, trimmed)
+    const keyword = keywordParam?.trim() || undefined;
+    if (keyword && keyword.length > MAX_KEYWORD_LENGTH) {
+      return badRequestResponse(
+        `Query parameter "keyword" must be less than ${MAX_KEYWORD_LENGTH} characters`
+      );
+    }
+
     // Build query conditions
     const conditions = [eq(fin.userId, user.userId)];
 
@@ -117,20 +168,14 @@ export const GET = withAuth(async (request, user) => {
       conditions.push(lte(fin.date, dateTo));
     }
 
-    // Fetch ALL records without limit. Include a per-record aggregation of
-    // line-item names + notes (itemSearchText) so client-side keyword search
-    // can match against item details without a bulky items payload or N+1.
+    // Add keyword filter
+    if (keyword) {
+      conditions.push(keywordCondition(keyword));
+    }
+
+    // Fetch ALL matching records without limit
     const results = await db
-      .select({
-        ...getTableColumns(fin),
-        itemSearchText: sql<string | null>`(
-          SELECT group_concat(
-            coalesce(${finItems.name}, '') || ' ' || coalesce(${finItems.notes}, ''), ' '
-          )
-          FROM ${finItems}
-          WHERE ${finItems.finId} = ${fin.finId}
-        )`,
-      })
+      .select()
       .from(fin)
       .where(and(...conditions))
       .orderBy(desc(fin.date));

@@ -5,7 +5,6 @@ import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   selectHistoryFilters,
   setHistoryFilters,
-  fetchAllHistoryAsync,
   resetHistoryFilters,
 } from "@/app/lib/redux/features/fin/finSlice";
 import { SearchFilters } from "@/app/lib/types/api";
@@ -114,8 +113,9 @@ export default function FilterBottomSheet({
           : undefined,
     };
 
+    // HistoryView refetches when the stored filters change, so no explicit
+    // fetch here — dispatching one would issue a duplicate request.
     dispatch(setHistoryFilters(filters));
-    dispatch(fetchAllHistoryAsync(filters));
     onClose();
   };
 
@@ -161,7 +161,7 @@ export default function FilterBottomSheet({
           </label>
           <Input
             type="text"
-            placeholder="搜索商户、分类、备注..."
+            placeholder="搜索商户、分类、备注、商品..."
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
