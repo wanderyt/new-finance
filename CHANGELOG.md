@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.1] - 2026-08-01
+
+### Fixed
+- **History View Crashed the Server (Out of Memory)**: `/api/fin/list/all` built its per-record `itemSearchText` aggregate with a hand-written correlated subquery. Drizzle renders columns unqualified when a query has no joins, so the correlation predicate collapsed to `fin_id = fin_id` — always true. Every record received a concatenation of *all* line items in the table (~105 KB across 14k records), exhausting the 4 GB heap and killing the server on every switch to the history view
+
+### Changed
+- **Keyword Search Now Runs Server-Side**: `/api/fin/list/all` accepts a `keyword` param and filters in SQL against `merchant`, `category`, `subcategory`, `comment` and the names/notes of the record's line items. The line-item half is an uncorrelated `IN` subquery, so it references no outer column and cannot reproduce the tautology above; keyword wildcards (`%`, `_`) are escaped to match literally. A "Costco" search now returns 78 KB in 13 ms instead of 6.18 MB filtered in the browser
+- **One Request per Filter Apply**: `FilterBottomSheet` no longer dispatches its own fetch on apply — `setHistoryFilters` assigns a new filters object, so `HistoryView`'s effect already refetches, and each apply was issuing two identical requests
+
+### Removed
+- **`itemSearchText` from `FinData`**: The aggregated line-item search blob is no longer computed or shipped, now that keyword matching happens in SQL
+
 ## [1.19.0] - 2026-06-07
 
 ### Added

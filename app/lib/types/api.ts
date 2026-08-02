@@ -156,8 +156,6 @@ export interface FinData {
   scheduleRuleId: number | null;
   scheduledOn: string | null;
   receipts?: ReceiptData[];
-  // Aggregated line-item names + notes for keyword search (from /api/fin/list/all)
-  itemSearchText?: string | null;
 }
 
 // Create Fin Response
@@ -215,7 +213,7 @@ export interface AmountRangeFilter {
 
 // Search filters for history view
 export interface SearchFilters {
-  keyword?: string; // Search in merchant, category, subcategory, comment
+  keyword?: string; // Server-side search in merchant, category, subcategory, comment + line item names/notes
   type: "all" | "expense" | "income";
   dateRange: DateRangeFilter;
   categories?: string[]; // Array of "category:subcategory"
