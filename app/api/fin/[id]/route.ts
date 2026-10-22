@@ -95,23 +95,18 @@ export const DELETE = withAuth(async (request, user) => {
     }
 
     // Handle scheduled transactions based on scope
-    if (targetFin.isScheduled && targetFin.scheduleRuleId) {
+    if (targetFin.isScheduled && targetFin.scheduleRuleId && targetFin.scheduledOn) {
       if (scope === "single") {
         // Delete only this specific occurrence
         await db.delete(fin).where(eq(fin.finId, finId));
       } else {
-        // Default to "all" - delete this and all future occurrences
-        // Use 00:00:00 of the target transaction's date as cutoff
-        const targetDate = new Date(targetFin.date);
-        targetDate.setHours(0, 0, 0, 0);
-        const cutoffDate = targetDate.toISOString();
-
-        // Delete all fin records with the same schedule rule that are on or after the cutoff date
+        // Default to "all" - delete this and all future occurrences.
+        // Cut off by the immutable scheduledOn slot, not the editable date.
         await db.delete(fin).where(
           and(
             eq(fin.scheduleRuleId, targetFin.scheduleRuleId),
             eq(fin.userId, user.userId),
-            gte(fin.date, cutoffDate)
+            gte(fin.scheduledOn, targetFin.scheduledOn)
           )
         );
       }

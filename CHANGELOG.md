@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.19.2] - 2026-10-21
+
+### Fixed
+- **"All Future Occurrences" Update Collapsed Dates into the Current Month**: Updating a scheduled transaction with "this and all future occurrences" copied the edited occurrence's `date` to every following occurrence. Each kept its correct `scheduledOn`, but list and history views filter by `date`, so all of them counted as the current month's expense. Each following occurrence now keeps its own `scheduledOn` slot plus the offset applied to the edited occurrence. One SQL `UPDATE` with `strftime` does this
+- **"All Future Occurrences" Cutoff Used the Editable Date**: Update and delete selected following occurrences by `date >= midnight of target date` (server-local time). After the bug above, that predicate also matched earlier occurrences, so an "all future" delete could remove occurrences before the selected one. Both routes now cut off by the immutable `scheduledOn`
+
 ## [1.19.1] - 2026-08-01
 
 ### Fixed
