@@ -215,6 +215,14 @@ interface UpdateFinRequest {
 - `404 Not Found`: Transaction doesn't exist or user doesn't own it
 - `500 Internal Server Error`: Database or unexpected errors
 
+**Scheduled Transactions (`scope`)**:
+- The body accepts an optional `scope: "single" | "all"`. `DELETE /api/fin/[id]` accepts the same value as `?scope=`.
+- `single` (default for update) changes only the target record.
+- `all` changes the target record and every record of the same `scheduleRuleId` with `scheduledOn >= target.scheduledOn`.
+- The cutoff uses `scheduledOn`, not `date`. `scheduledOn` is immutable, but `date` is editable and can be out of order.
+- With `all`, every field except `date` is copied as-is to each matched record.
+- With `all`, `date` is shifted per record: `date = record.scheduledOn + (body.date - target.scheduledOn)`. Each occurrence stays in its own month. An unchanged date resets each `date` to its `scheduledOn`.
+
 ---
 
 ## Data Models

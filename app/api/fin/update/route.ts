@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { fin, finItems } from "@/app/lib/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { UpdateFinRequest, UpdateFinResponse, ErrorResponse } from "@/app/lib/types/api";
 import {
   withAuth,
@@ -129,40 +129,39 @@ export const PATCH = withAuth(async (request, user) => {
     }
 
     // Handle scheduled transactions based on scope
-    if (existing.isScheduled && existing.scheduleRuleId && scope === "all") {
-      // Update this and all future occurrences
-      // Use 00:00:00 of the target transaction's date as cutoff
-      const targetDate = new Date(existing.date);
-      targetDate.setHours(0, 0, 0, 0);
-      const cutoffDate = targetDate.toISOString();
-
-      // Update all fin records with the same schedule rule that are on or after the cutoff date
+    if (
+      existing.isScheduled &&
+      existing.scheduleRuleId &&
+      existing.scheduledOn &&
+      scope === "all"
+    ) {
+      // Update this and all future occurrences.
+      // Cut off by the immutable scheduledOn slot, not the editable date.
+      const futureCondition = and(
+        eq(fin.scheduleRuleId, existing.scheduleRuleId),
+        eq(fin.userId, user.userId),
+        gte(fin.scheduledOn, existing.scheduledOn)
+      );
+      // Every field except date is copied as-is to all future occurrences.
+      // Date is shifted per occurrence: each keeps its own scheduledOn slot
+      // plus the offset the user applied to the edited occurrence.
+      if (updates.date !== undefined) {
+        const offsetSeconds =
+          (new Date(updates.date).getTime() -
+            new Date(existing.scheduledOn).getTime()) /
+          1000;
+        updates.date = sql`strftime('%Y-%m-%dT%H:%M:%fZ', ${fin.scheduledOn}, ${`${offsetSeconds} seconds`})`;
+      }
       if (Object.keys(updates).length > 0) {
-        await db
-          .update(fin)
-          .set(updates)
-          .where(
-            and(
-              eq(fin.scheduleRuleId, existing.scheduleRuleId),
-              eq(fin.userId, user.userId),
-              gte(fin.date, cutoffDate)
-            )
-          );
+        await db.update(fin).set(updates).where(futureCondition);
       }
 
       // Handle line items for all future occurrences
       if (body.lineItems !== undefined) {
-        // Get all future fin IDs
         const futureRecords = await db
           .select({ finId: fin.finId })
           .from(fin)
-          .where(
-            and(
-              eq(fin.scheduleRuleId, existing.scheduleRuleId),
-              eq(fin.userId, user.userId),
-              gte(fin.date, cutoffDate)
-            )
-          );
+          .where(futureCondition);
 
         // Update line items for each future record
         for (const record of futureRecords) {

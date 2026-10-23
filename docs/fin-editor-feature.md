@@ -59,6 +59,8 @@ The Fin Editor is a comprehensive financial transaction editor that supports:
   - Monthly: 10 years (120 occurrences)
   - Annually: 10 years (10 occurrences)
 - **Update/Delete Dialog**: Choose "single occurrence" or "all future occurrences"
+  - "All future occurrences" selects records by `scheduled_on` (immutable), not by `date`
+  - A date change on "all future occurrences" shifts each occurrence by the same offset from its own `scheduled_on`. It does not copy one date to all of them. Before this fix, every following occurrence got the edited occurrence's date and counted in the current month.
 - **Smart Date Handling**: Properly handles month-end dates (e.g., Jan 31 → Feb 28/29)
 - **Dashboard Filtering**: Only shows transactions up to end of current month
 
