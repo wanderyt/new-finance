@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
-import { fin, finItems } from "@/app/lib/db/schema";
-import { eq, and, gte, sql } from "drizzle-orm";
+import { fin, finItems, type Fin } from "@/app/lib/db/schema";
+import { eq, and, gte, sql, type SQL } from "drizzle-orm";
 import { UpdateFinRequest, UpdateFinResponse, ErrorResponse } from "@/app/lib/types/api";
 import {
   withAuth,
@@ -9,6 +9,7 @@ import {
   serverErrorResponse,
 } from "@/app/lib/middleware/auth";
 import { convertCurrency } from "@/app/lib/utils/currency";
+import { parseFinPhotoRequest, PhotoRequestError, saveFinWithPhotos } from "../../../lib/utils/fin-photo-storage";
 
 /**
  * Validate date format - must be ISO 8601 with time in UTC timezone
@@ -29,7 +30,11 @@ function isValidDateFormat(dateString: string): boolean {
 export const PATCH = withAuth(async (request, user) => {
   try {
     // Parse request body
-    const body: UpdateFinRequest & { scope?: "single" | "all" } = await request.json();
+    const { body, files, removedPhotoIds, receiptFile } = await parseFinPhotoRequest<UpdateFinRequest & { scope?: "single" | "all" }>(request);
+    if (receiptFile) return badRequestResponse("Use the receipt replacement endpoint to replace a receipt");
+    if (body.scope !== undefined && body.scope !== "single" && body.scope !== "all") {
+      return badRequestResponse("The update scope is invalid");
+    }
 
     // finId is required
     if (!body.finId) {
@@ -82,7 +87,7 @@ export const PATCH = withAuth(async (request, user) => {
     }
 
     // Build updates object
-    const updates: any = {};
+    const updates: Partial<Omit<Fin, "date">> & { date?: string | SQL } = {};
 
     // Basic fields
     if (body.type !== undefined) updates.type = body.type;
@@ -124,149 +129,125 @@ export const PATCH = withAuth(async (request, user) => {
     }
 
     // Check if there are any updates
-    if (Object.keys(updates).length === 0 && body.lineItems === undefined) {
+    if (Object.keys(updates).length === 0 && body.lineItems === undefined && files.length === 0 && removedPhotoIds.length === 0) {
       return badRequestResponse("No fields to update");
     }
 
-    // Handle scheduled transactions based on scope
-    if (
-      existing.isScheduled &&
-      existing.scheduleRuleId &&
-      existing.scheduledOn &&
-      scope === "all"
-    ) {
-      // Update this and all future occurrences.
-      // Cut off by the immutable scheduledOn slot, not the editable date.
-      const futureCondition = and(
-        eq(fin.scheduleRuleId, existing.scheduleRuleId),
-        eq(fin.userId, user.userId),
-        gte(fin.scheduledOn, existing.scheduledOn)
-      );
-      // Every field except date is copied as-is to all future occurrences.
-      // Date is shifted per occurrence: each keeps its own scheduledOn slot
-      // plus the offset the user applied to the edited occurrence.
-      if (updates.date !== undefined) {
-        const offsetSeconds =
-          (new Date(updates.date).getTime() -
-            new Date(existing.scheduledOn).getTime()) /
-          1000;
-        updates.date = sql`strftime('%Y-%m-%dT%H:%M:%fZ', ${fin.scheduledOn}, ${`${offsetSeconds} seconds`})`;
-      }
-      if (Object.keys(updates).length > 0) {
-        await db.update(fin).set(updates).where(futureCondition);
-      }
+    const updated = await saveFinWithPhotos({
+      finId: body.finId, userId: user.userId, files, removedPhotoIds,
+      metadata: {
+        merchant: body.merchant ?? existing.merchant,
+        date: body.date ?? existing.date,
+        amountCents: body.originalAmountCents ?? existing.originalAmountCents,
+      },
+      write: (transaction) => {
+        // Handle scheduled transactions based on scope
+        if (
+          existing.isScheduled &&
+          existing.scheduleRuleId &&
+          existing.scheduledOn &&
+          scope === "all"
+        ) {
+          // Update this and all future occurrences.
+          // Cut off by the immutable scheduledOn slot, not the editable date.
+          const futureCondition = and(
+            eq(fin.scheduleRuleId, existing.scheduleRuleId),
+            eq(fin.userId, user.userId),
+            gte(fin.scheduledOn, existing.scheduledOn)
+          );
+          // Every field except date is copied as-is to all future occurrences.
+          // Date is shifted per occurrence: each keeps its own scheduledOn slot
+          // plus the offset the user applied to the edited occurrence.
+          if (typeof updates.date === "string") {
+            const offsetSeconds =
+              (new Date(updates.date).getTime() -
+                new Date(existing.scheduledOn).getTime()) /
+              1000;
+            updates.date = sql`strftime('%Y-%m-%dT%H:%M:%fZ', ${fin.scheduledOn}, ${`${offsetSeconds} seconds`})`;
+          }
+          if (Object.keys(updates).length > 0) {
+            transaction.update(fin).set(updates).where(futureCondition).run();
+          }
 
-      // Handle line items for all future occurrences
-      if (body.lineItems !== undefined) {
-        const futureRecords = await db
-          .select({ finId: fin.finId })
-          .from(fin)
-          .where(futureCondition);
+          // Handle line items for all future occurrences
+          if (body.lineItems !== undefined) {
+            const futureRecords = transaction
+              .select({ finId: fin.finId })
+              .from(fin)
+              .where(futureCondition).all();
 
-        // Update line items for each future record
-        for (const record of futureRecords) {
-          // Delete existing line items
-          await db.delete(finItems).where(eq(finItems.finId, record.finId));
+            // Update line items for each future record
+            for (const record of futureRecords) {
+              // Delete existing line items
+              transaction.delete(finItems).where(eq(finItems.finId, record.finId)).run();
 
-          // Insert new line items
-          if (body.lineItems.length > 0) {
-            await db.insert(finItems).values(
-              body.lineItems.map((item, index) => ({
-                finId: record.finId,
-                lineNo: index + 1,
-                name: item.name,
-                qty: item.qty || null,
-                unit: item.unit || null,
-                unitPriceCents: item.unitPriceCents || null,
-                originalAmountCents: item.originalAmountCents,
-                personId: item.personId || null,
-                category: item.category || null,
-                subcategory: item.subcategory || null,
-                notes: item.notes || null,
-                brandName: item.brandName || null,
-              }))
-            );
+              // Insert new line items
+              if (body.lineItems.length > 0) {
+                transaction.insert(finItems).values(
+                  body.lineItems.map((item, index) => ({
+                    finId: record.finId,
+                    lineNo: index + 1,
+                    name: item.name,
+                    qty: item.qty || null,
+                    unit: item.unit || null,
+                    unitPriceCents: item.unitPriceCents || null,
+                    originalAmountCents: item.originalAmountCents,
+                    personId: item.personId || null,
+                    category: item.category || null,
+                    subcategory: item.subcategory || null,
+                    notes: item.notes || null,
+                    brandName: item.brandName || null,
+                  }))
+                ).run();
+              }
+            }
+          }
+        } else {
+          // Update only this single occurrence (default behavior)
+          if (Object.keys(updates).length > 0) {
+            transaction
+              .update(fin)
+              .set(updates)
+              .where(and(eq(fin.finId, body.finId), eq(fin.userId, user.userId))).run();
+          }
+
+          // Handle line items update if provided
+          if (body.lineItems !== undefined) {
+            // Delete existing line items
+            transaction.delete(finItems).where(eq(finItems.finId, body.finId)).run();
+
+            // Insert new line items
+            if (body.lineItems.length > 0) {
+              transaction.insert(finItems).values(
+                body.lineItems.map((item, index) => ({
+                  finId: body.finId,
+                  lineNo: index + 1,
+                  name: item.name,
+                  qty: item.qty || null,
+                  unit: item.unit || null,
+                  unitPriceCents: item.unitPriceCents || null,
+                  originalAmountCents: item.originalAmountCents,
+                  personId: item.personId || null,
+                  category: item.category || null,
+                  subcategory: item.subcategory || null,
+                  notes: item.notes || null,
+                  brandName: item.brandName || null,
+                }))
+              ).run();
+            }
           }
         }
-      }
-    } else {
-      // Update only this single occurrence (default behavior)
-      if (Object.keys(updates).length > 0) {
-        await db
-          .update(fin)
-          .set(updates)
-          .where(and(eq(fin.finId, body.finId), eq(fin.userId, user.userId)));
-      }
 
-      // Handle line items update if provided
-      if (body.lineItems !== undefined) {
-        // Delete existing line items
-        await db.delete(finItems).where(eq(finItems.finId, body.finId));
-
-        // Insert new line items
-        if (body.lineItems.length > 0) {
-          await db.insert(finItems).values(
-            body.lineItems.map((item, index) => ({
-              finId: body.finId,
-              lineNo: index + 1,
-              name: item.name,
-              qty: item.qty || null,
-              unit: item.unit || null,
-              unitPriceCents: item.unitPriceCents || null,
-              originalAmountCents: item.originalAmountCents,
-              personId: item.personId || null,
-              category: item.category || null,
-              subcategory: item.subcategory || null,
-              notes: item.notes || null,
-              brandName: item.brandName || null,
-            }))
-          );
-        }
-      }
-    }
-
-    // Fetch updated record
-    const [updated] = await db
-      .select()
-      .from(fin)
-      .where(eq(fin.finId, body.finId))
-      .limit(1);
-
-    if (!updated) {
-      return serverErrorResponse("Failed to retrieve updated record");
-    }
-
-    // Return success response
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          finId: updated.finId,
-          userId: updated.userId,
-          type: updated.type,
-          date: updated.date,
-          merchant: updated.merchant,
-          comment: updated.comment,
-          place: updated.place,
-          city: updated.city,
-          category: updated.category,
-          subcategory: updated.subcategory,
-          details: updated.details,
-          originalCurrency: updated.originalCurrency,
-          originalAmountCents: updated.originalAmountCents,
-          fxId: updated.fxId,
-          amountCadCents: updated.amountCadCents,
-          amountUsdCents: updated.amountUsdCents,
-          amountCnyCents: updated.amountCnyCents,
-          amountBaseCadCents: updated.amountBaseCadCents,
-          isScheduled: updated.isScheduled,
-          scheduleRuleId: updated.scheduleRuleId,
-          scheduledOn: updated.scheduledOn,
-        },
-      } as UpdateFinResponse,
-      { status: 200 }
-    );
+        const record = transaction.select().from(fin).where(eq(fin.finId, body.finId)).get();
+        if (!record) throw new Error("Failed to retrieve the updated record");
+        return record;
+      },
+    });
+    return NextResponse.json({ success: true, data: updated } as UpdateFinResponse);
   } catch (error) {
+    if (error instanceof PhotoRequestError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: error.status });
+    }
     console.error("Update fin error:", error);
     return serverErrorResponse("Internal server error");
   }

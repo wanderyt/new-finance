@@ -276,6 +276,23 @@ export const receipts = sqliteTable(
 export type Receipt = typeof receipts.$inferSelect;
 export type NewReceipt = typeof receipts.$inferInsert;
 
+export const finPhotos = sqliteTable(
+  "fin_photos",
+  {
+    photoId: integer("photo_id").primaryKey(),
+    finId: text("fin_id").notNull().references(() => fin.finId, { onDelete: "cascade" }),
+    storageKey: text("storage_key").notNull().unique(),
+    originalName: text("original_name"),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    uploadedAt: text("uploaded_at").notNull(),
+  },
+  (table) => [index("idx_fin_photos_order").on(table.finId, table.sortOrder, table.photoId)]
+);
+
+export type FinPhoto = typeof finPhotos.$inferSelect;
+
 // ============ 9. Tags ============
 export const tags = sqliteTable(
   "tags",

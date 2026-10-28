@@ -98,6 +98,7 @@ export interface CreateFinRequest {
 
 // Update Fin Request
 export interface UpdateFinRequest {
+  removedPhotoIds?: number[];
   finId: string; // Required to identify the record
 
   // Fields that can be updated
@@ -133,6 +134,15 @@ export interface ReceiptData {
 }
 
 // Fin Response (client-safe)
+export interface FinPhotoData {
+  photoId: number;
+  originalName: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  sortOrder: number;
+  uploadedAt: string;
+}
+
 export interface FinData {
   finId: string;
   userId: number;
@@ -156,6 +166,7 @@ export interface FinData {
   scheduleRuleId: number | null;
   scheduledOn: string | null;
   receipts?: ReceiptData[];
+  photos?: FinPhotoData[];
 }
 
 // Create Fin Response

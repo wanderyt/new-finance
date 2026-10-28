@@ -75,6 +75,14 @@ See [Database Schema](#database-schema) section for complete details.
 
 ## Overview
 
+### Product photo storage
+
+The `fin_photos` table stores product photo metadata and references `fin.fin_id` with cascade deletion.
+The application derives ownership from the parent record and enables SQLite foreign-key enforcement.
+Image files live in `uploads/product-photos` beside the SQLite database.
+Run `yarn db:migrate:photos` to apply the additive, repeatable photo migration.
+See [Product Photos](./product-photos-feature.md) for columns, indexes, and cleanup behavior.
+
 This document defines the complete database requirements and design for the new-finance Next.js application. The design includes:
 
 - **Core financial transaction tracking** with multi-currency support

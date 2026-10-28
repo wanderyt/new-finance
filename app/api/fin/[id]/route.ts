@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
-import { fin, finItems, finTags, receipts } from "@/app/lib/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { fin, finItems, finTags, receipts, finPhotos } from "@/app/lib/db/schema";
+import { eq, and, gte, inArray } from "drizzle-orm";
+import { getFinPhotos, removeProductPhotoFiles, cleanupOrphanProductPhotos } from "../../../lib/utils/fin-photo-storage";
 import {
   withAuth,
   badRequestResponse,
@@ -58,6 +59,7 @@ export const GET = withAuth(async (request, user) => {
         items,
         tags,
         receipts: finReceipts,
+        photos: getFinPhotos(finId),
       },
     });
   } catch (error) {
@@ -79,6 +81,9 @@ export const DELETE = withAuth(async (request, user) => {
 
     // Get scope parameter from query string
     const scope = url.searchParams.get("scope") as "single" | "all" | null;
+    if (scope !== null && scope !== "single" && scope !== "all") {
+      return badRequestResponse("The delete scope is invalid");
+    }
 
     // Verify ownership and get fin record
     const [targetFin] = await db
@@ -94,26 +99,18 @@ export const DELETE = withAuth(async (request, user) => {
       );
     }
 
-    // Handle scheduled transactions based on scope
-    if (targetFin.isScheduled && targetFin.scheduleRuleId && targetFin.scheduledOn) {
-      if (scope === "single") {
-        // Delete only this specific occurrence
-        await db.delete(fin).where(eq(fin.finId, finId));
-      } else {
-        // Default to "all" - delete this and all future occurrences.
-        // Cut off by the immutable scheduledOn slot, not the editable date.
-        await db.delete(fin).where(
-          and(
-            eq(fin.scheduleRuleId, targetFin.scheduleRuleId),
-            eq(fin.userId, user.userId),
-            gte(fin.scheduledOn, targetFin.scheduledOn)
-          )
-        );
-      }
-    } else {
-      // Delete single fin (cascade will handle finItems and finTags)
-      await db.delete(fin).where(eq(fin.finId, finId));
-    }
+    const condition = targetFin.isScheduled && targetFin.scheduleRuleId && targetFin.scheduledOn && scope !== "single"
+      ? and(eq(fin.scheduleRuleId, targetFin.scheduleRuleId), eq(fin.userId, user.userId), gte(fin.scheduledOn, targetFin.scheduledOn))
+      : and(eq(fin.finId, finId), eq(fin.userId, user.userId));
+    const storageKeys = db.transaction((transaction) => {
+      const recordIds = transaction.select({ finId: fin.finId }).from(fin).where(condition);
+      const photos = transaction.select({ key: finPhotos.storageKey }).from(finPhotos)
+        .where(inArray(finPhotos.finId, recordIds)).all();
+      transaction.delete(fin).where(condition).run();
+      return photos.map((photo) => photo.key);
+    });
+    await removeProductPhotoFiles(storageKeys);
+    await cleanupOrphanProductPhotos();
 
     return NextResponse.json({
       success: true,

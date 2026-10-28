@@ -71,6 +71,16 @@ The Fin Editor is a comprehensive financial transaction editor that supports:
 - **Result Dialog**: Popup with editable line items
 - **Person Assignment**: Each item can be assigned to a family member
 
+### Product Photos
+
+The optional 商品照片 section follows the receipt section for new and existing records.
+Users can add six JPEG, PNG, or WebP photos, with a 5 MiB limit per photo.
+The gallery provides thumbnails, pending removal, and a full-size viewer.
+Save commits photo changes. Cancel discards pending changes after the unsaved-change warning.
+Photo changes apply only to the selected scheduled occurrence.
+Product photos do not trigger receipt analysis.
+See [Product Photos](./product-photos-feature.md) for storage, validation, and cleanup details.
+
 ### User Decisions (Confirmed)
 
 | Aspect | Decision |
