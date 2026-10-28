@@ -14,6 +14,7 @@ function getDatabase() {
     // Support DATABASE_PATH env var for Docker, fallback to default for local dev
     const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), 'db', 'finance.db')
     globalForDb.sqlite = new Database(dbPath)
+    globalForDb.sqlite.pragma('foreign_keys = ON')
 
     if (process.env.NODE_ENV !== 'production') {
       // Keep singleton in dev mode to avoid too many connections

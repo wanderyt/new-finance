@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.20.0] - 2026-10-27
+
+### Added
+- **Product Photos**: Fin records support six optional JPEG, PNG, or WebP photos, up to 5 MB each, with previews and inset remove icons.
+- **Private Photo Storage**: The app checks ownership, saves photo metadata with record changes, and deletes removed files after a successful save.
+- **Photo Migration**: A repeatable SQL patch creates the photo table and index. Docker applies the migration at startup.
+
+### Changed
+- **Photo Filenames**: Product photos use the receipt date, merchant, and amount convention, with a unique suffix for each file.
+- **History Month Summaries**: Month titles show separate expense, income, and balance totals for the filtered records.
+- **History Rows**: Rows use the day heading for dates and retain place names and schedule badges.
+
 ## [1.19.2] - 2026-10-21
 
 ### Fixed

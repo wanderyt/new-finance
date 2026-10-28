@@ -94,6 +94,19 @@ export const POST = withAuth(async (request, user) => {
 
 ## API Endpoints
 
+### Product photo support
+
+Create and update endpoints accept JSON or multipart requests.
+Multipart requests include transaction JSON under `data` and repeated `photos` file fields.
+Update JSON accepts `removedPhotoIds`. Scheduled update `scope` also belongs inside the JSON payload.
+Each record supports six JPEG, PNG, or WebP photos of 5 MiB or smaller.
+The server limits each request body to 40 MiB.
+Create, update, and detail responses include photo display metadata in `photos`.
+Record changes and photo metadata commit in one SQLite transaction.
+Photo changes affect only the selected scheduled occurrence.
+The authenticated `GET /api/fin-photos/{photoId}` endpoint serves the image.
+See [Product Photos](./product-photos-feature.md) for the complete contract and failure behavior.
+
 ### 1. Create Fin Transaction
 
 **Endpoint**: `POST /api/fin/create`

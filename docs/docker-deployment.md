@@ -2,6 +2,16 @@
 
 This guide covers deploying the new-finance application as a Docker container on your NAS.
 
+## Product photo storage
+
+Docker runs the additive product photo migration before it starts Next.js.
+The migration creates `fin_photos` and `/app/db/uploads/product-photos` when they do not exist.
+The existing `/app/db` volume persists product photos across container replacements.
+The container user must have write access to this directory.
+Back up the SQLite database and the complete `uploads` directory together.
+The database-only backup examples below do not include uploaded images.
+See [Product Photos](./product-photos-feature.md) for storage and cleanup details.
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)

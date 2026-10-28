@@ -12,12 +12,14 @@ import ReceiptAnalysisDialog from "./ReceiptAnalysisDialog";
 import LineItemsDialog from "./LineItemsDialog";
 import HistoricalDataSheet from "./HistoricalDataSheet";
 import ReceiptViewer from "./ReceiptViewer";
+import ProductPhotos from "./ProductPhotos";
 import {
   CreateFinRequest,
   UpdateFinRequest,
   FinData,
   HistoricalDataItem,
   ReceiptData,
+  FinPhotoData,
 } from "@/app/lib/types/api";
 
 interface ReceiptAnalysisResult {
@@ -44,6 +46,7 @@ interface FinEditorFormProps {
   existingFin?: FinData;
   onSubmit: (data: CreateFinRequest | UpdateFinRequest | FormData, saveAndCreateAnother?: boolean) => Promise<void>;
   onCancel: () => void;
+  onDirtyChange?: (dirty: boolean) => void;
   onDelete?: () => Promise<void>;
   isSubmitting?: boolean;
   onReceiptUpdate?: (finId: string) => Promise<void>;
@@ -55,6 +58,7 @@ const FinEditorForm = ({
   existingFin,
   onSubmit,
   onCancel,
+  onDirtyChange,
   onDelete,
   isSubmitting = false,
   onReceiptUpdate,
@@ -103,6 +107,12 @@ const FinEditorForm = ({
   >("monthly");
   const [details, setDetails] = useState(existingFin?.details || "");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [savedPhotos, setSavedPhotos] = useState<FinPhotoData[]>(existingFin?.photos || []);
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<number[]>([]);
+  const [isLoadingPhotos, setIsLoadingPhotos] = useState(Boolean(existingFin));
+  const [photoLoadError, setPhotoLoadError] = useState(false);
+  const [photoLoadAttempt, setPhotoLoadAttempt] = useState(0);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isAnalyzingReceipt, setIsAnalyzingReceipt] = useState(false);
   const [categories, setCategories] = useState<
@@ -192,19 +202,26 @@ const FinEditorForm = ({
       .catch(console.error);
   }, []);
 
-  // Fetch line items for existing fin record
+  // Load photo metadata before users change the gallery.
   useEffect(() => {
-    if (existingFin?.finId) {
-      fetch(`/api/fin/${existingFin.finId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.data.items) {
-            setLineItems(data.data.items as LineItem[]);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [existingFin?.finId]);
+    if (!existingFin?.finId) return;
+    let cancelled = false;
+    fetch(`/api/fin/${existingFin.finId}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Failed to load the record");
+        return response.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        if (!data.success) throw new Error("Failed to load the record");
+        setLineItems((data.data.items || []) as LineItem[]);
+        setSavedPhotos(data.data.photos || []);
+        setPhotoLoadError(false);
+      })
+      .catch(() => { if (!cancelled) setPhotoLoadError(true); })
+      .finally(() => { if (!cancelled) setIsLoadingPhotos(false); });
+    return () => { cancelled = true; };
+  }, [existingFin?.finId, photoLoadAttempt]);
 
   // Sync form state when existingFin changes (e.g., after receipt update)
   useEffect(() => {
@@ -246,6 +263,8 @@ const FinEditorForm = ({
   const handleSubmit = async (e: FormEvent, saveAndCreateAnother = false) => {
     e.preventDefault();
 
+    if (isSubmitting || isLoadingPhotos || photoLoadError) return;
+
     if (!isValid()) {
       alert("Please fill in all required fields");
       return;
@@ -256,6 +275,7 @@ const FinEditorForm = ({
     if (existingFin) {
       const updateData: UpdateFinRequest = {
         finId: existingFin.finId,
+        removedPhotoIds,
         type,
         date: new Date(date).toISOString(),
         merchant: merchant || undefined,
@@ -269,7 +289,14 @@ const FinEditorForm = ({
         lineItems: lineItems.length > 0 ? lineItems : undefined,
       };
 
-      await onSubmit(updateData, saveAndCreateAnother);
+      if (photoFiles.length > 0) {
+        const formData = new FormData();
+        formData.append("data", JSON.stringify(updateData));
+        photoFiles.forEach((file) => formData.append("photos", file));
+        await onSubmit(formData, saveAndCreateAnother);
+      } else {
+        await onSubmit(updateData, saveAndCreateAnother);
+      }
     } else {
       // Build FormData to include receipt file
       const formData = new FormData();
@@ -292,6 +319,8 @@ const FinEditorForm = ({
 
       // Append data as JSON string
       formData.append("data", JSON.stringify(createData));
+
+      photoFiles.forEach((file) => formData.append("photos", file));
 
       // Append receipt file if present
       if (receiptFile) {
@@ -473,7 +502,7 @@ const FinEditorForm = ({
   ];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} onChangeCapture={() => onDirtyChange?.(true)} className="space-y-3">
       {/* Date and Scheduled */}
       <div className="flex gap-2">
         <div className="flex-1 relative min-w-0">
@@ -762,6 +791,25 @@ const FinEditorForm = ({
         </div>
       ) : null}
 
+      <ProductPhotos
+        photos={savedPhotos}
+        files={photoFiles}
+        removedPhotoIds={removedPhotoIds}
+        onFilesChange={(files) => { setPhotoFiles(files); onDirtyChange?.(true); }}
+        onRemovePhoto={(photoId) => {
+          setRemovedPhotoIds((ids) => [...ids, photoId]);
+          onDirtyChange?.(true);
+        }}
+        disabled={isSubmitting}
+        isLoading={isLoadingPhotos}
+        loadError={photoLoadError}
+        onRetry={() => {
+          setIsLoadingPhotos(true);
+          setPhotoLoadError(false);
+          setPhotoLoadAttempt((attempt) => attempt + 1);
+        }}
+      />
+
       {/* Action Buttons */}
       <div className="flex gap-2 pt-4">
         <Button
@@ -794,7 +842,7 @@ const FinEditorForm = ({
             variant="secondary"
             size="sm"
             onClick={handleSaveAndCreateAnother}
-            disabled={!isValid() || isSubmitting}
+            disabled={!isValid() || isSubmitting || isLoadingPhotos || photoLoadError}
             className="flex-1"
           >
             再记一笔
@@ -805,7 +853,7 @@ const FinEditorForm = ({
           type="submit"
           variant="primary"
           size="sm"
-          disabled={!isValid() || isSubmitting}
+          disabled={!isValid() || isSubmitting || isLoadingPhotos || photoLoadError}
           className="flex-1"
         >
           {isSubmitting ? "保存中..." : existingFin ? "更新" : "保存"}

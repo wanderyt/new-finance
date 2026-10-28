@@ -200,6 +200,7 @@ export default function HistoryView({ onFinClick }: HistoryViewProps) {
               <MonthGroup
                 key={monthGroup.monthKey}
                 monthGroup={monthGroup}
+                showTransactionTotals
                 isExpanded={expandedMonths.includes(monthGroup.monthKey)}
                 onToggle={() => handleMonthToggle(monthGroup.monthKey)}
                 onFinClick={onFinClick}

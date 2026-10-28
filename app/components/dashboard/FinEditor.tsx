@@ -47,6 +47,7 @@ const FinEditor = ({
   }, [isOpen]);
 
   const handleClose = () => {
+    if (isSubmitting) return;
     if (hasUnsavedChanges) {
       const confirmed = window.confirm(
         "You have unsaved changes. Are you sure you want to close?"
@@ -58,7 +59,8 @@ const FinEditor = ({
 
   const handleSubmit = async (data: CreateFinRequest | UpdateFinRequest | FormData, saveAndCreateAnother = false) => {
     // Check if this is an update to a scheduled transaction
-    const isUpdate = data instanceof FormData ? false : "finId" in data;
+    const payload = data instanceof FormData ? JSON.parse(String(data.get("data"))) : data;
+    const isUpdate = "finId" in payload;
     if (isUpdate && existingFin?.isScheduled && existingFin?.scheduleRuleId) {
       // Show dialog to ask user's preference
       setPendingData(data);
@@ -75,9 +77,8 @@ const FinEditor = ({
     setIsSubmitting(true);
 
     try {
-      const isUpdate = data instanceof FormData
-        ? false  // FormData always means create
-        : "finId" in data;
+      const payload = data instanceof FormData ? JSON.parse(String(data.get("data"))) : data;
+      const isUpdate = "finId" in payload;
 
       const endpoint = isUpdate ? "/api/fin/update" : "/api/fin/create";
       const method = isUpdate ? "PATCH" : "POST";
@@ -120,7 +121,7 @@ const FinEditor = ({
         // FormData: browser sets Content-Type with boundary
         body = scope
           ? (() => {
-              data.append("scope", scope);
+              data.set("data", JSON.stringify({ ...payload, scope }));
               return data;
             })()
           : data;
@@ -293,6 +294,7 @@ const FinEditor = ({
             existingFin={currentFinData}
             onSubmit={handleSubmit}
             onCancel={handleClose}
+            onDirtyChange={setHasUnsavedChanges}
             onDelete={existingFin ? handleDelete : undefined}
             isSubmitting={isSubmitting}
             onReceiptUpdate={handleReceiptUpdate}

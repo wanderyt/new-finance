@@ -82,12 +82,13 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/app/lib/db ./app/lib/db
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./
+COPY scripts/migrate-fin-photos.mjs ./scripts/migrate-fin-photos.mjs
 
 # Create db directory for volume mount
 RUN mkdir -p /app/db && chown -R nextjs:nodejs /app/db
 
 # Create uploads directory for receipts
-RUN mkdir -p /app/db/uploads/receipts && \
+RUN mkdir -p /app/db/uploads/receipts /app/db/uploads/product-photos && \
     chown -R nextjs:nodejs /app/db/uploads
 
 # Switch to non-root user
@@ -97,4 +98,4 @@ USER nextjs
 EXPOSE 3000
 
 # Start Next.js on all interfaces for Docker
-CMD ["node_modules/.bin/next", "start", "-H", "0.0.0.0", "-p", "3000"]
+CMD ["sh", "-c", "node scripts/migrate-fin-photos.mjs && exec node_modules/.bin/next start -H 0.0.0.0 -p 3000"]

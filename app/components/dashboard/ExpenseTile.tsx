@@ -6,9 +6,10 @@ import { FinData } from "@/app/lib/types/api";
 interface ExpenseTileProps {
   fin: FinData;
   onClick?: (fin: FinData) => void;
+  showDate?: boolean;
 }
 
-export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
+export default function ExpenseTile({ fin, onClick, showDate = true }: ExpenseTileProps) {
   const [showTooltip, setShowTooltip] = useState(false);
 
   const isExpense = fin.type === "expense";
@@ -67,17 +68,19 @@ export default function ExpenseTile({ fin, onClick }: ExpenseTileProps) {
           </div>
         )}
 
-        {/* Place, Time & Badges */}
-        <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-500">
-          {fin.place && <span>{fin.place}</span>}
-          {fin.place && <span className="text-zinc-400 dark:text-zinc-600">•</span>}
-          <span>{timeString}</span>
-          {fin.isScheduled && (
-            <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">
-              周期
-            </span>
-          )}
-        </div>
+        {/* Place, date, and schedule badge. */}
+        {(fin.place || showDate || fin.isScheduled) && (
+          <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-500">
+            {fin.place && <span>{fin.place}</span>}
+            {fin.place && showDate && <span className="text-zinc-400 dark:text-zinc-600">•</span>}
+            {showDate && <span>{timeString}</span>}
+            {fin.isScheduled && (
+              <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs font-medium">
+                周期
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right Side */}

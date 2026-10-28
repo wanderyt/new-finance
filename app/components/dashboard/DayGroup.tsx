@@ -36,7 +36,7 @@ export default function DayGroup({ dayGroup, onFinClick, renderTile }: DayGroupP
         {renderTile
           ? fins.map((fin) => renderTile(fin))
           : fins.map((fin) => (
-              <ExpenseTile key={fin.finId} fin={fin} onClick={onFinClick!} />
+              <ExpenseTile key={fin.finId} fin={fin} onClick={onFinClick!} showDate={false} />
             ))}
       </div>
     </div>

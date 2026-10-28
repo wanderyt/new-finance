@@ -4,6 +4,7 @@ import path from "path";
 import { db } from "@/app/lib/db/drizzle";
 import { receipts } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { buildTransactionFileBase, type TransactionFileMetadata } from "./transaction-file-name";
 
 // Derive upload directory from DATABASE_PATH
 // If DATABASE_PATH is /app/db/finance.db -> use /app/db/uploads/receipts
@@ -16,11 +17,7 @@ function getUploadDir(): string {
 
 const UPLOAD_DIR = getUploadDir();
 
-interface ReceiptMetadata {
-  merchant?: string | null;
-  date?: string | null;      // ISO 8601 string
-  amountCents?: number | null;
-}
+type ReceiptMetadata = TransactionFileMetadata;
 
 interface SaveReceiptParams {
   file: File;
@@ -49,32 +46,8 @@ export async function buildReceiptFileName(
 ): Promise<string> {
   const fallback = `${hash}.${ext}`;
 
-  if (!metadata) return fallback;
-
-  const { merchant, date, amountCents } = metadata;
-
-  // Require at least a date and amount for a descriptive name
-  if (!date || amountCents == null) return fallback;
-
-  // Format date as YYYYMMDD
-  const parsedDate = new Date(date);
-  if (isNaN(parsedDate.getTime())) return fallback;
-  const datePart = parsedDate.toISOString().slice(0, 10).replace(/-/g, "");
-
-  // Sanitize merchant: lowercase, non-alphanumeric → _, collapse multiples, max 30 chars
-  const rawMerchant = (merchant || "").trim();
-  const merchantPart = rawMerchant.length > 0
-    ? rawMerchant
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "_")
-        .replace(/^_+|_+$/g, "")
-        .slice(0, 30) || "unknown"
-    : "unknown";
-
-  // Format amount as dollars with 2 decimal places
-  const dollars = (amountCents / 100).toFixed(2);
-
-  const baseName = `${datePart}_${merchantPart}_${dollars}`;
+  const baseName = buildTransactionFileBase(metadata);
+  if (!baseName) return fallback;
   const candidate = `${baseName}.${ext}`;
   const candidatePath = path.join(uploadDir, candidate);
 

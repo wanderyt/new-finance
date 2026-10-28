@@ -19,7 +19,7 @@ export default function BottomSheet({
   // Handle ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
+      if (e.key === "Escape" && isOpen && !document.querySelector("dialog[open]")) {
         onClose();
       }
     };

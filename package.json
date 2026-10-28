@@ -1,6 +1,6 @@
 {
   "name": "new-finance",
-  "version": "1.19.2",
+  "version": "1.20.0",
   "private": true,
   "packageManager": "yarn@4.5.3",
   "engines": {
@@ -11,10 +11,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:photos": "tsx --test tests/fin-photos.test.ts",
     "db:studio": "drizzle-kit studio",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:photos": "node scripts/migrate-fin-photos.mjs",
     "db:seed": "tsx scripts/seed.ts",
     "db:add-merchant-cashback": "tsx scripts/add-merchant-cashback-category.ts",
     "db:cleanup-schedules": "tsx scripts/cleanup-schedule-rules.ts",
