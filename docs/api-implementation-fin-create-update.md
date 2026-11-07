@@ -10,7 +10,8 @@ Each line item accepts nullable `necessityLevel` and nullable `necessityReason`.
 A null or omitted item level inherits the record default.
 Reasons support 300 characters. Blank reasons save as null.
 Record and item amounts must use non-negative integer cents.
-Supplied item totals above the paid amount return a reconciliation error.
+Item totals can exceed the paid amount. Create and update preserve the supplied amounts.
+Priority reports proportionally allocate the paid amount when item totals exceed it.
 
 An omitted `lineItems` field preserves existing items. An explicit empty array deletes them.
 A supplied array replaces items and must include their saved classifications.

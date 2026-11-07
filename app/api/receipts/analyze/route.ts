@@ -38,7 +38,7 @@ Analyze this receipt image and extract the following information in JSON format:
       "unit": "pcs",       // Unit of measurement
       "amount": 1250,      // Total line item price in cents
       "suggestedNecessityLevel": "essential",
-      "necessityReason": "Short explanation in Chinese"
+      "necessityReason": null // Optional: a short Chinese explanation only when useful
     }
   ]
 }
@@ -47,16 +47,26 @@ Rules:
 - Extract ALL purchased items. Return taxAmount and tipAmount separately. Do not duplicate them in lineItems.
 - tipAmount is the tip actually paid. Do not extract a suggested tip table as a payment. Do not assume a service fee is a tip.
 - Classify EACH item independently using these definitions:
-  - essential: protect basic living, health, or obligations. Examples: basic groceries, necessary medicine, taxes and tax-related expenses.
+  - essential: protect basic living, health, or obligations. Examples: basic groceries, necessary medicine, rent, and required income-tax payments.
   - personal_priority: deliberately protect wellbeing, confidence, or personal goals. Examples: aesthetic skincare, elective aesthetic treatment, education, fitness.
-  - flexible: comfortably reduce, delay, or skip. Examples: discretionary extras, impulse snacks, rarely used subscriptions, tips.
+  - flexible: comfortably reduce, delay, or skip. Examples: discretionary extras, impulse snacks, rarely used subscriptions.
   - unexpected: unplanned expenses such as fines, penalties, and repairs after an unexpected breakdown.
-- Suggest unexpected for explicit fines or penalties. Taxes themselves remain essential.
+- Suggest unexpected for explicit fines or penalties, including tax penalties.
 - Suggest unexpected for repairs only when the receipt indicates an unexpected breakdown, damage, or an emergency.
 - Routine maintenance and planned replacements do not imply unexpected spending. Default to essential when context is insufficient.
-- Tax payments and tax-related services suggest essential. Fines and penalties, including tax penalties, suggest unexpected. Tips suggest flexible.
+- Purchase-tax and paid-tip items initially copy the fin record's current priority.
+- Tax does not automatically imply essential, and a tip does not automatically imply flexible.
+- For example, tax and tips on a personal_priority record initially use personal_priority.
+- For separate purchase-tax and paid-tip lines, return suggestedNecessityLevel as null to request the record's current priority as the initial value.
+- Receipt review saves each initial value as an explicit, independent item priority. Later edits to tax, tip, or record priority do not change the others.
+- Tax and tip lines on mixed-priority receipts use the same initial-value rule. Do not split these charges across priorities.
+- Classify standalone tax payments and tax-related services by their purpose and obligations.
 - When personal context is insufficient, suggest essential. Do not infer priority from price, brand, or merchant alone.
-- Return suggestedNecessityLevel and a short necessityReason for each item. Suggestions remain editable by the user.
+- Return suggestedNecessityLevel for each item. Use null for purchase-tax and paid-tip lines and one of the four levels for other items.
+- Suggestions remain editable by the user.
+- necessityReason is optional. Omit it or return null for routine items and obvious classifications, including taxes and tips.
+- Add a short Chinese reason only for key items when the receipt provides useful context, such as evidence of an unexpected breakdown.
+- Do not add a reason that only repeats the priority definition. Do not invent personal context.
 - Convert amounts to CENTS (multiply by 100)
 - IMPORTANT: Extract BOTH date AND time from receipt if available
   - Format as ISO 8601: "YYYY-MM-DDTHH:mm:ss" (e.g., "2026-01-15T14:30:00")

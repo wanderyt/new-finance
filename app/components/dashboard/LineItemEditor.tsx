@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, type RefObject } from "react";
+import { useState, useEffect, useRef, useCallback, useId, type RefObject } from "react";
 import { NECESSITY_LEVELS, NECESSITY_LABELS, type NecessityFields, type NecessityLevel } from "../../lib/types/necessity";
 import Input from "../ui-kit/Input";
 import Dropdown from "../ui-kit/Dropdown";
 import SearchableSelect from "../ui-kit/SearchableSelect";
+import Button from "../ui-kit/Button";
 
 interface AutocompleteItem {
   name: string;
@@ -80,7 +81,10 @@ const LineItemEditor = ({
   );
   const [autocompleteItems, setAutocompleteItems] = useState<AutocompleteItem[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [showNecessityReason, setShowNecessityReason] = useState(false);
+  const necessityReasonId = useId();
   const nameContainerRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const isNameFocused = useRef(false);
 
   // Track focus per numeric field so external prop updates never overwrite the
@@ -117,6 +121,7 @@ const LineItemEditor = ({
         const res = await fetch(`/api/fin/items/autocomplete?q=${encodeURIComponent(name)}`);
         if (res.ok) {
           const data = await res.json();
+          if (!isNameFocused.current) return;
           setAutocompleteItems(data.items ?? []);
           setShowAutocomplete(true);
         }
@@ -146,7 +151,9 @@ const LineItemEditor = ({
   };
 
   const handleNameSelect = useCallback((name: string) => {
+    isNameFocused.current = false;
     setShowAutocomplete(false);
+    nameInputRef.current?.blur();
     onChange(index, { ...item, name });
   }, [item, index, onChange]);
 
@@ -236,9 +243,10 @@ const LineItemEditor = ({
 
       <div className="space-y-2">
         {/* Item name, amount, and member. */}
-        <div className="grid grid-cols-[minmax(0,1fr)_5rem_5rem] gap-2 sm:grid-cols-[minmax(0,1fr)_6rem_6rem]">
-          <div className="relative min-w-0" ref={nameContainerRef}>
+        <div className="relative grid grid-cols-[minmax(0,1fr)_5rem_5rem] gap-2 sm:grid-cols-[minmax(0,1fr)_6rem_6rem]">
+          <div className="min-w-0" ref={nameContainerRef}>
             <Input
+              ref={nameInputRef}
               value={item.name}
               onChange={(e) => handleChange("name", e.target.value)}
               onFocus={() => {
@@ -246,7 +254,11 @@ const LineItemEditor = ({
                 if (item.name.trim().length > 0) {
                   fetch(`/api/fin/items/autocomplete?q=${encodeURIComponent(item.name)}`)
                     .then((r) => r.json())
-                    .then((d) => { setAutocompleteItems(d.items ?? []); setShowAutocomplete(true); })
+                    .then((d) => {
+                      if (!isNameFocused.current) return;
+                      setAutocompleteItems(d.items ?? []);
+                      setShowAutocomplete(true);
+                    })
                     .catch(() => {});
                 }
               }}
@@ -258,7 +270,7 @@ const LineItemEditor = ({
               required
             />
             {showAutocomplete && autocompleteItems.length > 0 && (
-              <div className="absolute z-20 w-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg max-h-48 overflow-y-auto">
+              <div className="absolute left-0 right-0 top-full z-20 mt-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md shadow-lg max-h-48 overflow-y-auto">
                 {autocompleteItems.map((ac) => (
                   <button
                     key={ac.name}
@@ -266,7 +278,7 @@ const LineItemEditor = ({
                     onMouseDown={(e) => { e.preventDefault(); handleNameSelect(ac.name); }}
                     className="w-full px-3 py-1.5 text-left hover:bg-zinc-100 dark:hover:bg-zinc-700 flex justify-between items-center"
                   >
-                    <span className="text-xs font-medium truncate">{ac.name}</span>
+                    <span className="min-w-0 text-xs font-medium break-words">{ac.name}</span>
                     <span className="text-xs text-zinc-400 ml-2 shrink-0">{ac.count}次</span>
                   </button>
                 ))}
@@ -357,7 +369,7 @@ const LineItemEditor = ({
           />
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {showNecessity && <div className="w-28 shrink-0" role="group" aria-label="支出优先级">
             <Dropdown
               value={item.necessityLevel ?? defaultNecessityLevel}
@@ -369,6 +381,27 @@ const LineItemEditor = ({
               }}
             />
           </div>}
+          {showNecessity && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="relative inline-flex shrink-0 items-center justify-center"
+              aria-label={showNecessityReason ? "收起优先级原因" : "展开优先级原因"}
+              aria-expanded={showNecessityReason}
+              aria-controls={necessityReasonId}
+              title={item.necessityReason?.trim() ? "编辑优先级原因" : "添加优先级原因"}
+              onClick={() => setShowNecessityReason((visible) => !visible)}
+            >
+              <svg aria-hidden="true" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                  d="M8 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM9 3v18M4 7h3m-3 5h3m-3 5h3m5-10h5m-5 5h5" />
+              </svg>
+              {item.necessityReason?.trim() && (
+                <span aria-hidden="true" className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-blue-500" />
+              )}
+            </Button>
+          )}
           <SearchableSelect
             value={item.brandName || ""}
             onChange={(value) => handleChange("brandName", value.trim() || undefined)}
@@ -378,8 +411,8 @@ const LineItemEditor = ({
           />
         </div>
 
-        {showNecessity && (
-          <Input aria-label="优先级原因" value={item.necessityReason ?? ""} maxLength={300}
+        {showNecessity && showNecessityReason && (
+          <Input id={necessityReasonId} autoFocus aria-label="优先级原因" value={item.necessityReason ?? ""} maxLength={300}
             onChange={(event) => handleChange("necessityReason", event.target.value || null)} placeholder="原因（可选）" />
         )}
 

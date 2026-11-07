@@ -4,7 +4,7 @@
 
 Expense records default to Essential and use the shared dropdown beside the currency selector.
 Each item can inherit that default or select Essential, Personal priority, Optional, or Unexpected explicitly.
-The displayed levels are 必需, 享受, 可选, and 突发.
+The displayed levels are 必需, 品质, 可选, and 突发.
 Unexpected covers unplanned costs such as fines and breakdown repairs.
 The record selector shows only the selected level, without a description or summary line.
 Item selectors show only the four levels. Items without an override display their inherited effective level.
@@ -13,10 +13,23 @@ The item panel places product name, amount, and member on one row, with member o
 The shared priority dropdown and brand input occupy one row. Priority selectors omit labels and explanatory text.
 Quantity, unit price, and unit remain on a separate row. The optional reason remains editable below priority and brand.
 
+Product name suggestions span the full first row without changing the name input width.
+Long suggestion names can wrap within the menu.
+The product autocomplete API returns at most 10 distinct names for the signed-in user.
+Suggestions sort by the latest transaction date, then the newest item identifier for ties.
+SQLite normalizes dates for ordering, including historical formats and timezone offsets.
+Future-dated transactions do not affect suggestions or purchase counts.
+The menu still displays purchase counts. Counts and prices do not determine the order.
+Reasons start folded, including saved and AI reasons.
+A notebook button beside the priority dropdown opens the reason input in its existing location below priority and brand.
+A small dot indicates an existing reason. Folding the input preserves its value.
+
 Items expose an optional editable reason in receipt review and item editing.
 Users can write, edit, or clear reasons. The editor clears stale reasons when a priority changes.
-Tax and tip remain ordinary separate items with explicit AI suggestions.
-The server suggests Essential for tax and Optional for tips. Users can correct either suggestion.
+Tax and tip remain ordinary separate items.
+Receipt tax and tips initially copy the record priority, including on mixed-priority receipts.
+Receipt review saves each charge priority explicitly. Later changes to tax, tip, or record priority do not change the others.
+Users can select an explicit priority for either item. Existing explicit overrides remain independent of the record default.
 
 Unchanged item collections are omitted from updates.
 Deleting all items sends an explicit empty array.
