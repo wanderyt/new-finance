@@ -9,7 +9,7 @@ export interface AnalyzedLineItem {
   unitPriceCents?: number;
   notes?: string;
   brandName?: string | null;
-  suggestedNecessityLevel?: NecessityLevel;
+  suggestedNecessityLevel?: NecessityLevel | null;
   necessityReason?: string | null;
 }
 

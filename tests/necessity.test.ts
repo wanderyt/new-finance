@@ -12,7 +12,7 @@ test("priority inheritance preserves explicit overrides", () => {
   assert.equal(effectiveNecessity({ necessityLevel: "essential" }, "flexible"), "essential");
   assert.equal(effectiveNecessity({ necessityLevel: null }, "personal_priority"), "personal_priority");
   assert.equal(validateNecessityRequest({ necessityLevel: null }, 100), "The spending priority is invalid.");
-  assert.match(validateNecessityRequest({ lineItems: [{ name: "A", originalAmountCents: 101 }] }, 100)!, /exceed/);
+  assert.equal(validateNecessityRequest({ lineItems: [{ name: "A", originalAmountCents: 101 }] }, 100), null);
   assert.match(validateNecessityRequest({ lineItems: [{ name: "A", originalAmountCents: 1, necessityReason: "x".repeat(301) }] }, 100)!, /300/);
   assert.equal(validateNecessityRequest({ lineItems: [] }, 100), null);
 });
@@ -50,14 +50,20 @@ test("receipt normalization applies tax and tip rules without duplicate charges"
     { name: "Tip", amount: 200, suggestedNecessityLevel: "essential" },
   ] });
   assert.equal(items.length, 3);
-  assert.deepEqual(items.map((item) => item.suggestedNecessityLevel), ["personal_priority", "essential", "flexible"]);
+  assert.deepEqual(items.map((item) => item.suggestedNecessityLevel), ["personal_priority", null, null]);
   assert.equal(items.reduce((sum, item) => sum + item.amount, 0), 1300);
   assert.equal(items[0].necessityReason, "My choice");
+  assert.deepEqual(items.slice(1).map((item) => item.necessityReason), [null, null]);
+  const routine = normalizeReceiptNecessities({ totalAmount: 4, lineItems: [
+    { name: "Milk", amount: 1 }, { name: "Tax", amount: 1 },
+    { name: "Tip", amount: 1 }, { name: "Parking fine", amount: 1 },
+  ] });
+  assert.ok(routine.every((item) => item.necessityReason === null));
   const fallback = normalizeReceiptNecessities({ totalAmount: 1, lineItems: [{ name: "Unknown", amount: 1,
     suggestedNecessityLevel: "invalid" as never, necessityReason: "x".repeat(500) }] });
   assert.equal(fallback[0].suggestedNecessityLevel, "essential");
   assert.equal(fallback[0].necessityReason?.length, 300);
-  assert.equal(normalizeReceiptNecessities({ totalAmount: 1, lineItems: [{ name: "小费", amount: 1 }] })[0].suggestedNecessityLevel, "flexible");
+  assert.equal(normalizeReceiptNecessities({ totalAmount: 1, lineItems: [{ name: "小费", amount: 1 }] })[0].suggestedNecessityLevel, null);
 });
 
 test("unexpected fines and repairs retain their own priority and reconcile with other levels", () => {
@@ -69,11 +75,37 @@ test("unexpected fines and repairs retain their own priority and reconcile with 
     { name: "Tax", amount: 200, suggestedNecessityLevel: "unexpected" },
     { name: "Tip", amount: 100, suggestedNecessityLevel: "unexpected" },
   ] });
-  assert.deepEqual(items.map((item) => item.suggestedNecessityLevel), ["unexpected", "unexpected", "essential", "flexible"]);
+  assert.deepEqual(items.map((item) => item.suggestedNecessityLevel), ["unexpected", "unexpected", null, null]);
+  assert.equal(items[1].necessityReason, "Unexpected breakdown");
+  assert.deepEqual(items.filter((_, index) => index !== 1).map((item) => item.necessityReason), [null, null, null]);
+  const corrected = normalizeReceiptNecessities({ totalAmount: 1, lineItems: [{ name: "Tax", amount: 1,
+    suggestedNecessityLevel: "flexible", necessityReason: "Can skip this expense" }] });
+  assert.equal(corrected[0].necessityReason, null);
   const allocations = allocateNecessity({ ...record, originalAmountCents: 1000, amountCadCents: 1000 },
     items.map((item) => ({ name: item.name, originalAmountCents: item.amount, necessityLevel: item.suggestedNecessityLevel })));
   assert.equal(allocations.filter((item) => item.necessityLevel === "unexpected").reduce((sum, item) => sum + item.amountCadCents, 0), 700);
   assert.equal(allocations.reduce((sum, item) => sum + item.amountCadCents, 0), 1000);
+});
+
+test("receipt tax and tips request the record priority as initial suggestions on uniform and mixed purchases", () => {
+  const separate = normalizeReceiptNecessities({ totalAmount: 1280, taxAmount: 130, tipAmount: 150, lineItems: [
+    { name: "Aesthetic treatment", amount: 1000, suggestedNecessityLevel: "personal_priority" },
+  ] });
+  const extracted = normalizeReceiptNecessities({ totalAmount: 1280, lineItems: [
+    { name: "Medicine", amount: 500, suggestedNecessityLevel: "essential" },
+    { name: "Skincare", amount: 500, suggestedNecessityLevel: "personal_priority" },
+    { name: "HST", amount: 130, suggestedNecessityLevel: "essential", necessityReason: "Tax is always essential" },
+    { name: "Gratuity", amount: 150, suggestedNecessityLevel: "flexible", necessityReason: "Tips are always optional" },
+  ] });
+  for (const items of [separate, extracted]) {
+    for (const charge of items.slice(-2)) {
+      assert.equal(charge.suggestedNecessityLevel, null);
+      assert.equal(charge.necessityReason, null);
+    }
+    assert.equal(items.reduce((sum, item) => sum + item.amount, 0), 1280);
+  }
+  const penalty = normalizeReceiptNecessities({ totalAmount: 100, lineItems: [{ name: "Tax penalty", amount: 100 }] });
+  assert.equal(penalty[0].suggestedNecessityLevel, "unexpected");
 });
 
 test("report periods use UTC boundaries and reject malformed or future periods", () => {

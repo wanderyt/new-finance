@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.1] - 2026-11-07
+
+### Changed
+- **Priority Label**: Rename the Personal priority label from 享受 to 品质.
+- **Product Suggestions**: Widen the item name menu to the full row while keeping the input width unchanged.
+- **Suggestion Order**: Show the 10 most recently purchased matching item names instead of sorting by purchase frequency. Exclude future-dated transactions.
+- **Optional Reasons**: Fold priority reasons behind a notebook button beside the priority dropdown.
+- **Receipt Suggestions**: Request reasons only for key items with useful context. Stop generating routine tax, tip, and fine explanations.
+- **Item Totals**: Allow item amounts above the paid total when users create or edit records.
+- **Tax and Tip Priority**: Initialize receipt tax and tips from the record priority, then keep all values independent. Remove fixed charge priorities.
+
+### Fixed
+- **Suggestion Selection**: Keep the product menu closed after users select an option or leave the name input.
+
 ## [1.21.0] - 2026-11-06
 
 ### Added

@@ -3,20 +3,32 @@
 ### Spending priority in the current receipt pipeline
 
 The current route uses Gemini vision analysis and Gemini item-name standardization.
-The vision prompt returns `suggestedNecessityLevel` and an optional Chinese `necessityReason` for each item.
+The vision prompt returns `suggestedNecessityLevel` for each item.
+It requests an optional Chinese `necessityReason` only for key items with useful receipt context, such as evidence of a breakdown.
+Routine items and obvious classifications can omit the reason or return null.
+The server does not manufacture reasons for tax, tip, or fine items.
+It clears generated tax and tip reasons and reasons for changed fine suggestions.
 The prompt explains Essential, Personal priority, Optional, and Unexpected with examples.
 It suggests Unexpected for explicit fines and repairs after unplanned damage or a breakdown.
 Routine maintenance does not imply Unexpected. Insufficient context still defaults to Essential.
 Missing or invalid suggestions default to Essential.
 
 Tax and tips remain separate fin items.
-The server assigns Essential to recognized tax rows and Optional to recognized tip rows.
+The server returns `suggestedNecessityLevel: null` for purchase-tax and paid-tip rows to request the record priority as an initial value.
+This also applies to tax and tip items on a mixed-priority receipt.
+Receipt review and MCP creation resolve that suggestion to the current record priority and save an explicit item priority.
+Later changes to tax, tip, or record priority do not change the others.
+Tax and tips on a Personal priority record therefore initially use Personal priority.
+The prompt classifies standalone tax payments and services by their purpose and obligations, without a blanket Essential rule.
+Tax penalties still suggest Unexpected. Tips do not have a fixed Optional default.
 Separate `taxAmount` and `tipAmount` values produce single charge rows without duplicating recognized extracted rows.
 Only an actually paid tip belongs in `tipAmount`. Suggested tip tables and generic service fees do not imply a paid tip.
 The paid total includes tax and any paid tip.
 
 Name standardization preserves priority fields and generated charge notes.
-Receipt review lets users edit each suggestion and reason before confirming.
+Receipt review lets users edit each suggestion before confirming.
+Reasons start folded behind a notebook button beside the priority dropdown.
+Users can open the reason input to review, add, change, or clear its value.
 Reanalysis asks before replacing existing items and classifications.
 Classification normalization does not add a model request.
 See [Spending Priority](./spending-priority-feature.md) for the complete rules.

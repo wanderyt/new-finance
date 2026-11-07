@@ -6,7 +6,7 @@ Status: Implemented on `codex/spending-priority`. The local database migration i
 
 Date: 2026-11-03.
 
-Last updated: 2026-11-06. Added Unexpected and updated the displayed labels to 必需 / 享受 / 可选 / 突发.
+Last updated: 2026-11-07. Receipt tax and tips initially copy the record priority, then remain independent.
 
 Classify expenses as Essential, Personal priority, Optional, or Unexpected. Support record defaults, item overrides, receipt AI suggestions, and monthly or yearly reports.
 
@@ -17,14 +17,14 @@ Classify expenses as Essential, Personal priority, Optional, or Unexpected. Supp
 | Stored value | English label | Chinese label | Definition |
 |---|---|---|---|
 | `essential` | Essential | 必需 | Protect spending for basic living, health, or obligations. |
-| `personal_priority` | Personal priority | 享受 | Choose to protect spending for wellbeing, confidence, or personal goals. |
+| `personal_priority` | Personal priority | 品质 | Choose to protect spending for wellbeing, confidence, or personal goals. |
 | `flexible` | Optional | 可选 | Comfortably reduce, delay, or skip this spending. |
 | `unexpected` | Unexpected | 突发 | Track unplanned charges such as fines, penalties, and repairs after a breakdown. |
 
 Apply these rules during receipt preclassification:
 
-1. Assign tax payments, tax-related services, and tax lines to Essential. Tax penalties follow the fine rule below.
-2. Assign identified tips and gratuities to Optional.
+1. Initialize purchase-tax items from the record priority. Classify standalone tax payments and services by their purpose and obligations.
+2. Initialize identified tips and gratuities from the record priority, then save them as independent item values.
 3. Assign explicit fines and penalties to Unexpected. Suggest Unexpected for repairs only when the receipt shows unplanned damage or a breakdown.
 4. Use the receipt AI's suggested priority for other items.
 5. Use the record default for other items without an explicit priority.
@@ -34,9 +34,14 @@ Necessary medicine usually suggests Essential. Aesthetic care usually suggests P
 
 Unexpected identifies costs the user wants to track as unplanned. Routine maintenance follows the normal priority rules.
 
-Personal context can change item suggestions. Tax and tip rules take precedence over record defaults and AI suggestions during receipt preclassification.
+Personal context can change item suggestions. Tax and tip charges use the record priority as their initial value.
+Purchase tax and tips initially copy the record priority, including on mixed-priority receipts. Do not split these charges across priorities.
+For example, tax and tips on a Personal priority record initially use Personal priority.
+Save each charge priority explicitly. Later changes to tax, tip, or record priority do not change the others.
 
-Store tax and tip amounts as separate fin items with explicit priorities. Do not add an item-kind field.
+Store tax and tip amounts as separate fin items with explicit priorities.
+A null tax or tip suggestion requests the current record priority as its initial value, rather than persistent inheritance.
+Do not add an item-kind field.
 
 Users can correct any item's priority before saving or during later edits. Reports use saved priorities without interpreting item names again.
 
@@ -56,14 +61,20 @@ Show only the selected default level. Omit description and summary lines from th
 The item panel uses the shared dropdown beside brand, without labels or explanatory text.
 The item dropdown shows only the four levels. Items without an override display their inherited effective level.
 Selecting a level saves an explicit override. Product name, amount, and member share the first row.
+Product suggestions span that row while the name input keeps its original width.
 
 ### Editable necessity reason
 
 Provide an optional Reason / 原因 field on each item in receipt review and item editing.
 
-Prefill the field with the AI explanation when available. Users can write, edit, or clear the reason before saving.
+Keep the reason input folded by default, including when an AI or saved reason exists.
+Show a notebook button beside the priority dropdown. A small dot indicates an existing reason.
+Clicking the button opens the input below priority and brand and focuses it.
+Users can write, edit, or clear the reason before saving. Folding the input preserves its value.
 
-Store the saved reason and show it when the item reopens. A blank reason saves as null.
+Store the saved reason and show it when the user opens the input. A blank reason saves as null.
+AI reasons are optional. Request them only for key items with useful receipt context.
+Do not generate explanations that only repeat the priority definition, including routine tax or tip explanations.
 
 Changing the item's priority clears its previous reason in the draft. Users can enter a replacement before saving.
 
@@ -122,6 +133,7 @@ Do not send historical receipts to AI during migration. Historical defaults repr
 
 The local database received a SQLite backup before migration.
 The migration assigned explicit Essential levels to 316 exact legacy tax rows.
+That historical migration predates the revised tax rule. This receipt change does not reclassify saved tax overrides.
 It reported 26 legacy tip candidates for review and preserved their inherited defaults.
 
 ### Current implementation findings
@@ -164,7 +176,7 @@ Completion condition: existing data remains intact, defaults resolve correctly, 
 1. Extend create, update, detail, list, item, and receipt-analysis response types.
 2. Add record `necessityLevel` and item `necessityLevel` and `necessityReason` fields.
 3. Validate enum values, null semantics, reason length, and integer item amounts.
-4. Persist explicit receipt priorities for separate tax and tip items. Preserve later manual corrections.
+4. Persist explicit tax and tip priorities initialized from the record. Preserve later manual corrections.
 5. Preserve the record default when an update omits `necessityLevel`.
 6. Interpret an explicit null item priority as Use record default.
 7. Preserve items when an update omits `lineItems`. Delete them only when the update explicitly supplies an empty array.
@@ -186,13 +198,13 @@ Completion condition: classifications survive create, save, reload, and scoped s
 ### Phase 3: Receipt AI suggestions
 
 1. Add the definitions, examples, and tax or tip precedence rules to the vision prompt.
-2. Request `suggestedNecessityLevel` and `necessityReason` for each extracted item.
+2. Request `suggestedNecessityLevel` for each extracted item. Request an optional `necessityReason` only when useful receipt context explains a key item.
 3. Extract a separate `tipAmount` when the receipt identifies a tip.
 4. Keep product extraction separate from generated tax and tip rows to prevent duplicate charges.
 5. Append exactly one tax row and one tip row when their separate amounts exist.
 6. Validate AI values before showing suggestions.
-7. Use Essential when an item suggestion is missing, invalid, or uncertain.
-8. Assign tax and tip levels deterministically after AI extraction.
+7. Use Essential when an ordinary product suggestion is missing, invalid, or uncertain.
+8. Set purchase-tax and paid-tip suggestions to null to request initial record priority. Receipt review resolves and saves each explicit value.
 9. Preserve priority metadata through item-name standardization by matching the original item index.
 10. Show editable suggestions and optional editable reasons in receipt review before saving.
 
@@ -208,14 +220,14 @@ Confirming receipt review transfers suggestions into the editor. Cancelling revi
 
 Reanalysis requires confirmation before replacing existing items and their manual classifications.
 
-Completion condition: a mixed receipt returns independent editable suggestions, with tax Essential and tips Optional.
+Completion condition: tax and tips start with the record priority, and later edits to any of these values remain independent.
 
 ### Phase 4: Record editor and item editor
 
 1. Use the shared record default dropdown beside the currency selector, without description or summary lines.
 2. Show only the four levels in each item selector. Display the inherited effective level until users select an override.
 3. Display each inherited item's effective level as its selected value, without an additional inheritance option.
-4. Show tax and tip as separate items with explicit Essential and Optional suggestions.
+4. Show tax and tip as separate items. Initialize both from the record priority and save explicit values.
 5. Allow users to correct any item's priority.
 6. Add an optional editable reason during receipt review and item editing.
 7. Clear the previous reason when the item's explicit or inherited priority changes.
@@ -244,16 +256,16 @@ Apply these rules:
 3. For matching item and record totals, allocate each item's amount to its effective priority and category pair.
 4. For a positive remainder, create a reporting allocation using the record default and category pair.
 5. Label the remainder explicitly. Do not save it as a product item.
-6. Use the explicit priorities saved on tax and tip items. Receipt preclassification assigns Essential and Optional respectively.
+6. Resolve saved tax and tip priorities like other items. Receipt tax and tips save explicit initial values.
 7. Preserve original item amounts, quantities, and unit prices.
 8. Allocate stored CAD totals across original-currency allocations with deterministic largest-remainder rounding.
 9. Break rounding ties by line number and item identifier.
 
 The first dashboard uses CAD, consistent with the existing category charts. Do not add mixed-currency sums or fetch current exchange rates.
 
-For new item edits, reject item sums above the paid total with an actionable reconciliation message.
+Allow item sums above the paid total during creation and editing. Preserve the supplied item amounts.
 
-For historical over-total records, proportionally scale reporting allocations to the paid total and mark them as estimates.
+For all over-total records, proportionally scale reporting allocations to the paid total and mark them as estimates.
 
 This refines the earlier whole-record fallback proposal. It preserves saved priority labels while preventing inflated totals.
 

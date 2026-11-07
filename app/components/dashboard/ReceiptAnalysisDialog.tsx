@@ -42,7 +42,7 @@ const ReceiptAnalysisDialog = ({
       unitPriceCents: item.unitPriceCents,
       notes: item.notes, // Preserve original name from standardization
       brandName: item.brandName ?? undefined,
-      necessityLevel: item.suggestedNecessityLevel ?? "essential",
+      necessityLevel: item.suggestedNecessityLevel ?? defaultNecessityLevel,
       necessityReason: item.necessityReason ?? null,
       personId: defaultPerson?.personId,
     })) || [];

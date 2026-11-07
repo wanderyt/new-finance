@@ -41,5 +41,5 @@ export function validateNecessityRequest(body: {
     sum += item.originalAmountCents;
   }
   if (!Number.isSafeInteger(sum)) return "The item total is too large.";
-  return sum > paidAmount ? "Item amounts exceed the paid total. Reconcile the amounts before saving." : null;
+  return null;
 }

@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { NextRequest } from "next/server";
+import { normalizeReceiptNecessities } from "../app/lib/utils/receipt-necessity";
 
 test("priority migration, mutation APIs, schedules, and complete reports", async (suite) => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "fin-necessity-"));
@@ -78,8 +79,11 @@ test("priority migration, mutation APIs, schedules, and complete reports", async
       assert.equal(edited.status, 200);
       const loaded = (await (await detail(request(`/api/fin/${finId}`))).json()).data;
       assert.equal(loaded.items[1].necessityReason, "Updated reason");
-      const bad = await update(request("/api/fin/update", "PATCH", { finId, lineItems: [{ name: "Too much", originalAmountCents: 1001 }] }));
-      assert.equal(bad.status, 400);
+      const overTotal = await update(request("/api/fin/update", "PATCH", { finId, lineItems: [{ name: "Item", originalAmountCents: 1001 }] }));
+      assert.equal(overTotal.status, 200);
+      const overTotalSaved = (await (await detail(request(`/api/fin/${finId}`))).json()).data;
+      assert.equal(overTotalSaved.items[0].originalAmountCents, 1001);
+      assert.equal(overTotalSaved.originalAmountCents, 1000);
       assert.equal((await update(request("/api/fin/update", "PATCH", { finId, necessityLevel: "invalid" }))).status, 400);
       assert.equal((await update(request("/api/fin/update", "PATCH", { finId, lineItems: [] }))).status, 200);
       assert.equal((await (await detail(request(`/api/fin/${finId}`))).json()).data.items.length, 0);
@@ -149,6 +153,78 @@ test("priority migration, mutation APIs, schedules, and complete reports", async
       assert.deepEqual(data.totals, { essential: 100, personal_priority: 0, flexible: 100, unexpected: 800 });
       assert.equal(data.pagination.total, 1);
       assert.equal(data.details[0].matchedCadCents, 800);
+    });
+    await suite.test("create and update allow item totals above the paid amount while reports retain the paid total", async () => {
+      const lineItems = [
+        { name: "Item", originalAmountCents: 1500, necessityLevel: "personal_priority" },
+        { name: "Extra", originalAmountCents: 500, necessityLevel: "essential" },
+      ];
+      const response = await create(request("/api/fin/create", "POST", {
+        ...base, date: "2026-06-15T12:00:00.000Z", lineItems,
+      }));
+      assert.equal(response.status, 201);
+      const record = (await response.json()).data;
+      const created = (await (await detail(request(`/api/fin/${record.finId}`))).json()).data;
+      assert.equal(created.originalAmountCents, 1000);
+      assert.deepEqual(created.items.map((item: { originalAmountCents: number }) => item.originalAmountCents), [1500, 500]);
+      const changed = await update(request("/api/fin/update", "PATCH", {
+        finId: record.finId, lineItems: [{ ...lineItems[0], originalAmountCents: 2500 }, lineItems[1]],
+      }, true));
+      assert.equal(changed.status, 200);
+      const saved = (await (await detail(request(`/api/fin/${record.finId}`))).json()).data;
+      assert.deepEqual(saved.items.map((item: { originalAmountCents: number }) => item.originalAmountCents), [2500, 500]);
+      assert.equal(saved.originalAmountCents, 1000);
+      const data = (await (await report(request("/api/fin/necessity?period=month&value=2026-06"))).json()).data;
+      assert.equal(data.totalCadCents, 1000);
+      assert.equal(data.estimatedRecordCount, 1);
+      assert.equal(Object.values(data.totals).reduce((sum: number, amount) => sum + Number(amount), 0), 1000);
+    });
+    await suite.test("receipt tax and tips start with the record priority and remain independent after any priority changes", async () => {
+      const items = normalizeReceiptNecessities({ totalAmount: 1280, taxAmount: 130, tipAmount: 150, lineItems: [
+        { name: "Aesthetic treatment", amount: 1000, suggestedNecessityLevel: "personal_priority" },
+      ] });
+      const response = await create(request("/api/fin/create", "POST", {
+        ...base, date: "2026-07-15T12:00:00.000Z", originalAmountCents: 1280, necessityLevel: "personal_priority",
+        lineItems: items.map((item) => ({ name: item.name, originalAmountCents: item.amount,
+          necessityLevel: item.suggestedNecessityLevel ?? "personal_priority", necessityReason: item.necessityReason })),
+      }, true));
+      assert.equal(response.status, 201);
+      const record = (await response.json()).data;
+      const saved = (await (await detail(request(`/api/fin/${record.finId}`))).json()).data;
+      assert.equal(saved.items[1].necessityLevel, "personal_priority");
+      assert.equal(saved.items[2].necessityLevel, "personal_priority");
+      const initialReport = (await (await report(request("/api/fin/necessity?period=month&value=2026-07"))).json()).data;
+      assert.equal(initialReport.totals.personal_priority, 1280);
+      assert.equal(initialReport.totals.essential, 0);
+      assert.equal((await update(request("/api/fin/update", "PATCH", {
+        finId: record.finId, necessityLevel: "flexible",
+      }))).status, 200);
+      const changedReport = (await (await report(request("/api/fin/necessity?period=month&value=2026-07"))).json()).data;
+      assert.equal(changedReport.totals.personal_priority, 1280);
+      assert.equal(changedReport.totals.flexible, 0);
+      assert.equal((await update(request("/api/fin/update", "PATCH", {
+        finId: record.finId, lineItems: saved.items.map((item: { name: string }) => ({ ...item,
+          ...(item.name === "税" ? { necessityLevel: "unexpected" } : {}) })),
+      }))).status, 200);
+      const taxEdited = (await (await detail(request(`/api/fin/${record.finId}`))).json()).data;
+      assert.equal(taxEdited.necessityLevel, "flexible");
+      assert.equal(taxEdited.items[0].necessityLevel, "personal_priority");
+      assert.equal(taxEdited.items[1].necessityLevel, "unexpected");
+      assert.equal(taxEdited.items[2].necessityLevel, "personal_priority");
+      assert.equal((await update(request("/api/fin/update", "PATCH", {
+        finId: record.finId, lineItems: taxEdited.items.map((item: { name: string }) => ({ ...item,
+          ...(item.name === "小费" ? { necessityLevel: "essential" } : {}) })),
+      }))).status, 200);
+      const tipEdited = (await (await detail(request(`/api/fin/${record.finId}`))).json()).data;
+      assert.equal(tipEdited.necessityLevel, "flexible");
+      assert.equal(tipEdited.items[1].necessityLevel, "unexpected");
+      assert.equal(tipEdited.items[2].necessityLevel, "essential");
+      assert.equal((await update(request("/api/fin/update", "PATCH", {
+        finId: record.finId, necessityLevel: "essential",
+      }))).status, 200);
+      const overridden = (await (await detail(request(`/api/fin/${record.finId}`))).json()).data;
+      assert.equal(overridden.items[1].necessityLevel, "unexpected");
+      assert.equal(overridden.items[2].necessityLevel, "essential");
     });
   } finally {
     global.fetch = originalFetch;

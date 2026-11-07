@@ -14,21 +14,22 @@ export function normalizeReceiptNecessities(receipt: ReceiptAnalysisResult): Ana
     const tax = taxLabel.test(item.name.trim());
     const tip = tipLabel.test(item.name.trim());
     const fine = fineLabel.test(item.name.trim());
+    const suggestedNecessityLevel = tax || tip ? null
+      : fine ? "unexpected" : isNecessityLevel(item.suggestedNecessityLevel) ? item.suggestedNecessityLevel : "essential";
     return {
       ...item,
-      suggestedNecessityLevel: tax ? "essential" : tip ? "flexible"
-        : fine ? "unexpected" : isNecessityLevel(item.suggestedNecessityLevel) ? item.suggestedNecessityLevel : "essential",
-      necessityReason: tax ? "税费属于必需支出。" : tip ? "小费属于可选支出。"
-        : fine ? "罚款属于计划外的突发支出。" : normalizeNecessityReason(item.necessityReason),
+      suggestedNecessityLevel,
+      necessityReason: tax || tip || (isNecessityLevel(item.suggestedNecessityLevel) && item.suggestedNecessityLevel !== suggestedNecessityLevel)
+        ? null : normalizeNecessityReason(item.necessityReason),
     };
   });
   const brands = [...new Set(items.map((item) => item.brandName?.trim()).filter(Boolean))];
   const sharedBrand = brands.length === 1 ? brands[0] : undefined;
   if (separateTax) items.push({ name: "税", amount: receipt.taxAmount!, quantity: 1,
     notes: "Tax (HST/GST/PST combined)", brandName: sharedBrand,
-    suggestedNecessityLevel: "essential", necessityReason: "税费属于必需支出。" });
+    suggestedNecessityLevel: null, necessityReason: null });
   if (separateTip) items.push({ name: "小费", amount: receipt.tipAmount!, quantity: 1,
     notes: "Tip paid", brandName: receipt.merchant,
-    suggestedNecessityLevel: "flexible", necessityReason: "小费属于可选支出。" });
+    suggestedNecessityLevel: null, necessityReason: null });
   return items;
 }
