@@ -1,3 +1,4 @@
+import { normalizeReceiptNecessities } from "../../../lib/utils/receipt-necessity";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -25,6 +26,7 @@ Analyze this receipt image and extract the following information in JSON format:
   "date": "ISO date string with time (YYYY-MM-DDTHH:mm:ss)",
   "detectedCurrency": "CAD, USD, or CNY",
   "subtotalAmount": 2200,  // Subtotal before tax in cents (optional)
+  "tipAmount": 0,        // Tip actually paid in cents, excluding suggested tips
   "taxAmount": 286,        // Tax in cents (HST/GST/PST combined, optional)
   "totalAmount": 2486,     // Final total in cents (required)
   "lineItems": [
@@ -34,13 +36,27 @@ Analyze this receipt image and extract the following information in JSON format:
       "unitPrice": 625,    // Price per unit in cents (if visible on receipt)
       "quantity": 2,       // Quantity purchased
       "unit": "pcs",       // Unit of measurement
-      "amount": 1250       // Total line item price in cents
+      "amount": 1250,      // Total line item price in cents
+      "suggestedNecessityLevel": "essential",
+      "necessityReason": "Short explanation in Chinese"
     }
   ]
 }
 
 Rules:
-- Extract ALL line items (do NOT include tax as a line item)
+- Extract ALL purchased items. Return taxAmount and tipAmount separately. Do not duplicate them in lineItems.
+- tipAmount is the tip actually paid. Do not extract a suggested tip table as a payment. Do not assume a service fee is a tip.
+- Classify EACH item independently using these definitions:
+  - essential: protect basic living, health, or obligations. Examples: basic groceries, necessary medicine, taxes and tax-related expenses.
+  - personal_priority: deliberately protect wellbeing, confidence, or personal goals. Examples: aesthetic skincare, elective aesthetic treatment, education, fitness.
+  - flexible: comfortably reduce, delay, or skip. Examples: discretionary extras, impulse snacks, rarely used subscriptions, tips.
+  - unexpected: unplanned expenses such as fines, penalties, and repairs after an unexpected breakdown.
+- Suggest unexpected for explicit fines or penalties. Taxes themselves remain essential.
+- Suggest unexpected for repairs only when the receipt indicates an unexpected breakdown, damage, or an emergency.
+- Routine maintenance and planned replacements do not imply unexpected spending. Default to essential when context is insufficient.
+- Tax payments and tax-related services suggest essential. Fines and penalties, including tax penalties, suggest unexpected. Tips suggest flexible.
+- When personal context is insufficient, suggest essential. Do not infer priority from price, brand, or merchant alone.
+- Return suggestedNecessityLevel and a short necessityReason for each item. Suggestions remain editable by the user.
 - Convert amounts to CENTS (multiply by 100)
 - IMPORTANT: Extract BOTH date AND time from receipt if available
   - Format as ISO 8601: "YYYY-MM-DDTHH:mm:ss" (e.g., "2026-01-15T14:30:00")
@@ -73,7 +89,7 @@ Rules:
 - If no tax visible, omit taxAmount or set to null
 - For Chinese receipts without tax, omit taxAmount
 - For Canadian receipts, combine HST/GST/PST as single taxAmount
-- Verify: subtotalAmount + taxAmount = totalAmount (if both present)
+- Verify: subtotalAmount + taxAmount + tipAmount = totalAmount (use zero for missing tax or tip).
 - For Chinese text, provide English translation
 - Return valid JSON only, no markdown
 `;
@@ -542,7 +558,7 @@ ${JSON.stringify({
         return {
           ...item,
           name: standardized.standardizedName,
-          notes: item.name, // Original name goes to notes
+          notes: (item as { notes?: string }).notes || item.name, // Preserve generated tax and tip notes.
         };
       }
       return item; // Fallback to original
@@ -578,6 +594,8 @@ export const POST = withAuth(async (request, user) => {
     // Fallback to OpenAI if needed:
     // const receiptData = await analyzeReceiptWithOpenAI(base64Image, file.type);
 
+    receiptData.lineItems = normalizeReceiptNecessities(receiptData);
+
     // Map unitPrice to unitPriceCents and standardize item names
     if (receiptData.lineItems && receiptData.lineItems.length > 0) {
       // Map unitPrice to unitPriceCents before standardization
@@ -605,29 +623,6 @@ export const POST = withAuth(async (request, user) => {
       receiptData.lineItems = await standardizeItemNames(itemsWithUnitPrice, receiptData.merchantType);
     }
 
-    // Add tax as special line item if present
-    if (receiptData.taxAmount && receiptData.taxAmount > 0) {
-      // If every branded item shares the same brand, inherit it on the tax item
-      // so brand-based analytics include tax. Mixed brands → leave tax unbranded.
-      const brands = [
-        ...new Set(
-          (receiptData.lineItems as Array<{ brandName?: string | null }>)
-            .map((i) => i.brandName?.trim())
-            .filter((b): b is string => !!b)
-        ),
-      ];
-      const sharedBrand = brands.length === 1 ? brands[0] : undefined;
-
-      receiptData.lineItems.push({
-        name: "税",
-        amount: receiptData.taxAmount,
-        quantity: 1,
-        unit: null,
-        notes: "Tax (HST/GST/PST combined)",
-        ...(sharedBrand ? { brandName: sharedBrand } : {}),
-      });
-    }
-
     // Auto-populate line-item defaults:
     //  - brandName falls back to the store/merchant name when the AI didn't identify a brand
     //  - unitPriceCents falls back to the line amount when empty (notably the 税 tax line)
@@ -649,7 +644,7 @@ export const POST = withAuth(async (request, user) => {
 
     // Validate total if both subtotal and tax present
     if (receiptData.subtotalAmount && receiptData.taxAmount) {
-      const calculatedTotal = receiptData.subtotalAmount + receiptData.taxAmount;
+      const calculatedTotal = receiptData.subtotalAmount + receiptData.taxAmount + (receiptData.tipAmount || 0);
       // Allow small rounding differences (within 2 cents)
       if (Math.abs(calculatedTotal - receiptData.totalAmount) <= 2) {
         receiptData.totalAmount = calculatedTotal;

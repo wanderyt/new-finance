@@ -1,3 +1,4 @@
+import { normalizeNecessityReason, validateNecessityRequest } from "../../../lib/utils/necessity";
 import { NextResponse } from "next/server";
 import { fin, finItems, scheduleRules } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -35,6 +36,9 @@ export const POST = withAuth(async (request, user) => {
     if (body.frequency && !["daily", "weekly", "biweekly", "monthly", "annually"].includes(body.frequency)) {
       return badRequestResponse("The schedule frequency is invalid");
     }
+
+    const priorityError = validateNecessityRequest(body, body.originalAmountCents);
+    if (priorityError) return badRequestResponse(priorityError);
 
     // Validate required fields
     if (!body.date) {
@@ -136,6 +140,7 @@ export const POST = withAuth(async (request, user) => {
           finId,
           userId: user.userId,
           type: body.type || "expense",
+          necessityLevel: body.necessityLevel || "essential",
           date: body.date,
           scheduledOn: body.isScheduled ? body.date : null,
           scheduleRuleId: scheduleRuleId,
@@ -172,6 +177,8 @@ export const POST = withAuth(async (request, user) => {
               subcategory: item.subcategory || null,
               notes: item.notes || null,
               brandName: item.brandName || null,
+              necessityLevel: item.necessityLevel ?? null,
+              necessityReason: normalizeNecessityReason(item.necessityReason),
             }))
           ).run();
         }
@@ -271,6 +278,7 @@ export const POST = withAuth(async (request, user) => {
               finId: nextFinId,
               userId: user.userId,
               type: body.type || "expense",
+              necessityLevel: body.necessityLevel || "essential",
               date: nextDate.toISOString(),
               scheduledOn: nextDate.toISOString(),
               scheduleRuleId: scheduleRuleId,
@@ -307,6 +315,8 @@ export const POST = withAuth(async (request, user) => {
                   subcategory: item.subcategory || null,
                   notes: item.notes || null,
                   brandName: item.brandName || null,
+                  necessityLevel: item.necessityLevel ?? null,
+                  necessityReason: normalizeNecessityReason(item.necessityReason),
                 }))
               );
             }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, type RefObject } from "react";
+import { NECESSITY_LEVELS, NECESSITY_LABELS, type NecessityFields, type NecessityLevel } from "../../lib/types/necessity";
 import Input from "../ui-kit/Input";
 import Dropdown from "../ui-kit/Dropdown";
 import SearchableSelect from "../ui-kit/SearchableSelect";
@@ -30,7 +31,7 @@ function useDeferredSync<T>(
   }, [value]);
 }
 
-export interface LineItem {
+export interface LineItem extends NecessityFields {
   name: string;
   originalAmountCents: number;
   personId?: number;
@@ -51,6 +52,8 @@ interface LineItemEditorProps {
   persons?: Array<{ personId: number; name: string }>;
   brandOptions?: Array<{ value: string; label: string }>;
   className?: string;
+  defaultNecessityLevel?: NecessityLevel;
+  showNecessity?: boolean;
 }
 
 const LineItemEditor = ({
@@ -61,6 +64,8 @@ const LineItemEditor = ({
   persons = [],
   brandOptions = [],
   className = "",
+  defaultNecessityLevel = "essential",
+  showNecessity = true,
 }: LineItemEditorProps) => {
   // The `item` prop is the single source of truth for structured fields. Only
   // the raw text buffers below are local, so in-progress typing isn't clobbered.
@@ -230,9 +235,9 @@ const LineItemEditor = ({
       </button>
 
       <div className="space-y-2">
-        {/* Item name and amount */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="relative" ref={nameContainerRef}>
+        {/* Item name, amount, and member. */}
+        <div className="grid grid-cols-[minmax(0,1fr)_5rem_5rem] gap-2 sm:grid-cols-[minmax(0,1fr)_6rem_6rem]">
+          <div className="relative min-w-0" ref={nameContainerRef}>
             <Input
               value={item.name}
               onChange={(e) => handleChange("name", e.target.value)}
@@ -270,7 +275,7 @@ const LineItemEditor = ({
           </div>
           <div className="relative">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -291,7 +296,17 @@ const LineItemEditor = ({
               onBlur={handleAmountBlur}
               placeholder="0.00"
               required
-              className="w-full pl-10 pr-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+              aria-label="项目金额"
+              className="w-full pl-8 pr-2 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+            />
+          </div>
+          <div role="group" aria-label="人员">
+            <Dropdown
+              options={personOptions}
+              value={item.personId?.toString() || ""}
+              onChange={(value) => handleChange("personId", value ? parseInt(value) : undefined)}
+              placeholder="人员"
+              className="min-w-0 [&_span]:truncate [&_svg]:shrink-0"
             />
           </div>
         </div>
@@ -342,26 +357,31 @@ const LineItemEditor = ({
           />
         </div>
 
-        {/* Person */}
-        <div>
-          <Dropdown
-            options={personOptions}
-            value={item.personId?.toString() || ""}
-            onChange={(value) =>
-              handleChange("personId", value ? parseInt(value) : undefined)
-            }
-            placeholder="人员"
+        <div className="flex gap-2">
+          {showNecessity && <div className="w-28 shrink-0" role="group" aria-label="支出优先级">
+            <Dropdown
+              value={item.necessityLevel ?? defaultNecessityLevel}
+              options={NECESSITY_LEVELS.map((value) => ({ value, label: NECESSITY_LABELS[value] }))}
+              onChange={(value) => {
+                const necessityLevel = value as NecessityLevel;
+                if (necessityLevel === item.necessityLevel) return;
+                onChange(index, { ...item, necessityLevel, necessityReason: null });
+              }}
+            />
+          </div>}
+          <SearchableSelect
+            value={item.brandName || ""}
+            onChange={(value) => handleChange("brandName", value.trim() || undefined)}
+            options={brandOptions}
+            placeholder="品牌"
+            className="min-w-0 flex-1"
           />
         </div>
 
-        <SearchableSelect
-          value={item.brandName || ""}
-          onChange={(value) =>
-            handleChange("brandName", value.trim() || undefined)
-          }
-          options={brandOptions}
-          placeholder="品牌 (e.g. Kirkland)"
-        />
+        {showNecessity && (
+          <Input aria-label="优先级原因" value={item.necessityReason ?? ""} maxLength={300}
+            onChange={(event) => handleChange("necessityReason", event.target.value || null)} placeholder="原因（可选）" />
+        )}
 
         {/* Notes - show original name if available */}
         <div className="space-y-1">

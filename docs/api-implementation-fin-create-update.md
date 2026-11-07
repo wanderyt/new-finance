@@ -1,5 +1,28 @@
 # Fin Create/Update API Implementation Documentation
 
+### Spending priority fields
+
+Create and update requests accept record `necessityLevel`.
+Allowed values are `essential`, `personal_priority`, `flexible`, and `unexpected`.
+Creation defaults to Essential. An omitted update field preserves the saved default.
+
+Each line item accepts nullable `necessityLevel` and nullable `necessityReason`.
+A null or omitted item level inherits the record default.
+Reasons support 300 characters. Blank reasons save as null.
+Record and item amounts must use non-negative integer cents.
+Supplied item totals above the paid amount return a reconciliation error.
+
+An omitted `lineItems` field preserves existing items. An explicit empty array deletes them.
+A supplied array replaces items and must include their saved classifications.
+Default-only schedule updates preserve each occurrence's explicit item overrides.
+Changing a record default clears reasons on its inherited items within the selected scope.
+Tax and tip suggestions remain editable. Reports use the saved levels.
+Detail, list, and item responses expose the new fields.
+
+The authenticated `GET /api/fin/necessity` endpoint supplies complete expense reports.
+See [Spending Priority](./spending-priority-feature.md) for its query contract and allocation rules.
+
+
 > **Status**: ✅ Implemented
 > **Date**: 2025-12-25
 > **Author**: Claude (Automated Documentation)

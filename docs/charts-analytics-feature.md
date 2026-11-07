@@ -1,5 +1,36 @@
 # Charts/Analytics Feature - Technical Documentation
 
+### Spending priority view
+
+The Charts sheet includes a Spending priority view with the existing month and year controls.
+All five view tabs share one horizontally scrollable row. Labels stay on one line, and buttons retain their natural width.
+The row hides its scrollbar while preserving horizontal scrolling.
+It reports CAD expense totals through priority, category, and subcategory pie charts.
+The priority chart includes 必需, 享受, 可选, and 突发.
+The breadcrumb supports navigation to each parent view.
+Segment clicks and keyboard-accessible legend buttons select the next level.
+The detail list shows matched item amounts and each transaction's full total.
+Typography matches the existing chart views: labels, amounts, legends, tooltips, and transaction details use 12px text.
+Summary amounts and emphasized headings use semibold weight.
+
+The view uses `GET /api/fin/necessity?period=month&value=YYYY-MM`.
+Year reports use `period=year&value=YYYY`.
+Optional `level`, `category`, and `subcategory` parameters filter details.
+Use `details=1`, `offset`, and `limit` for paginated transaction details.
+Use `review=estimated` with details to inspect historical over-total records.
+The endpoint scopes queries to the authenticated user and reads records in complete batches.
+Its response contains `totals`, `buckets`, `totalCadCents`, `estimatedCadCents`, `estimatedRecordCount`, and `remainderCadCents`.
+
+Periods use UTC calendar boundaries and include records through the current time.
+The query accepts historical SQLite date formats and explicit timezone offsets.
+Income and future transactions are excluded.
+Positive remainders use the record default. Historical over-total items use labelled proportional estimates.
+Largest-remainder rounding keeps allocated CAD cents equal to each record's saved CAD total.
+Changing periods resets drill-down state. Aborted older requests cannot replace the active result.
+Record updates refresh the report independently from capped person-item data.
+See [Spending Priority](./spending-priority-feature.md) for allocation rules.
+
+
 ## Feature Overview
 
 The Charts/Analytics feature provides users with visual insights into their financial data through interactive charts and graphs. It enables users to analyze spending patterns by category, compare monthly trends, and drill down into specific expense details.

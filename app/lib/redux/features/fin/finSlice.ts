@@ -1,3 +1,4 @@
+import type { ReceiptAnalysisResult } from "../../../types/receipt";
 import { createSlice, createAsyncThunk, PayloadAction, createSelector } from "@reduxjs/toolkit";
 import axios from "axios";
 import type { RootState } from "../../store";
@@ -319,18 +320,7 @@ export const deleteFinAsync = createAsyncThunk<
 
 // Async thunk for analyzing receipt
 export const analyzeReceiptAsync = createAsyncThunk<
-  {
-    lineItems: Array<{
-      name: string;
-      amount: number;
-      quantity?: number;
-      unit?: string;
-    }>;
-    totalAmount: number;
-    detectedCurrency?: string;
-    merchant?: string;
-    date?: string;
-  },
+  ReceiptAnalysisResult,
   File,
   { rejectValue: string }
 >("fin/analyzeReceipt", async (file, { rejectWithValue }) => {

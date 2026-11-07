@@ -1,5 +1,27 @@
 # Receipt Analysis AI Implementation Plan
 
+### Spending priority in the current receipt pipeline
+
+The current route uses Gemini vision analysis and Gemini item-name standardization.
+The vision prompt returns `suggestedNecessityLevel` and an optional Chinese `necessityReason` for each item.
+The prompt explains Essential, Personal priority, Optional, and Unexpected with examples.
+It suggests Unexpected for explicit fines and repairs after unplanned damage or a breakdown.
+Routine maintenance does not imply Unexpected. Insufficient context still defaults to Essential.
+Missing or invalid suggestions default to Essential.
+
+Tax and tips remain separate fin items.
+The server assigns Essential to recognized tax rows and Optional to recognized tip rows.
+Separate `taxAmount` and `tipAmount` values produce single charge rows without duplicating recognized extracted rows.
+Only an actually paid tip belongs in `tipAmount`. Suggested tip tables and generic service fees do not imply a paid tip.
+The paid total includes tax and any paid tip.
+
+Name standardization preserves priority fields and generated charge notes.
+Receipt review lets users edit each suggestion and reason before confirming.
+Reanalysis asks before replacing existing items and classifications.
+Classification normalization does not add a model request.
+See [Spending Priority](./spending-priority-feature.md) for the complete rules.
+
+
 ## Executive Summary
 
 Implement AI-powered receipt analysis to extract line items, amounts, merchant info, and location from uploaded receipt images. The UI components and API structure already exist - we need to integrate an AI vision API.
