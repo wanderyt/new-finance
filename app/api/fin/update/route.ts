@@ -1,7 +1,8 @@
+import { normalizeNecessityReason, validateNecessityRequest } from "../../../lib/utils/necessity";
 import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { fin, finItems, type Fin } from "@/app/lib/db/schema";
-import { eq, and, gte, sql, type SQL } from "drizzle-orm";
+import { eq, and, gte, sql, inArray, type SQL } from "drizzle-orm";
 import { UpdateFinRequest, UpdateFinResponse, ErrorResponse } from "@/app/lib/types/api";
 import {
   withAuth,
@@ -61,6 +62,9 @@ export const PATCH = withAuth(async (request, user) => {
       );
     }
 
+    const priorityError = validateNecessityRequest(body, body.originalAmountCents ?? existing.originalAmountCents);
+    if (priorityError) return badRequestResponse(priorityError);
+
     // Validate updated fields
     if (body.type && !["expense", "income"].includes(body.type)) {
       return badRequestResponse('Field "type" must be "expense" or "income"');
@@ -88,6 +92,8 @@ export const PATCH = withAuth(async (request, user) => {
 
     // Build updates object
     const updates: Partial<Omit<Fin, "date">> & { date?: string | SQL } = {};
+
+    if (body.necessityLevel !== undefined) updates.necessityLevel = body.necessityLevel;
 
     // Basic fields
     if (body.type !== undefined) updates.type = body.type;
@@ -141,6 +147,15 @@ export const PATCH = withAuth(async (request, user) => {
         amountCents: body.originalAmountCents ?? existing.originalAmountCents,
       },
       write: (transaction) => {
+        if (body.necessityLevel !== undefined) {
+          const affected = existing.isScheduled && existing.scheduleRuleId && existing.scheduledOn && scope === "all"
+            ? and(eq(fin.userId, user.userId), eq(fin.scheduleRuleId, existing.scheduleRuleId), gte(fin.scheduledOn, existing.scheduledOn))
+            : and(eq(fin.userId, user.userId), eq(fin.finId, existing.finId));
+          const changedDefaults = transaction.select({ finId: fin.finId }).from(fin)
+            .where(and(affected, sql`${fin.necessityLevel} != ${body.necessityLevel}`));
+          transaction.update(finItems).set({ necessityReason: null })
+            .where(and(sql`${finItems.necessityLevel} IS NULL`, inArray(finItems.finId, changedDefaults))).run();
+        }
         // Handle scheduled transactions based on scope
         if (
           existing.isScheduled &&
@@ -197,6 +212,8 @@ export const PATCH = withAuth(async (request, user) => {
                     subcategory: item.subcategory || null,
                     notes: item.notes || null,
                     brandName: item.brandName || null,
+                    necessityLevel: item.necessityLevel ?? null,
+                    necessityReason: normalizeNecessityReason(item.necessityReason),
                   }))
                 ).run();
               }
@@ -232,6 +249,8 @@ export const PATCH = withAuth(async (request, user) => {
                   subcategory: item.subcategory || null,
                   notes: item.notes || null,
                   brandName: item.brandName || null,
+                  necessityLevel: item.necessityLevel ?? null,
+                  necessityReason: normalizeNecessityReason(item.necessityReason),
                 }))
               ).run();
             }

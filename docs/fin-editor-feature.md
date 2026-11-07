@@ -1,5 +1,31 @@
 # Fin Editor Feature Specification
 
+### Spending priority
+
+Expense records default to Essential and use the shared dropdown beside the currency selector.
+Each item can inherit that default or select Essential, Personal priority, Optional, or Unexpected explicitly.
+The displayed levels are 必需, 享受, 可选, and 突发.
+Unexpected covers unplanned costs such as fines and breakdown repairs.
+The record selector shows only the selected level, without a description or summary line.
+Item selectors show only the four levels. Items without an override display their inherited effective level.
+Selecting a level saves an explicit item override. The compact menu has no additional default option.
+The item panel places product name, amount, and member on one row, with member on the right.
+The shared priority dropdown and brand input occupy one row. Priority selectors omit labels and explanatory text.
+Quantity, unit price, and unit remain on a separate row. The optional reason remains editable below priority and brand.
+
+Items expose an optional editable reason in receipt review and item editing.
+Users can write, edit, or clear reasons. The editor clears stale reasons when a priority changes.
+Tax and tip remain ordinary separate items with explicit AI suggestions.
+The server suggests Essential for tax and Optional for tips. Users can correct either suggestion.
+
+Unchanged item collections are omitted from updates.
+Deleting all items sends an explicit empty array.
+Default-only scheduled updates preserve each occurrence's explicit overrides.
+Priority changes participate in the existing unsaved-change behavior.
+Income records hide these controls.
+See [Spending Priority](./spending-priority-feature.md) for details.
+
+
 > **Status**: Ready for Implementation
 > **Last Updated**: 2025-12-29
 > **Feature**: Comprehensive expense/income editor with receipt analysis and multi-currency support

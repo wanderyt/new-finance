@@ -1,3 +1,5 @@
+import type { NecessityLevel } from "./necessity";
+
 // User data structure (with password for mock auth)
 export interface User {
   id: string;
@@ -55,6 +57,8 @@ export interface SessionPayload {
 
 // Line Item for fin record
 export interface FinLineItem {
+  necessityLevel?: NecessityLevel | null;
+  necessityReason?: string | null;
   name: string;
   originalAmountCents: number;
   qty?: number;
@@ -69,6 +73,7 @@ export interface FinLineItem {
 
 // Create Fin Request
 export interface CreateFinRequest {
+  necessityLevel?: NecessityLevel;
   // Transaction metadata
   type?: "expense" | "income"; // default: 'expense'
   date: string; // ISO 8601 with time in UTC (required) e.g., "2025-12-29T15:30:00Z"
@@ -98,6 +103,7 @@ export interface CreateFinRequest {
 
 // Update Fin Request
 export interface UpdateFinRequest {
+  necessityLevel?: NecessityLevel;
   removedPhotoIds?: number[];
   finId: string; // Required to identify the record
 
@@ -144,6 +150,7 @@ export interface FinPhotoData {
 }
 
 export interface FinData {
+  necessityLevel: NecessityLevel;
   finId: string;
   userId: number;
   type: string;
@@ -266,6 +273,9 @@ export interface PersonData {
 
 // Line item with parent fin data for person analysis
 export interface FinItemWithParent {
+  necessityLevel: NecessityLevel | null;
+  necessityReason: string | null;
+  parentNecessityLevel: NecessityLevel;
   // From finItems table
   itemId: number;
   finId: string;

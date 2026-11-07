@@ -13,13 +13,17 @@ import {
 } from "@/app/lib/redux/features/fin/finSlice";
 import Dropdown from "../../ui-kit/Dropdown";
 
-export default function MonthYearFilter() {
+export default function MonthYearFilter({ excludeFuture = false }: { excludeFuture?: boolean }) {
   const dispatch = useAppDispatch();
   const viewMode = useAppSelector(selectChartsViewMode);
   const selectedMonth = useAppSelector(selectChartsSelectedMonth);
   const selectedYear = useAppSelector(selectChartsSelectedYear);
-  const availableMonths = useAppSelector(selectAvailableMonths);
-  const availableYears = useAppSelector(selectAvailableYears);
+  const months = useAppSelector(selectAvailableMonths);
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const availableMonths = excludeFuture ? [...new Set([currentMonth, ...months])].filter((month) => month <= currentMonth).sort().reverse() : months;
+  const years = useAppSelector(selectAvailableYears);
+  const currentYear = String(new Date().getUTCFullYear());
+  const availableYears = excludeFuture ? [...new Set([currentYear, ...years])].filter((year) => year <= currentYear).sort().reverse() : years;
 
   const handleViewModeChange = (mode: "month" | "year") => {
     dispatch(setChartsViewMode(mode));
@@ -73,7 +77,7 @@ export default function MonthYearFilter() {
       {/* Month/Year Selector */}
       {viewMode === "month" ? (
         <Dropdown
-          value={selectedMonth || ""}
+          value={excludeFuture ? (selectedMonth && selectedMonth <= currentMonth ? selectedMonth : currentMonth) : selectedMonth || ""}
           onChange={handleMonthChange}
           options={availableMonths.map((month) => ({
             value: month,
@@ -83,7 +87,7 @@ export default function MonthYearFilter() {
         />
       ) : (
         <Dropdown
-          value={selectedYear || ""}
+          value={excludeFuture ? (selectedYear && selectedYear <= currentYear ? selectedYear : currentYear) : selectedYear || ""}
           onChange={handleYearChange}
           options={availableYears.map((year) => ({
             value: year,

@@ -1,5 +1,23 @@
 # Database Setup - SQLite Integration
 
+### Spending priority storage
+
+Records store `necessity_level`, with a non-null `essential` default.
+Items store nullable `necessity_level` and optional `necessity_reason`.
+A null item level inherits the record default. Explicit item levels remain independent.
+SQLite checks restrict levels to `essential`, `personal_priority`, `flexible`, and `unexpected`.
+
+Run `yarn db:migrate:necessity --dry-run` to preview the migration.
+Run `yarn db:migrate:necessity` to apply it after backing up the database.
+The runner respects `DATABASE_PATH` and checks existing columns inside an immediate transaction.
+Repeat execution preserves saved classifications.
+The constraint helper rebuilds existing priority checks to allow Unexpected. It preserves data, references, indexes, and triggers.
+For a database without priority columns, `drizzle/manual-add-fin-necessity.sql` provides a one-time standalone SQL alternative.
+It adds the fields and all four allowed values in one transaction. Existing priority columns require the repeatable runner.
+Only exact legacy tax rows receive explicit Essential overrides. Legacy tip candidates require review.
+See [Spending Priority](./spending-priority-feature.md) for classification and reporting rules.
+
+
 > **Status**: Design Document - **UPDATED with New Schema** > **Last Updated**: 2025-12-25
 > **Target Deployment**: Self-hosted VPS
 

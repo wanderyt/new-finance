@@ -1,5 +1,6 @@
 "use client";
 
+import type { NecessityLevel } from "../../lib/types/necessity";
 import { useState } from "react";
 import Dialog from "../ui-kit/Dialog";
 import Button from "../ui-kit/Button";
@@ -12,6 +13,8 @@ interface LineItemsDialogProps {
   onCancel: () => void;
   persons?: Array<{ personId: number; name: string; isDefault?: boolean }>;
   brandOptions?: Array<{ value: string; label: string }>;
+  defaultNecessityLevel?: NecessityLevel;
+  showNecessity?: boolean;
 }
 
 const LineItemsDialog = ({
@@ -21,6 +24,8 @@ const LineItemsDialog = ({
   onCancel,
   persons = [],
   brandOptions = [],
+  defaultNecessityLevel = "essential",
+  showNecessity = true,
 }: LineItemsDialogProps) => {
   const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems);
 
@@ -75,6 +80,8 @@ const LineItemsDialog = ({
               onRemove={handleLineItemRemove}
               persons={persons}
               brandOptions={brandOptions}
+              defaultNecessityLevel={defaultNecessityLevel}
+              showNecessity={showNecessity}
             />
           ))}
         </div>

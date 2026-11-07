@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.21.0] - 2026-11-06
+
+### Added
+- **Spending Priorities**: Add 必需, 享受, 可选, and 突发, with Essential as the record default and optional item overrides.
+- **Editable Reasons**: Let users review and change each item's priority and reason.
+- **Receipt Suggestions**: Suggest item priorities and reasons during receipt analysis. Classify separate tax items as Essential and tip items as Optional.
+- **Priority Dashboard**: Show monthly and yearly expense totals by priority, with category and subcategory pie charts.
+- **Database Migration**: Add priority fields and constraints, with repeatable Docker startup migration and standalone SQL for manual setup.
+
+### Changed
+- **Record and Item Editors**: Use shared priority dropdowns and compact layouts for currency, member, and brand controls.
+- **Dashboard Tabs**: Allow horizontal scrolling, keep tab labels on one line, and hide the scrollbar.
+- **Dashboard Typography**: Match the priority dashboard's text sizes to the existing dashboards.
+
 ## [1.20.0] - 2026-10-27
 
 ### Added

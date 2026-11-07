@@ -1,5 +1,13 @@
 # Item Name Standardization Feature
 
+### Spending priority metadata
+
+Receipt normalization assigns priority suggestions before item-name standardization.
+The standardizer merges names by the original item index and preserves all other item fields.
+It preserves `suggestedNecessityLevel`, `necessityReason`, and generated tax or tip notes.
+A standardization failure returns the original items with their priority metadata.
+
+
 ## Overview
 
 Automatic, context-aware standardization of receipt item names from English to Chinese using Google Gemini 2.5 Flash. The standardization behavior adapts based on merchant type — grocery items are generalized to category names (e.g., "Large Jumbo Eggs" → "鸡蛋"), while restaurant dishes, book titles, and music products preserve their specific identities (e.g., "Kung Pao Chicken" → "宫保鸡丁"). Original names are preserved in the notes field.

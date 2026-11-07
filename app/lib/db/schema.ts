@@ -6,6 +6,7 @@ import {
   index,
   uniqueIndex,
   primaryKey,
+  check,
 } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
@@ -113,6 +114,7 @@ export const fin = sqliteTable(
       .references(() => users.userId, { onDelete: "cascade" }),
 
     type: text("type").notNull().default("expense"),
+    necessityLevel: text("necessity_level", { enum: ["essential", "personal_priority", "flexible", "unexpected"] }).notNull().default("essential"),
 
     date: text("date").notNull(),
     scheduledOn: text("scheduled_on"),
@@ -147,6 +149,7 @@ export const fin = sqliteTable(
       .default(false),
   },
   (table) => ({
+    necessityLevelCheck: check("fin_necessity_level_check", sql`${table.necessityLevel} IN ('essential', 'personal_priority', 'flexible', 'unexpected')`),
     userDateIdx: index("idx_fin_user_date").on(table.userId, table.date),
     userTypeDateIdx: index("idx_fin_user_type_date").on(
       table.userId,
@@ -240,8 +243,11 @@ export const finItems = sqliteTable(
     subcategory: text("subcategory"),
     notes: text("notes"),
     brandName: text("brand_name"),
+    necessityLevel: text("necessity_level", { enum: ["essential", "personal_priority", "flexible", "unexpected"] }),
+    necessityReason: text("necessity_reason"),
   },
   (table) => ({
+    necessityLevelCheck: check("item_necessity_level_check", sql`${table.necessityLevel} IS NULL OR ${table.necessityLevel} IN ('essential', 'personal_priority', 'flexible', 'unexpected')`),
     finIdx: index("idx_items_fin").on(table.finId),
     personIdx: index("idx_items_person").on(table.personId),
     originalAmountCheck: sql`CHECK (original_amount_cents >= 0)`,

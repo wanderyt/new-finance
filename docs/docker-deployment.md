@@ -1,5 +1,35 @@
 # Docker Deployment Guide
 
+### Spending priority migration
+
+The image packages the priority runner, `scripts/necessity-constraints.mjs`, and `drizzle/0005_add_fin_necessity.sql`.
+Startup runs the product-photo migration, then the spending-priority migration, before starting Next.js.
+The priority runner uses `DATABASE_PATH` and applies missing columns in one immediate SQLite transaction.
+It then expands existing priority constraints to accept Unexpected in a separate immediate transaction.
+Migration failure prevents application startup.
+
+Back up the mounted database through the SQLite backup API before deployment.
+Verify the migration on a disposable copy first.
+Use `node scripts/migrate-fin-necessity.mjs --dry-run` to preview pending columns and legacy tax or tip candidates.
+Existing records initially use Essential. Recognized legacy tax rows receive explicit Essential overrides.
+Repeat migration execution preserves classifications that users later edit.
+
+Yarn is not required inside the container. Run the repeatable migration directly with Node:
+
+```bash
+docker exec CONTAINER_NAME node /app/scripts/migrate-fin-necessity.mjs
+```
+
+For manual SQL execution, use `drizzle/manual-add-fin-necessity.sql` before the spending-priority columns exist.
+This file follows migration 0002's format: plain SQL, numbered steps, and commented verification queries.
+Open the container's finance database through your existing SQL execution workflow.
+Execute the file as one script after backing up the database. Stop execution if any statement fails.
+The SQL adds all three fields, allows all four levels, and classifies exact legacy tax rows in one transaction.
+Uncomment its verification queries after applying the migration to inspect the fields and constraints.
+Use the repeatable Node migration when priority columns already exist, including databases with older three-level constraints.
+The new image runs that migration automatically on startup. Do not apply the one-time SQL after startup has already migrated the database.
+
+
 This guide covers deploying the new-finance application as a Docker container on your NAS.
 
 ## Product photo storage

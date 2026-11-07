@@ -1,6 +1,8 @@
 "use client";
 
+import type { ReceiptAnalysisResult } from "../../lib/types/receipt";
 import { useState, FormEvent, useEffect } from "react";
+import { NECESSITY_LEVELS, NECESSITY_LABELS, type NecessityLevel } from "../../lib/types/necessity";
 import Button from "../ui-kit/Button";
 import SearchableSelect from "../ui-kit/SearchableSelect";
 import Dropdown from "../ui-kit/Dropdown";
@@ -21,25 +23,6 @@ import {
   ReceiptData,
   FinPhotoData,
 } from "@/app/lib/types/api";
-
-interface ReceiptAnalysisResult {
-  lineItems: Array<{
-    name: string;
-    amount: number;
-    quantity?: number;
-    unit?: string;
-    unitPriceCents?: number;
-    notes?: string;
-    brandName?: string;
-  }>;
-  totalAmount: number;
-  detectedCurrency?: string;
-  merchant?: string;
-  merchantType?: string;
-  date?: string;
-  suggestedCategory?: string;
-  suggestedSubcategory?: string;
-}
 
 interface FinEditorFormProps {
   type: "expense" | "income";
@@ -107,6 +90,8 @@ const FinEditorForm = ({
   >("monthly");
   const [details, setDetails] = useState(existingFin?.details || "");
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [itemsChanged, setItemsChanged] = useState(false);
+  const [necessityLevel, setNecessityLevel] = useState<NecessityLevel>(existingFin?.necessityLevel ?? "essential");
   const [savedPhotos, setSavedPhotos] = useState<FinPhotoData[]>(existingFin?.photos || []);
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [removedPhotoIds, setRemovedPhotoIds] = useState<number[]>([]);
@@ -242,6 +227,7 @@ const FinEditorForm = ({
           : ""
       );
       setCurrency((existingFin.originalCurrency as "CAD" | "USD" | "CNY") || "CAD");
+      setNecessityLevel(existingFin.necessityLevel ?? "essential");
       setCategory(existingFin.category || "");
       setSubcategory(existingFin.subcategory || "");
       setDetails(existingFin.details || "");
@@ -286,7 +272,8 @@ const FinEditorForm = ({
         details: details || undefined,
         originalCurrency: currency,
         originalAmountCents: amountCents,
-        lineItems: lineItems.length > 0 ? lineItems : undefined,
+        lineItems: itemsChanged ? lineItems : undefined,
+        necessityLevel: necessityLevel !== existingFin.necessityLevel ? necessityLevel : undefined,
       };
 
       if (photoFiles.length > 0) {
@@ -315,6 +302,7 @@ const FinEditorForm = ({
         isScheduled,
         frequency: isScheduled ? frequency : undefined,
         lineItems: lineItems.length > 0 ? lineItems : undefined,
+        necessityLevel,
       };
 
       // Append data as JSON string
@@ -571,35 +559,37 @@ const FinEditorForm = ({
         }
       />
 
-      {/* Amount and Currency */}
+      {/* Amount, currency, and spending priority. */}
       <div className="flex gap-2">
-        <CalculatorInput
-          value={amount}
-          onChange={(val) => setAmount(val)}
-          onBlur={(e) => {
-            const value = parseFloat(e.target.value);
-            if (!isNaN(value)) {
-              setAmount(value.toFixed(2));
+        <div className="min-w-0 flex-1">
+          <CalculatorInput
+            value={amount}
+            onChange={(val) => setAmount(val)}
+            onBlur={(e) => {
+              const value = parseFloat(e.target.value);
+              if (!isNaN(value)) {
+                setAmount(value.toFixed(2));
+              }
+            }}
+            placeholder="0.00"
+            required
+            leftIcon={
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
             }
-          }}
-          placeholder="0.00"
-          required
-          leftIcon={
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 pointer-events-none"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          }
-        />
+          />
+        </div>
         <Dropdown
           value={currency}
           onChange={(val) => setCurrency(val as "CAD" | "USD" | "CNY")}
@@ -609,8 +599,22 @@ const FinEditorForm = ({
             { value: "CNY", label: "CNY" },
           ]}
           placeholder="CAD"
-          className="w-24"
+          className="w-20 shrink-0"
         />
+        {type === "expense" && (
+          <div className="w-20 shrink-0" role="group" aria-label="账单默认优先级">
+            <Dropdown
+              value={necessityLevel}
+              options={NECESSITY_LEVELS.map((value) => ({ value, label: NECESSITY_LABELS[value] }))}
+              onChange={(value) => {
+                if (value === necessityLevel) return;
+                setNecessityLevel(value as NecessityLevel);
+                setLineItems((items) => items.map((item) => item.necessityLevel == null ? { ...item, necessityReason: null } : item));
+                onDirtyChange?.(true);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Category and Subcategory with Line Items Button */}
@@ -866,7 +870,10 @@ const FinEditorForm = ({
           isOpen={showAnalysisDialog}
           result={analysisResult}
           onConfirm={(items) => {
+            if (lineItems.length && !window.confirm("替换现有明细及其优先级设置？")) return;
             setLineItems(items);
+            setItemsChanged(true);
+            onDirtyChange?.(true);
             // Auto-populate category and subcategory if suggested
             if (analysisResult.suggestedCategory) {
               setCategory(analysisResult.suggestedCategory);
@@ -879,6 +886,8 @@ const FinEditorForm = ({
           onCancel={() => setShowAnalysisDialog(false)}
           persons={persons}
           brandOptions={brandOptions}
+          defaultNecessityLevel={necessityLevel}
+          showNecessity={type === "expense"}
         />
       )}
 
@@ -889,11 +898,15 @@ const FinEditorForm = ({
         lineItems={lineItems}
         onConfirm={(items) => {
           setLineItems(items);
+          setItemsChanged(true);
+          onDirtyChange?.(true);
           setShowLineItemsDialog(false);
         }}
         onCancel={() => setShowLineItemsDialog(false)}
         persons={persons}
         brandOptions={brandOptions}
+        defaultNecessityLevel={necessityLevel}
+        showNecessity={type === "expense"}
       />
 
       {/* Historical Data Selection Sheet */}

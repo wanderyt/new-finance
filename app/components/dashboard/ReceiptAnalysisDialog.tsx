@@ -1,30 +1,12 @@
 "use client";
 
+import type { ReceiptAnalysisResult } from "../../lib/types/receipt";
+import type { NecessityLevel } from "../../lib/types/necessity";
 import { useState } from "react";
 import Dialog from "../ui-kit/Dialog";
 import Button from "../ui-kit/Button";
 import LineItemEditor, { LineItem } from "./LineItemEditor";
 
-export interface AnalyzedLineItem {
-  name: string;
-  amount: number; // In cents
-  quantity?: number;
-  unit?: string;
-  unitPriceCents?: number; // Price per unit in cents (from AI or calculated)
-  notes?: string; // Original name from receipt (before standardization)
-  brandName?: string;
-}
-
-interface ReceiptAnalysisResult {
-  lineItems: AnalyzedLineItem[];
-  totalAmount: number; // In cents
-  detectedCurrency?: string;
-  merchant?: string;
-  merchantType?: string;
-  date?: string;
-  suggestedCategory?: string;
-  suggestedSubcategory?: string;
-}
 
 interface ReceiptAnalysisDialogProps {
   isOpen: boolean;
@@ -33,6 +15,8 @@ interface ReceiptAnalysisDialogProps {
   onCancel: () => void;
   persons?: Array<{ personId: number; name: string; isDefault?: boolean }>;
   brandOptions?: Array<{ value: string; label: string }>;
+  defaultNecessityLevel?: NecessityLevel;
+  showNecessity?: boolean;
 }
 
 const ReceiptAnalysisDialog = ({
@@ -42,6 +26,8 @@ const ReceiptAnalysisDialog = ({
   onCancel,
   persons = [],
   brandOptions = [],
+  defaultNecessityLevel = "essential",
+  showNecessity = true,
 }: ReceiptAnalysisDialogProps) => {
   // Find default person
   const defaultPerson = persons.find((p) => p.isDefault);
@@ -52,32 +38,16 @@ const ReceiptAnalysisDialog = ({
       name: item.name,
       originalAmountCents: item.amount,
       qty: item.quantity,
-      unit: item.unit,
+      unit: item.unit ?? undefined,
       unitPriceCents: item.unitPriceCents,
       notes: item.notes, // Preserve original name from standardization
-      brandName: item.brandName,
+      brandName: item.brandName ?? undefined,
+      necessityLevel: item.suggestedNecessityLevel ?? "essential",
+      necessityReason: item.necessityReason ?? null,
       personId: defaultPerson?.personId,
     })) || [];
 
   const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems);
-
-  // Update line items when result changes
-  useState(() => {
-    if (result) {
-      setLineItems(
-        result.lineItems.map((item) => ({
-          name: item.name,
-          originalAmountCents: item.amount,
-          qty: item.quantity,
-          unit: item.unit,
-          unitPriceCents: item.unitPriceCents,
-          notes: item.notes, // Preserve original name from standardization
-          brandName: item.brandName,
-          personId: defaultPerson?.personId,
-        }))
-      );
-    }
-  });
 
   const handleLineItemChange = (index: number, item: LineItem) => {
     const updated = [...lineItems];
@@ -199,6 +169,8 @@ const ReceiptAnalysisDialog = ({
               onRemove={handleLineItemRemove}
               persons={persons}
               brandOptions={brandOptions}
+              defaultNecessityLevel={defaultNecessityLevel}
+              showNecessity={showNecessity}
             />
           ))}
         </div>

@@ -21,6 +21,7 @@ import {
 import { FinData } from "@/app/lib/types/api";
 import BottomSheet from "../ui-kit/BottomSheet";
 import MonthYearFilter from "./charts/MonthYearFilter";
+import NecessityAnalysisView from "./charts/NecessityAnalysisView";
 import CategoryBarChart from "./charts/CategoryBarChart";
 import CategoryPieChart from "./charts/CategoryPieChart";
 import CategoryBreadcrumb from "./charts/CategoryBreadcrumb";
@@ -38,7 +39,7 @@ interface ChartsViewProps {
 export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewProps) {
   const dispatch = useAppDispatch();
   const [chartType, setChartType] = useState<"bar" | "pie">("pie");
-  const [viewMode, setViewMode] = useState<"category" | "comparison" | "person" | "price-trend">("category");
+  const [viewMode, setViewMode] = useState<"necessity" | "category" | "comparison" | "person" | "price-trend">("category");
 
   // Selectors
   const categoryChartData = useAppSelector(selectCategoryChartData);
@@ -114,10 +115,14 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
         </div>
 
         {/* View Mode Tabs */}
-        <div className="flex gap-2">
+        <div className="flex flex-nowrap gap-2 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button type="button" onClick={() => setViewMode("necessity")}
+            className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium ${viewMode === "necessity" ? "bg-blue-600 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"}`}>
+            支出优先级
+          </button>
           <button
             onClick={() => setViewMode("category")}
-            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               viewMode === "category"
                 ? "bg-blue-600 text-white"
                 : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -127,7 +132,7 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
           </button>
           <button
             onClick={() => setViewMode("comparison")}
-            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               viewMode === "comparison"
                 ? "bg-blue-600 text-white"
                 : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -137,7 +142,7 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
           </button>
           <button
             onClick={() => setViewMode("person")}
-            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               viewMode === "person"
                 ? "bg-blue-600 text-white"
                 : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -147,7 +152,7 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
           </button>
           <button
             onClick={() => setViewMode("price-trend")}
-            className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
               viewMode === "price-trend"
                 ? "bg-blue-600 text-white"
                 : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -158,7 +163,9 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
         </div>
 
         {/* Date Filter - Only show for category, comparison, and person views */}
-        {viewMode !== "price-trend" && <MonthYearFilter />}
+        {viewMode !== "price-trend" && <MonthYearFilter excludeFuture={viewMode === "necessity"} />}
+
+        {isOpen && viewMode === "necessity" && <NecessityAnalysisView onFinClick={onFinClick} />}
 
         {/* Category View */}
         {viewMode === "category" && (

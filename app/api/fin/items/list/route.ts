@@ -96,6 +96,9 @@ export const GET = withAuth(async (request, user) => {
     const results = await db
       .select({
         itemId: finItems.itemId,
+        necessityLevel: finItems.necessityLevel,
+        necessityReason: finItems.necessityReason,
+        parentNecessityLevel: fin.necessityLevel,
         finId: finItems.finId,
         lineNo: finItems.lineNo,
         name: finItems.name,
