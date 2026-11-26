@@ -3,18 +3,10 @@
 import { useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
-  selectCategoryChartData,
-  selectCategoryExpenseList,
-  selectChartsDrilldownCategory,
   selectMonthComparisonData,
   selectChartsComparisonMonth1,
   selectChartsComparisonMonth2,
   selectAvailableMonthsForComparison,
-  selectChartsFilteredFins,
-  setChartsDrilldownCategory,
-  setChartsCategoryForList,
-  clearChartsCategorySelection,
-  clearChartsDrilldown,
   setChartsComparisonMonths,
   fetchPersonsAsync,
 } from "@/app/lib/redux/features/fin/finSlice";
@@ -22,10 +14,7 @@ import { FinData } from "@/app/lib/types/api";
 import BottomSheet from "../ui-kit/BottomSheet";
 import MonthYearFilter from "./charts/MonthYearFilter";
 import NecessityAnalysisView from "./charts/NecessityAnalysisView";
-import CategoryBarChart from "./charts/CategoryBarChart";
-import CategoryPieChart from "./charts/CategoryPieChart";
-import CategoryBreadcrumb from "./charts/CategoryBreadcrumb";
-import CategoryExpenseList from "./charts/CategoryExpenseList";
+import CategoryAnalysisView from "./charts/CategoryAnalysisView";
 import MonthComparisonLineChart from "./charts/MonthComparisonLineChart";
 import PersonAnalysisView from "./charts/PersonAnalysisView";
 import { ItemPriceTrendView } from "./charts/ItemPriceTrendView";
@@ -38,39 +27,15 @@ interface ChartsViewProps {
 
 export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewProps) {
   const dispatch = useAppDispatch();
-  const [chartType, setChartType] = useState<"bar" | "pie">("pie");
   const [viewMode, setViewMode] = useState<"necessity" | "category" | "comparison" | "person" | "price-trend">("category");
 
   // Selectors
-  const categoryChartData = useAppSelector(selectCategoryChartData);
-  const drilldownCategory = useAppSelector(selectChartsDrilldownCategory);
-  const categoryExpenseList = useAppSelector(selectCategoryExpenseList);
   const comparisonData = useAppSelector(selectMonthComparisonData);
   const month1 = useAppSelector(selectChartsComparisonMonth1);
   const month2 = useAppSelector(selectChartsComparisonMonth2);
   const availableMonths = useAppSelector(selectAvailableMonthsForComparison);
-  const filteredFins = useAppSelector(selectChartsFilteredFins);
 
   // Handlers
-  const handleCategoryClick = (category: string, subcategory?: string) => {
-    if (drilldownCategory) {
-      // Already drilled down, clicking a subcategory → show expense list
-      dispatch(setChartsCategoryForList({ category, subcategory }));
-    } else {
-      // Top-level, clicking a category → drill down
-      dispatch(setChartsDrilldownCategory(category));
-    }
-  };
-
-  const handleBreadcrumbBack = () => {
-    dispatch(clearChartsDrilldown());
-    dispatch(clearChartsCategorySelection());
-  };
-
-  const handleClearExpenseList = () => {
-    dispatch(clearChartsCategorySelection());
-  };
-
   const handleMonth1Change = (month: string) => {
     dispatch(setChartsComparisonMonths({ month1: month }));
   };
@@ -163,81 +128,11 @@ export default function ChartsView({ isOpen, onClose, onFinClick }: ChartsViewPr
         </div>
 
         {/* Date Filter - Only show for category, comparison, and person views */}
-        {viewMode !== "price-trend" && <MonthYearFilter excludeFuture={viewMode === "necessity"} />}
+        {viewMode !== "price-trend" && <MonthYearFilter excludeFuture={viewMode === "necessity" || viewMode === "category"} />}
 
         {isOpen && viewMode === "necessity" && <NecessityAnalysisView onFinClick={onFinClick} />}
 
-        {/* Category View */}
-        {viewMode === "category" && (
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                图表类型
-              </label>
-              {/* Chart Type Toggle */}
-              <div className="flex gap-0.5 bg-zinc-100 dark:bg-zinc-700 p-0.5 rounded">
-                <button
-                  onClick={() => setChartType("pie")}
-                  className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                    chartType === "pie"
-                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                  }`}
-                >
-                  饼图
-                </button>
-                <button
-                  onClick={() => setChartType("bar")}
-                  className={`px-2 py-0.5 text-xs rounded transition-colors ${
-                    chartType === "bar"
-                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-sm"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
-                  }`}
-                >
-                  柱状图
-                </button>
-              </div>
-            </div>
-
-            {/* Breadcrumb (if drilled down) */}
-            <CategoryBreadcrumb
-              drilldownCategory={drilldownCategory}
-              onBack={handleBreadcrumbBack}
-            />
-
-            {/* Chart */}
-            {filteredFins.length === 0 ? (
-              <div className="text-center py-6 text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
-                <p className="text-xs">所选时段无支出数据</p>
-              </div>
-            ) : chartType === "pie" ? (
-              <CategoryPieChart
-                data={categoryChartData}
-                drilldownCategory={drilldownCategory}
-                onCategoryClick={handleCategoryClick}
-                height={220}
-              />
-            ) : (
-              <CategoryBarChart
-                data={categoryChartData}
-                drilldownCategory={drilldownCategory}
-                onCategoryClick={handleCategoryClick}
-                height={220}
-              />
-            )}
-
-            {/* Expense List (when category selected) */}
-            {categoryExpenseList.length > 0 && onFinClick && (
-              <CategoryExpenseList
-                category={categoryExpenseList[0]?.category || "未分类"}
-                subcategory={categoryExpenseList[0]?.subcategory || undefined}
-                transactions={categoryExpenseList}
-                onFinClick={onFinClick}
-                onClear={handleClearExpenseList}
-              />
-            )}
-          </div>
-        )}
+        {isOpen && viewMode === "category" && <CategoryAnalysisView onFinClick={onFinClick} />}
 
         {/* Comparison View */}
         {viewMode === "comparison" && (

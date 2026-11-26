@@ -17,6 +17,14 @@ It adds the fields and all four allowed values in one transaction. Existing prio
 Only exact legacy tax rows receive explicit Essential overrides. Legacy tip candidates require review.
 See [Spending Priority](./spending-priority-feature.md) for classification and reporting rules.
 
+### Item category storage
+
+Items store a nullable category pair. A null pair means that the item follows its record.
+Items store non-null `tax_status`, with a `taxable` default. A SQLite check restricts it to `taxable`, `exempt`, and `tax`.
+Run `yarn db:migrate:item-categories --dry-run` to preview the migration.
+Back up the database, then run `yarn db:migrate:item-categories` to apply it.
+See [Item Categories](./item-categories-feature.md) for the legacy data conversion.
+
 
 > **Status**: Design Document - **UPDATED with New Schema** > **Last Updated**: 2025-12-25
 > **Target Deployment**: Self-hosted VPS

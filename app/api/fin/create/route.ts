@@ -1,4 +1,5 @@
-import { normalizeNecessityReason, validateNecessityRequest } from "../../../lib/utils/necessity";
+import { validateNecessityRequest } from "../../../lib/utils/necessity";
+import { toFinItemRows, validateItemClassification } from "../../../lib/utils/fin-items";
 import { NextResponse } from "next/server";
 import { fin, finItems, scheduleRules } from "@/app/lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -37,7 +38,7 @@ export const POST = withAuth(async (request, user) => {
       return badRequestResponse("The schedule frequency is invalid");
     }
 
-    const priorityError = validateNecessityRequest(body, body.originalAmountCents);
+    const priorityError = validateNecessityRequest(body, body.originalAmountCents) ?? validateItemClassification(body.lineItems);
     if (priorityError) return badRequestResponse(priorityError);
 
     // Validate required fields
@@ -164,22 +165,7 @@ export const POST = withAuth(async (request, user) => {
         // Insert line items if provided
         if (body.lineItems && body.lineItems.length > 0) {
           transaction.insert(finItems).values(
-            body.lineItems.map((item, index) => ({
-              finId,
-              lineNo: index + 1,
-              name: item.name,
-              qty: item.qty || null,
-              unit: item.unit || null,
-              unitPriceCents: item.unitPriceCents || null,
-              originalAmountCents: item.originalAmountCents,
-              personId: item.personId || null,
-              category: item.category || null,
-              subcategory: item.subcategory || null,
-              notes: item.notes || null,
-              brandName: item.brandName || null,
-              necessityLevel: item.necessityLevel ?? null,
-              necessityReason: normalizeNecessityReason(item.necessityReason),
-            }))
+            toFinItemRows(body.lineItems, finId)
           ).run();
         }
 
@@ -302,22 +288,7 @@ export const POST = withAuth(async (request, user) => {
             // Collect line items for recurring records
             if (body.lineItems && body.lineItems.length > 0) {
               recurringLineItems.push(
-                ...body.lineItems.map((item, index) => ({
-                  finId: nextFinId,
-                  lineNo: index + 1,
-                  name: item.name,
-                  qty: item.qty || null,
-                  unit: item.unit || null,
-                  unitPriceCents: item.unitPriceCents || null,
-                  originalAmountCents: item.originalAmountCents,
-                  personId: item.personId || null,
-                  category: item.category || null,
-                  subcategory: item.subcategory || null,
-                  notes: item.notes || null,
-                  brandName: item.brandName || null,
-                  necessityLevel: item.necessityLevel ?? null,
-                  necessityReason: normalizeNecessityReason(item.necessityReason),
-                }))
+                ...toFinItemRows(body.lineItems, nextFinId)
               );
             }
           }

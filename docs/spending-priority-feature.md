@@ -84,13 +84,12 @@ Do not require a reason for any level. Reasons do not affect classification or r
 
 ### Category scope
 
-Keep the existing category and subcategory model for this feature.
-
-Use an item's existing category pair when its category exists. Otherwise, use the record's category pair.
+Use an item's category pair when its category exists. Otherwise, use the record's category pair.
 
 Resolve the pair together. Never combine an item category with a record subcategory. Group missing values under Uncategorized.
 
-Category editing, category identifiers, and category split rows are outside this implementation.
+A tax line without a category splits across the record's taxable items. Each share keeps the tax line's priority.
+See [Item Categories](./item-categories-feature.md) for item category pairs and the tax split.
 
 ### Database changes
 

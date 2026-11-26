@@ -3,9 +3,9 @@ import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { db } from "../../../lib/db/drizzle";
 import { fin, finItems } from "../../../lib/db/schema";
 import { withAuth, badRequestResponse, serverErrorResponse } from "../../../lib/middleware/auth";
-import { allocateNecessity, emptyNecessityReport, necessityPeriod } from "../../../lib/utils/necessity-allocation";
+import { allocateSpending, emptyNecessityReport, necessityPeriod } from "../../../lib/utils/spending-allocation";
 import { isNecessityLevel } from "../../../lib/utils/necessity";
-import type { NecessityAllocation, NecessityBucket } from "../../../lib/types/necessity";
+import type { CategoryTotal, NecessityAllocation, NecessityBucket } from "../../../lib/types/necessity";
 import type { FinData } from "../../../lib/types/api";
 
 export const GET = withAuth(async (request, user) => {
@@ -30,6 +30,16 @@ export const GET = withAuth(async (request, user) => {
     const data = db.transaction((transaction) => {
       const report = emptyNecessityReport();
       const buckets = new Map<string, NecessityBucket>();
+      // Records arrive one at a time, so the last fin ID per key gives a distinct record count.
+      const categoryTotals = new Map<string, CategoryTotal & { lastFinId?: string }>();
+      const addCategoryTotal = (category: string, subcategory: string | null, finId: string, amountCadCents: number) => {
+        const key = JSON.stringify([category, subcategory]);
+        const total = categoryTotals.get(key) ?? { category, subcategory, amountCadCents: 0, recordCount: 0 };
+        total.amountCadCents += amountCadCents;
+        if (total.lastFinId !== finId) total.recordCount++;
+        total.lastFinId = finId;
+        categoryTotals.set(key, total);
+      };
       const details: { record: FinData; allocations: NecessityAllocation[]; matchedCadCents: number }[] = [];
       let matchedRecordCount = 0;
       let cursor: string | undefined;
@@ -48,7 +58,7 @@ export const GET = withAuth(async (request, user) => {
           byRecord.set(item.finId, group);
         }
         for (const record of records) {
-          const allocations = allocateNecessity(record, byRecord.get(record.finId) ?? []);
+          const allocations = allocateSpending(record, byRecord.get(record.finId) ?? []);
           report.totalCadCents += record.amountCadCents;
           if (allocations.some((allocation) => allocation.estimated)) {
             report.estimatedCadCents += record.amountCadCents;
@@ -62,6 +72,11 @@ export const GET = withAuth(async (request, user) => {
               subcategory: allocation.subcategory, amountCadCents: 0 };
             bucket.amountCadCents += allocation.amountCadCents;
             buckets.set(key, bucket);
+            // Detail pages do not read category totals, so only the summary request builds them.
+            if (!detailsRequested) {
+              addCategoryTotal(allocation.category, null, record.finId, allocation.amountCadCents);
+              addCategoryTotal(allocation.category, allocation.subcategory, record.finId, allocation.amountCadCents);
+            }
           }
           if (detailsRequested) {
             const selected = allocations.filter(matches);
@@ -75,6 +90,9 @@ export const GET = withAuth(async (request, user) => {
         cursor = records[records.length - 1].finId;
       }
       report.buckets = [...buckets.values()].sort((a, b) => b.amountCadCents - a.amountCadCents);
+      report.categories = [...categoryTotals.values()]
+        .map(({ category, subcategory, amountCadCents, recordCount }) => ({ category, subcategory, amountCadCents, recordCount }))
+        .sort((a, b) => b.amountCadCents - a.amountCadCents);
       return { ...report, details, pagination: { total: matchedRecordCount, offset, limit,
         hasMore: offset + details.length < matchedRecordCount } };
     });

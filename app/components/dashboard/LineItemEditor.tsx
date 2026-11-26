@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useId, type RefObject } from "react";
+import { useState, useEffect, useRef, useId, type RefObject } from "react";
 import { NECESSITY_LEVELS, NECESSITY_LABELS, type NecessityFields, type NecessityLevel } from "../../lib/types/necessity";
+import { GOODS_TAX_STATUSES, TAX_STATUS_LABELS, taxStatusForName, type TaxStatus } from "../../lib/types/tax";
+import type { CategoryPair } from "../../lib/utils/receipt-categories";
 import Input from "../ui-kit/Input";
 import Dropdown from "../ui-kit/Dropdown";
 import SearchableSelect from "../ui-kit/SearchableSelect";
@@ -39,13 +41,21 @@ export interface LineItem extends NecessityFields {
   qty?: number;
   unit?: string;
   unitPriceCents?: number;
-  category?: string;
-  subcategory?: string;
+  // Null or missing means the item follows the record's category.
+  category?: string | null;
+  subcategory?: string | null;
   notes?: string;
   brandName?: string;
+  taxStatus?: TaxStatus;
 }
 
-interface LineItemEditorProps {
+export interface ItemCategoryOptions {
+  categoryPairs?: CategoryPair[];
+  recordCategory?: string;
+  recordSubcategory?: string;
+}
+
+interface LineItemEditorProps extends ItemCategoryOptions {
   item: LineItem;
   index: number;
   onChange: (index: number, item: LineItem) => void;
@@ -67,6 +77,8 @@ const LineItemEditor = ({
   className = "",
   defaultNecessityLevel = "essential",
   showNecessity = true,
+  categoryPairs = [],
+  recordSubcategory,
 }: LineItemEditorProps) => {
   // The `item` prop is the single source of truth for structured fields. Only
   // the raw text buffers below are local, so in-progress typing isn't clobbered.
@@ -150,12 +162,12 @@ const LineItemEditor = ({
     onChange(index, { ...item, [field]: value });
   };
 
-  const handleNameSelect = useCallback((name: string) => {
+  const handleNameSelect = (name: string) => {
     isNameFocused.current = false;
     setShowAutocomplete(false);
     nameInputRef.current?.blur();
-    onChange(index, { ...item, name });
-  }, [item, index, onChange]);
+    onChange(index, { ...item, name, taxStatus: taxStatusForName(name, item.taxStatus) });
+  };
 
   const handleAmountChange = (value: string) => {
     setAmountInput(value);
@@ -210,6 +222,14 @@ const LineItemEditor = ({
     handleChange("unitPriceCents", cents || undefined);
   };
 
+  const isTaxLine = item.taxStatus === "tax";
+  const categoryOptions = [
+    { value: "", label: isTaxLine ? "按计税商品分摊" : "跟随账单" },
+    ...[...new Set(categoryPairs.map((pair) => pair.category))].map((value) => ({ value, label: value })),
+  ];
+  const subcategoryOptions = categoryPairs.filter((pair) => pair.category === item.category)
+    .map((pair) => ({ value: pair.subcategory, label: pair.subcategory }));
+
   const personOptions = persons.map((p) => ({
     value: p.personId.toString(),
     label: p.name,
@@ -248,7 +268,8 @@ const LineItemEditor = ({
             <Input
               ref={nameInputRef}
               value={item.name}
-              onChange={(e) => handleChange("name", e.target.value)}
+              onChange={(e) => onChange(index, { ...item, name: e.target.value,
+                taxStatus: taxStatusForName(e.target.value, item.taxStatus) })}
               onFocus={() => {
                 isNameFocused.current = true;
                 if (item.name.trim().length > 0) {
@@ -367,6 +388,42 @@ const LineItemEditor = ({
             onChange={(e) => handleChange("unit", e.target.value || undefined)}
             placeholder="单位"
           />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1" role="group" aria-label="项目分类">
+            <Dropdown
+              value={item.category ?? ""}
+              options={categoryOptions}
+              onChange={(value) => {
+                if (value === (item.category ?? "")) return;
+                onChange(index, { ...item, category: value || null, subcategory: null });
+              }}
+              className="[&_span]:truncate [&_svg]:shrink-0"
+            />
+          </div>
+          <div className="min-w-0 flex-1" role="group" aria-label="项目子分类">
+            <Dropdown
+              value={item.subcategory ?? ""}
+              options={subcategoryOptions}
+              onChange={(value) => handleChange("subcategory", value || null)}
+              placeholder={item.category || isTaxLine ? "子分类" : recordSubcategory || "子分类"}
+              disabled={!item.category}
+              className="[&_span]:truncate [&_svg]:shrink-0"
+            />
+          </div>
+          {showNecessity && (isTaxLine
+            ? <span role="img" aria-label="税额，按计税商品分摊" title="税额，按计税商品分摊"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber-100 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+              {TAX_STATUS_LABELS.tax}
+            </span>
+            : <div className="w-20 shrink-0" role="group" aria-label="计税方式">
+              <Dropdown
+                value={item.taxStatus ?? "taxable"}
+                options={GOODS_TAX_STATUSES.map((value) => ({ value, label: TAX_STATUS_LABELS[value] }))}
+                onChange={(value) => handleChange("taxStatus", value as TaxStatus)}
+              />
+            </div>)}
         </div>
 
         <div className="flex items-center gap-2">

@@ -98,6 +98,7 @@ Before merging a PR, ensure:
 - [History Search](docs/history-search-feature.md) — search/filter design for transaction history
 - [Charts & Analytics](docs/charts-analytics-feature.md) — charting data model and rendering approach
 - [Pocket Money](docs/pocket-money-feature.md) — pocket money tracking feature design
+- [Item Categories](docs/item-categories-feature.md) — per-item category pairs and tax split across taxable items
 
 ### API & Data
 - [Fin Create/Update API](docs/api-implementation-fin-create-update.md) — REST API contracts for financial records

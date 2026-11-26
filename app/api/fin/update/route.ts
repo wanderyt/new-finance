@@ -1,4 +1,5 @@
-import { normalizeNecessityReason, validateNecessityRequest } from "../../../lib/utils/necessity";
+import { validateNecessityRequest } from "../../../lib/utils/necessity";
+import { toFinItemRows, validateItemClassification } from "../../../lib/utils/fin-items";
 import { NextResponse } from "next/server";
 import { db } from "@/app/lib/db/drizzle";
 import { fin, finItems, type Fin } from "@/app/lib/db/schema";
@@ -62,7 +63,8 @@ export const PATCH = withAuth(async (request, user) => {
       );
     }
 
-    const priorityError = validateNecessityRequest(body, body.originalAmountCents ?? existing.originalAmountCents);
+    const priorityError = validateNecessityRequest(body, body.originalAmountCents ?? existing.originalAmountCents)
+      ?? validateItemClassification(body.lineItems);
     if (priorityError) return badRequestResponse(priorityError);
 
     // Validate updated fields
@@ -199,22 +201,7 @@ export const PATCH = withAuth(async (request, user) => {
               // Insert new line items
               if (body.lineItems.length > 0) {
                 transaction.insert(finItems).values(
-                  body.lineItems.map((item, index) => ({
-                    finId: record.finId,
-                    lineNo: index + 1,
-                    name: item.name,
-                    qty: item.qty || null,
-                    unit: item.unit || null,
-                    unitPriceCents: item.unitPriceCents || null,
-                    originalAmountCents: item.originalAmountCents,
-                    personId: item.personId || null,
-                    category: item.category || null,
-                    subcategory: item.subcategory || null,
-                    notes: item.notes || null,
-                    brandName: item.brandName || null,
-                    necessityLevel: item.necessityLevel ?? null,
-                    necessityReason: normalizeNecessityReason(item.necessityReason),
-                  }))
+                  toFinItemRows(body.lineItems, record.finId)
                 ).run();
               }
             }
@@ -236,22 +223,7 @@ export const PATCH = withAuth(async (request, user) => {
             // Insert new line items
             if (body.lineItems.length > 0) {
               transaction.insert(finItems).values(
-                body.lineItems.map((item, index) => ({
-                  finId: body.finId,
-                  lineNo: index + 1,
-                  name: item.name,
-                  qty: item.qty || null,
-                  unit: item.unit || null,
-                  unitPriceCents: item.unitPriceCents || null,
-                  originalAmountCents: item.originalAmountCents,
-                  personId: item.personId || null,
-                  category: item.category || null,
-                  subcategory: item.subcategory || null,
-                  notes: item.notes || null,
-                  brandName: item.brandName || null,
-                  necessityLevel: item.necessityLevel ?? null,
-                  necessityReason: normalizeNecessityReason(item.necessityReason),
-                }))
+                toFinItemRows(body.lineItems, body.finId)
               ).run();
             }
           }

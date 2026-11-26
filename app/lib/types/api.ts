@@ -1,4 +1,5 @@
 import type { NecessityLevel } from "./necessity";
+import type { TaxStatus } from "./tax";
 
 // User data structure (with password for mock auth)
 export interface User {
@@ -65,10 +66,12 @@ export interface FinLineItem {
   unit?: string;
   unitPriceCents?: number;
   personId?: number;
-  category?: string;
-  subcategory?: string;
+  // Null or missing means the item follows the record's category.
+  category?: string | null;
+  subcategory?: string | null;
   notes?: string;
   brandName?: string;
+  taxStatus?: TaxStatus;
 }
 
 // Create Fin Request

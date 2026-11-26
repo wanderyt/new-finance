@@ -84,6 +84,7 @@ COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./
 COPY scripts/migrate-fin-photos.mjs ./scripts/migrate-fin-photos.mjs
 COPY scripts/migrate-fin-necessity.mjs ./scripts/migrate-fin-necessity.mjs
+COPY scripts/migrate-item-categories.mjs ./scripts/migrate-item-categories.mjs
 COPY scripts/necessity-constraints.mjs ./scripts/necessity-constraints.mjs
 
 # Create db directory for volume mount
@@ -100,4 +101,4 @@ USER nextjs
 EXPOSE 3000
 
 # Start Next.js on all interfaces for Docker
-CMD ["sh", "-c", "node scripts/migrate-fin-photos.mjs && node scripts/migrate-fin-necessity.mjs && exec node_modules/.bin/next start -H 0.0.0.0 -p 3000"]
+CMD ["sh", "-c", "node scripts/migrate-fin-photos.mjs && node scripts/migrate-fin-necessity.mjs && node scripts/migrate-item-categories.mjs && exec node_modules/.bin/next start -H 0.0.0.0 -p 3000"]

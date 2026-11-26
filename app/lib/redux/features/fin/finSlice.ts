@@ -88,9 +88,6 @@ export interface FinState {
     viewMode: "month" | "year";
     selectedMonth?: string;
     selectedYear?: string;
-    drilldownCategory?: string;
-    selectedCategoryForList?: string;
-    selectedSubcategoryForList?: string;
     comparisonMonth1?: string;
     comparisonMonth2?: string;
 
@@ -846,18 +843,6 @@ const finSlice = createSlice({
       state.charts.selectedYear = action.payload;
     },
 
-    setChartsDrilldownCategory: (state, action: PayloadAction<string | undefined>) => {
-      state.charts.drilldownCategory = action.payload;
-    },
-
-    setChartsCategoryForList: (
-      state,
-      action: PayloadAction<{ category?: string; subcategory?: string }>
-    ) => {
-      state.charts.selectedCategoryForList = action.payload.category;
-      state.charts.selectedSubcategoryForList = action.payload.subcategory;
-    },
-
     setChartsComparisonMonths: (
       state,
       action: PayloadAction<{ month1?: string; month2?: string }>
@@ -868,15 +853,6 @@ const finSlice = createSlice({
       if (action.payload.month2 !== undefined) {
         state.charts.comparisonMonth2 = action.payload.month2;
       }
-    },
-
-    clearChartsCategorySelection: (state) => {
-      state.charts.selectedCategoryForList = undefined;
-      state.charts.selectedSubcategoryForList = undefined;
-    },
-
-    clearChartsDrilldown: (state) => {
-      state.charts.drilldownCategory = undefined;
     },
 
     setChartsSelectedPerson: (state, action: PayloadAction<number | undefined>) => {
@@ -1174,11 +1150,7 @@ export const {
   setChartsViewMode,
   setChartsSelectedMonth,
   setChartsSelectedYear,
-  setChartsDrilldownCategory,
-  setChartsCategoryForList,
   setChartsComparisonMonths,
-  clearChartsCategorySelection,
-  clearChartsDrilldown,
   setChartsSelectedPerson,
   clearPersonItems,
   clearPurchaseHistory,
@@ -1367,7 +1339,6 @@ export const selectHistoryFilterCount = createSelector(
 export const selectChartsViewMode = (state: RootState) => state.fin.charts.viewMode;
 export const selectChartsSelectedMonth = (state: RootState) => state.fin.charts.selectedMonth;
 export const selectChartsSelectedYear = (state: RootState) => state.fin.charts.selectedYear;
-export const selectChartsDrilldownCategory = (state: RootState) => state.fin.charts.drilldownCategory;
 export const selectChartsComparisonMonth1 = (state: RootState) => state.fin.charts.comparisonMonth1;
 export const selectChartsComparisonMonth2 = (state: RootState) => state.fin.charts.comparisonMonth2;
 
@@ -1407,100 +1378,6 @@ export const selectAvailableYears = createSelector([selectFins], (fins): string[
   });
   return Array.from(years).sort().reverse();
 });
-
-// Filter fins for charts (by selected month/year + expenses only)
-export const selectChartsFilteredFins = createSelector(
-  [selectFins, selectChartsViewMode, selectChartsSelectedMonth, selectChartsSelectedYear],
-  (fins, viewMode, selectedMonth, selectedYear): FinData[] => {
-    return fins.filter((fin) => {
-      if (fin.type !== "expense") return false;
-
-      // SQLite returns dates as "YYYY-MM-DD HH:MM:SS" - convert to UTC
-      const isoDate = fin.date.includes('T') ? fin.date : fin.date.replace(' ', 'T') + 'Z';
-      const finDate = new Date(isoDate);
-      if (viewMode === "month" && selectedMonth) {
-        const finMonth = `${finDate.getUTCFullYear()}-${String(finDate.getUTCMonth() + 1).padStart(2, "0")}`;
-        return finMonth === selectedMonth;
-      } else if (viewMode === "year" && selectedYear) {
-        return String(finDate.getUTCFullYear()) === selectedYear;
-      }
-      return true;
-    });
-  }
-);
-
-interface CategoryData {
-  category: string;
-  subcategory?: string;
-  totalCents: number;
-  count: number;
-}
-
-// Aggregate category data for bar chart
-export const selectCategoryChartData = createSelector(
-  [selectChartsFilteredFins, selectChartsDrilldownCategory],
-  (fins, drilldownCategory): CategoryData[] => {
-    const aggregated: Record<string, { totalCents: number; count: number }> = {};
-
-    fins.forEach((fin) => {
-      const category = fin.category || "Uncategorized";
-      const subcategory = fin.subcategory;
-
-      let key: string;
-      if (drilldownCategory) {
-        // Drill-down view: show subcategories for the selected category
-        if (category !== drilldownCategory) return;
-        key = subcategory || "Uncategorized";
-      } else {
-        // Top-level view: show categories
-        key = category;
-      }
-
-      if (!aggregated[key]) {
-        aggregated[key] = { totalCents: 0, count: 0 };
-      }
-      aggregated[key].totalCents += fin.amountCadCents;
-      aggregated[key].count += 1;
-    });
-
-    // Convert to array and sort by total descending
-    return Object.entries(aggregated)
-      .map(([name, data]) => ({
-        category: drilldownCategory || name,
-        subcategory: drilldownCategory ? name : undefined,
-        totalCents: data.totalCents,
-        count: data.count,
-      }))
-      .sort((a, b) => b.totalCents - a.totalCents)
-      .slice(0, 15); // Top 15
-  }
-);
-
-// Get expense list for selected category
-export const selectCategoryExpenseList = createSelector(
-  [
-    selectChartsFilteredFins,
-    (state: RootState) => state.fin.charts.selectedCategoryForList,
-    (state: RootState) => state.fin.charts.selectedSubcategoryForList,
-  ],
-  (fins, selectedCategory, selectedSubcategory): FinData[] => {
-    if (!selectedCategory) return [];
-
-    return fins
-      .filter((fin) => {
-        const category = fin.category || "Uncategorized";
-        if (category !== selectedCategory) return false;
-
-        if (selectedSubcategory) {
-          const subcategory = fin.subcategory || "Uncategorized";
-          return subcategory === selectedSubcategory;
-        }
-
-        return true;
-      })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }
-);
 
 interface DayAccumulation {
   day: number;

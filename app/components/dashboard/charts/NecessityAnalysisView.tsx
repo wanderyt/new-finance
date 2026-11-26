@@ -1,39 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { useAppSelector } from "../../../lib/redux/hooks";
-import { selectChartsViewMode, selectChartsSelectedMonth, selectChartsSelectedYear } from "../../../lib/redux/features/fin/finSlice";
-import { NECESSITY_LABELS, NECESSITY_DESCRIPTIONS, NECESSITY_LEVELS, type NecessityLevel, type NecessityReport, type NecessityAllocation } from "../../../lib/types/necessity";
+import { NECESSITY_LABELS, NECESSITY_DESCRIPTIONS, NECESSITY_LEVELS, type NecessityLevel } from "../../../lib/types/necessity";
 import type { FinData } from "../../../lib/types/api";
-import Button from "../../ui-kit/Button";
-
-interface ReportResponse extends NecessityReport {
-  details: { record: FinData; allocations: NecessityAllocation[]; matchedCadCents: number }[];
-  pagination: { offset: number; limit: number; total: number; hasMore: boolean };
-}
+import AllocationDetails from "./AllocationDetails";
+import ReportStatus from "./ReportStatus";
+import { formatCad as money, useReportPeriod, useSpendingReport } from "./useSpendingReport";
 
 const COLORS = ["#2563eb", "#8b5cf6", "#f59e0b", "#ef4444", "#ec4899", "#64748b"];
-const money = (cents: number) => new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CAD" }).format(cents / 100);
 
 export default function NecessityAnalysisView({ onFinClick }: { onFinClick?: (record: FinData) => void }) {
-  const period = useAppSelector(selectChartsViewMode);
-  const month = useAppSelector(selectChartsSelectedMonth);
-  const year = useAppSelector(selectChartsSelectedYear);
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const currentYear = String(new Date().getUTCFullYear());
-  const value = period === "month" ? (month && month <= currentMonth ? month : currentMonth)
-    : (year && year <= currentYear ? year : currentYear);
+  const { period, value } = useReportPeriod();
   return <NecessityPeriodView key={`${period}:${value}`} period={period} value={value} onFinClick={onFinClick} />;
 }
 
 function NecessityPeriodView({ period, value, onFinClick }: {
   period: "month" | "year"; value: string; onFinClick?: (record: FinData) => void;
 }) {
-  const records = useAppSelector((state) => state.fin.fins);
   const [selection, setSelection] = useState<{ level?: NecessityLevel; category?: string; subcategory?: string; review?: boolean }>({});
   const [offset, setOffset] = useState(0);
-  const [retry, setRetry] = useState(0);
   const params = new URLSearchParams({ period, value });
   if (selection.level) params.set("level", selection.level);
   if (selection.category !== undefined) params.set("category", selection.category);
@@ -42,30 +28,11 @@ function NecessityPeriodView({ period, value, onFinClick }: {
   if (details) params.set("details", "1");
   if (selection.review) params.set("review", "estimated");
   params.set("offset", String(offset));
-  const query = params.toString();
-  const [result, setResult] = useState<{ query: string; data?: ReportResponse; error?: string }>();
-  const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    Promise.resolve().then(() => { if (!controller.signal.aborted) setPending(true); });
-    fetch(`/api/fin/necessity?${query}`, { signal: controller.signal })
-      .then(async (response) => {
-        const body = await response.json();
-        if (!response.ok || !body.success) throw new Error(body.error || "无法加载支出优先级。");
-        if (!controller.signal.aborted) setResult({ query, data: body.data });
-      })
-      .catch((error: Error) => { if (!controller.signal.aborted) setResult({ query, error: error.message }); })
-      .finally(() => { if (!controller.signal.aborted) setPending(false); });
-    return () => controller.abort();
-  }, [query, records, retry]);
+  const request = useSpendingReport(params.toString());
+  const report = request.data;
 
   const navigate = (next: typeof selection) => { setOffset(0); setSelection(next); };
-  if (!result || result.query !== query || pending) return <p role="status" className="py-8 text-center text-xs text-zinc-500">正在加载支出优先级…</p>;
-  if (result.error || !result.data) return <div role="alert" className="space-y-2 py-4 text-xs">
-    <p>{result.error}</p><Button size="sm" onClick={() => setRetry((count) => count + 1)}>重试</Button>
-  </div>;
-  const report = result.data;
+  if (request.loading || !report) return <ReportStatus report={request} loadingText="正在加载支出优先级…" padded />;
   const grouped = new Map<string, number>();
   if (!selection.level) NECESSITY_LEVELS.forEach((level) => grouped.set(level, report.totals[level]));
   else report.buckets.filter((bucket) => bucket.necessityLevel === selection.level &&
@@ -120,18 +87,6 @@ function NecessityPeriodView({ period, value, onFinClick }: {
       </button>)}</div>
       {selection.level && <p className="text-xs text-zinc-500">{NECESSITY_DESCRIPTIONS[selection.level]}</p>}
     </>}
-    {details && <div className="space-y-3">
-      <p className="text-xs">{report.pagination.total} 笔匹配账单</p>
-      {report.details.map((detail) => <button key={detail.record.finId} type="button" onClick={() => onFinClick?.(detail.record)}
-        disabled={!onFinClick} className="w-full rounded-lg border border-zinc-200 p-3 text-left text-xs dark:border-zinc-700">
-        <span className="flex justify-between gap-2"><strong className="font-semibold">{detail.record.merchant || "未填写商户"}</strong><span>{money(detail.matchedCadCents)}</span></span>
-        <span className="mt-1 block text-xs text-zinc-500">{detail.record.date.slice(0, 10)} · 整笔账单 {money(detail.record.amountCadCents)}</span>
-        {detail.allocations.map((allocation, index) => <span key={index} className="mt-1 block text-xs">
-          {allocation.name} · {NECESSITY_LABELS[allocation.necessityLevel]} · {money(allocation.amountCadCents)}{allocation.estimated ? "（估算）" : ""}
-        </span>)}
-      </button>)}
-      <div className="flex justify-between"><Button size="sm" variant="secondary" disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 20))}>上一页</Button>
-        <Button size="sm" variant="secondary" disabled={!report.pagination.hasMore} onClick={() => setOffset(offset + 20)}>下一页</Button></div>
-    </div>}
+    {details && <AllocationDetails report={report} offset={offset} onOffsetChange={setOffset} onFinClick={onFinClick} />}
   </div>;
 }

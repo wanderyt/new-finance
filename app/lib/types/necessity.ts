@@ -30,6 +30,8 @@ export interface NecessityAllocation {
   amountCadCents: number;
   remainder: boolean;
   estimated: boolean;
+  // True for the part of a tax line assigned to the category of taxable items.
+  taxShare: boolean;
 }
 
 export interface NecessityBucket {
@@ -39,6 +41,14 @@ export interface NecessityBucket {
   amountCadCents: number;
 }
 
+// Level-independent category totals. A null subcategory row totals the whole category.
+export interface CategoryTotal {
+  category: string;
+  subcategory: string | null;
+  amountCadCents: number;
+  recordCount: number;
+}
+
 export interface NecessityReport {
   totalCadCents: number;
   estimatedCadCents: number;
@@ -46,4 +56,5 @@ export interface NecessityReport {
   remainderCadCents: number;
   totals: Record<NecessityLevel, number>;
   buckets: NecessityBucket[];
+  categories: CategoryTotal[];
 }
