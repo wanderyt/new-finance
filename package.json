@@ -1,6 +1,6 @@
 {
   "name": "new-finance",
-  "version": "1.21.1",
+  "version": "1.22.0",
   "private": true,
   "packageManager": "yarn@4.5.3",
   "engines": {
@@ -20,6 +20,8 @@
     "test:necessity": "tsx --test tests/necessity*.test.ts",
     "test:autocomplete": "tsx --test tests/items-autocomplete.test.ts",
     "db:migrate:photos": "node scripts/migrate-fin-photos.mjs",
+    "db:migrate:item-categories": "node scripts/migrate-item-categories.mjs",
+    "test:item-categories": "tsx --test tests/item-categories*.test.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:add-merchant-cashback": "tsx scripts/add-merchant-cashback-category.ts",
     "db:cleanup-schedules": "tsx scripts/cleanup-schedule-rules.ts",

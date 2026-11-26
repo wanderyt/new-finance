@@ -3,7 +3,9 @@
 ### Spending priority migration
 
 The image packages the priority runner, `scripts/necessity-constraints.mjs`, and `drizzle/0005_add_fin_necessity.sql`.
-Startup runs the product-photo migration, then the spending-priority migration, before starting Next.js.
+Startup runs the product-photo migration, the spending-priority migration, and then the item-category migration, before starting Next.js.
+The image also packages `scripts/migrate-item-categories.mjs` and `drizzle/0006_add_item_tax_status.sql`.
+Use `node scripts/migrate-item-categories.mjs --dry-run` to preview its legacy tax, tip, and category counts.
 The priority runner uses `DATABASE_PATH` and applies missing columns in one immediate SQLite transaction.
 It then expands existing priority constraints to accept Unexpected in a separate immediate transaction.
 Migration failure prevents application startup.

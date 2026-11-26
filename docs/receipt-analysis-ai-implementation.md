@@ -33,6 +33,18 @@ Reanalysis asks before replacing existing items and classifications.
 Classification normalization does not add a model request.
 See [Spending Priority](./spending-priority-feature.md) for the complete rules.
 
+### Item categories and tax codes
+
+The prompt receives the user's expense category pairs. The AI returns `suggestedCategory` and `suggestedSubcategory` for each item.
+The AI also returns `taxable` from the receipt's per-line tax codes, such as `19.99 H`. A null value means that the receipt shows no codes.
+The prompt tells the AI to use the code legend, copy codes to discount lines, and check the taxed lines against the printed tax rate.
+If any line has `taxable: true`, the server treats lines with a null value as exempt. Tests showed that the AI sometimes returns null for unmarked lines.
+`normalizeReceiptNecessities` converts the flag into `taxStatus` and removes the raw flag. Tax lines become `tax` and take the name `税`. Their original label moves to the notes. Tips and `taxable: false` lines become `exempt`.
+`normalizeReceiptCategories` keeps only pairs from the user's list and chooses the record pair.
+Items that match the record pair inherit it. Restaurant receipts pass an empty list, so all their items inherit.
+Then `normalizeReceiptCategories` splits the tax line into one `税` item per category pair of the taxable goods. The response carries each share's pair in `suggestedCategory` and `suggestedSubcategory`.
+See [Item Categories](./item-categories-feature.md) for the complete rules.
+
 
 ## Executive Summary
 

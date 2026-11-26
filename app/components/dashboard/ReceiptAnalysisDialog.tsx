@@ -5,10 +5,11 @@ import type { NecessityLevel } from "../../lib/types/necessity";
 import { useState } from "react";
 import Dialog from "../ui-kit/Dialog";
 import Button from "../ui-kit/Button";
-import LineItemEditor, { LineItem } from "./LineItemEditor";
+import LineItemEditor, { type ItemCategoryOptions, type LineItem } from "./LineItemEditor";
+import ResplitTaxButton from "./ResplitTaxButton";
 
 
-interface ReceiptAnalysisDialogProps {
+interface ReceiptAnalysisDialogProps extends ItemCategoryOptions {
   isOpen: boolean;
   result: ReceiptAnalysisResult | null;
   onConfirm: (lineItems: LineItem[]) => void;
@@ -28,6 +29,9 @@ const ReceiptAnalysisDialog = ({
   brandOptions = [],
   defaultNecessityLevel = "essential",
   showNecessity = true,
+  categoryPairs,
+  recordCategory,
+  recordSubcategory,
 }: ReceiptAnalysisDialogProps) => {
   // Find default person
   const defaultPerson = persons.find((p) => p.isDefault);
@@ -44,6 +48,9 @@ const ReceiptAnalysisDialog = ({
       brandName: item.brandName ?? undefined,
       necessityLevel: item.suggestedNecessityLevel ?? defaultNecessityLevel,
       necessityReason: item.necessityReason ?? null,
+      taxStatus: item.taxStatus,
+      category: item.suggestedCategory ?? null,
+      subcategory: item.suggestedSubcategory ?? null,
       personId: defaultPerson?.personId,
     })) || [];
 
@@ -152,12 +159,6 @@ const ReceiptAnalysisDialog = ({
           </div>
         )}
 
-        {/* Instructions */}
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Review and edit the line items below. You can assign each item to a person,
-          adjust amounts, or add/remove items.
-        </p>
-
         {/* Line Items */}
         <div className="space-y-3 max-h-96 overflow-y-auto">
           {lineItems.map((item, index) => (
@@ -171,18 +172,24 @@ const ReceiptAnalysisDialog = ({
               brandOptions={brandOptions}
               defaultNecessityLevel={defaultNecessityLevel}
               showNecessity={showNecessity}
+              categoryPairs={categoryPairs}
+              recordSubcategory={recordSubcategory}
             />
           ))}
         </div>
 
-        {/* Add Item Button */}
-        <button
-          type="button"
-          onClick={handleAddLineItem}
-          className="w-full py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-        >
-          + Add Line Item
-        </button>
+        {/* Add Item and tax split buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleAddLineItem}
+            className="flex-1 py-2 border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-lg text-sm text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+          >
+            + Add Line Item
+          </button>
+          {showNecessity && <ResplitTaxButton items={lineItems} onSplit={setLineItems}
+            record={{ category: recordCategory, subcategory: recordSubcategory }} />}
+        </div>
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-700">

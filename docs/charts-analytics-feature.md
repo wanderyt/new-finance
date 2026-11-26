@@ -30,6 +30,17 @@ Changing periods resets drill-down state. Aborted older requests cannot replace 
 Record updates refresh the report independently from capped person-item data.
 See [Spending Priority](./spending-priority-feature.md) for allocation rules.
 
+### Category view
+
+The category view uses the same `GET /api/fin/necessity` report as the spending priority view.
+It adds item allocations, not record totals. Each item uses its own category pair or follows the record.
+Tax lines split across taxable items. See [Item Categories](./item-categories-feature.md).
+The chart reads the report's `categories` totals and shows the top 15 rows. The count is the number of distinct records.
+A subcategory selection loads paginated details with `details=1`. Each detail shows the matched item allocations.
+The category view excludes future records, like the spending priority view. A future month or year falls back to the current one.
+`useSpendingReport` loads reports, aborts stale requests, and reloads after record changes.
+`AllocationDetails` and `ReportStatus` are shared by both views.
+
 
 ## Feature Overview
 
@@ -113,9 +124,6 @@ export interface FinState {
     viewMode: "month" | "year";
     selectedMonth?: string;
     selectedYear?: string;
-    drilldownCategory?: string;
-    selectedCategoryForList?: string;
-    selectedSubcategoryForList?: string;
     comparisonMonth1?: string;
     comparisonMonth2?: string;
   };
@@ -126,21 +134,14 @@ export interface FinState {
 - `setChartsViewMode(mode)` - Switch between month/year filtering
 - `setChartsSelectedMonth(month)` - Set selected month for filtering
 - `setChartsSelectedYear(year)` - Set selected year for filtering
-- `setChartsDrilldownCategory(category)` - Drill into category to show subcategories
-- `setChartsCategoryForList(category, subcategory)` - Show expense list for category
 - `setChartsComparisonMonths(month1, month2)` - Set months for line chart comparison
-- `clearChartsCategorySelection()` - Clear drill-down and expense list
 
 **Redux Selectors**:
 - `selectChartsViewMode` - Get current view mode (month/year)
-- `selectChartsFilteredFins` - Get transactions filtered by selected month/year + expenses only
-- `selectCategoryChartData` - Get aggregated category/subcategory data for bar chart
 - `selectMonthComparisonData` - Get daily accumulated totals for two months
-- `selectCategoryExpenseList` - Get transactions for selected category
 - `selectAvailableMonths` - Extract unique months from transactions (used by `MonthYearFilter` for the category, person, and price-trend views)
 - `selectAvailableMonthsForComparison` - Same as `selectAvailableMonths`, but excludes any month later than the current month. Used by the **Month Comparison** view so users cannot pick a future month even if a (mis-dated) fin record exists there. Compared as `"YYYY-MM"` strings against the current UTC year/month, so the boundary moves automatically as the calendar advances.
 - `selectAvailableYears` - Extract unique years from transactions
-- `selectChartsDrilldownCategory` - Get current drill-down category (if any)
 - `selectChartsComparisonMonths` - Get selected months for comparison
 
 ### Component Hierarchy
@@ -156,10 +157,10 @@ Dashboard
     │   └── Select (Month or Year dropdown)
     ├── Section: Category Breakdown
     │   ├── Heading
-    │   ├── CategoryBreadcrumb (when drilled down)
-    │   ├── CategoryBarChart (Recharts BarChart)
-    │   └── CategoryExpenseList (conditional)
-    │       └── ExpenseTile[] (reused component)
+    │   └── CategoryAnalysisView (drill-down state is local)
+    │       ├── CategoryBreadcrumb (when drilled down)
+    │       ├── CategoryPieChart or CategoryBarChart
+    │       └── AllocationDetails (when a subcategory is selected)
     └── Section: Month Comparison
         ├── Heading
         ├── Month Selectors (2 Select dropdowns)
@@ -184,7 +185,7 @@ interface ChartsViewProps {
 - Organize sections (filter, bar chart, line chart)
 - Handle loading and empty states
 - Connect child components to Redux state
-- Pass onFinClick to CategoryExpenseList
+- Pass onFinClick to CategoryAnalysisView
 
 **Styling**:
 - `max-w-2xl mx-auto` - Centered container
@@ -280,31 +281,20 @@ interface CategoryBreadcrumbProps {
 - Shows "All Categories > Food" when drilled down
 - Click "All Categories" or back button → Clear drilldown
 
-### 5. CategoryExpenseList.tsx
+### 5. CategoryAnalysisView.tsx
 
-**Purpose**: Display transaction list for selected category
+**Purpose**: Show category and subcategory charts from the server report, and the details of a selected subcategory.
 
 **Props**:
 ```typescript
-interface CategoryExpenseListProps {
-  category: string;
-  subcategory?: string;
-  transactions: FinData[];
-  onFinClick: (fin: FinData) => void;
-  onClear: () => void;
-}
+{ onFinClick?: (record: FinData) => void }
 ```
 
 **Features**:
-- Header showing category/subcategory name + count + total
-- List of ExpenseTile components (reused from Dashboard)
-- Clear button (X icon) to hide list
-- Sorted by date descending (most recent first)
-
-**Example Header**:
-```
-Category: Food > Groceries - 12 transactions ($456.78)  [X]
-```
+- Keeps the chart type, drill-down selection, and detail offset in local state. A period change resets them.
+- Header shows the selected category, subcategory, and its total.
+- `AllocationDetails` lists matched records with their item allocations. A tax share reads `税（按计税商品分摊）`.
+- The clear button (✕) closes the details.
 
 ### 6. MonthComparisonLineChart.tsx
 
@@ -378,14 +368,11 @@ const accumulated = [
       └→ Selectors: selectAvailableMonths, selectChartsSelectedMonth
       └→ User changes month → dispatch(setChartsSelectedMonth("2026-01"))
 
-   └→ CategoryBarChart
-      └→ Selector: selectCategoryChartData (filters + aggregates)
-      └→ User clicks bar → dispatch(setChartsDrilldownCategory("Food"))
-      └→ Selector re-computes → Shows subcategories for "Food"
-
-   └→ CategoryExpenseList (conditional)
-      └→ Selector: selectCategoryExpenseList
-      └→ User clicks transaction → onFinClick(fin) → Opens FinEditor
+   └→ CategoryAnalysisView
+      └→ useSpendingReport: GET /api/fin/necessity?period=…&value=…
+      └→ User clicks a category → local state shows its subcategories
+      └→ User clicks a subcategory → useSpendingReport loads details=1
+      └→ User clicks a transaction → onFinClick(fin) → Opens FinEditor
 
    └→ MonthComparisonLineChart
       └→ Selector: selectMonthComparisonData
@@ -400,14 +387,12 @@ Raw FinData[] (from API)
   ↓
 Redux fins[] (all transactions)
   ↓
-selectChartsFilteredFins (filter by month/year + expenses only)
+selectMonthComparisonData (accumulate by day)
   ↓
-┌─────────────────────────┬─────────────────────────────┐
-│ selectCategoryChartData │ selectMonthComparisonData   │
-│ (group by category)     │ (accumulate by day)         │
-└─────────────────────────┴─────────────────────────────┘
-  ↓                         ↓
-CategoryBarChart          MonthComparisonLineChart
+MonthComparisonLineChart
+
+The category charts do not use Redux records. They read the server report:
+GET /api/fin/necessity → allocateSpending per record → categories totals → CategoryAnalysisView
 ```
 
 ## Implementation Details
@@ -438,28 +423,12 @@ const filtered = fins.filter(fin => {
 
 ### Category Aggregation Algorithm
 
-```typescript
-// Top-level categories (no drilldown)
-const categories = fins.reduce((acc, fin) => {
-  const category = fin.category || "Uncategorized";
-  if (!acc[category]) {
-    acc[category] = { totalCents: 0, count: 0 };
-  }
-  acc[category].totalCents += fin.amountCadCents;
-  acc[category].count += 1;
-  return acc;
-}, {} as Record<string, { totalCents: number; count: number }>);
+The server aggregates categories in `app/api/fin/necessity/route.ts`:
 
-// Convert to array and sort
-const chartData = Object.entries(categories)
-  .map(([category, data]) => ({
-    category,
-    totalCents: data.totalCents,
-    count: data.count,
-  }))
-  .sort((a, b) => b.totalCents - a.totalCents)
-  .slice(0, 15); // Top 15
-```
+1. `allocateSpending` splits each record into item allocations. Tax lines split across taxable items.
+2. Each allocation adds its CAD amount to its `[category, null]` row and its `[category, subcategory]` row.
+3. Each row counts distinct records. Records arrive one at a time, so the row compares the last fin ID.
+4. The response sorts rows by amount. The client shows the top 15 rows for the current level.
 
 ### Cumulative Accumulation Algorithm
 

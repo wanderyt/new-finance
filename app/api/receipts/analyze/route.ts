@@ -1,4 +1,8 @@
 import { normalizeReceiptNecessities } from "../../../lib/utils/receipt-necessity";
+import { normalizeReceiptCategories, type CategoryPair } from "../../../lib/utils/receipt-categories";
+import { and, eq, inArray } from "drizzle-orm";
+import { db } from "@/app/lib/db/drizzle";
+import { categories } from "@/app/lib/db/schema";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -38,13 +42,24 @@ Analyze this receipt image and extract the following information in JSON format:
       "unit": "pcs",       // Unit of measurement
       "amount": 1250,      // Total line item price in cents
       "suggestedNecessityLevel": "essential",
-      "necessityReason": null // Optional: a short Chinese explanation only when useful
+      "necessityReason": null, // Optional: a short Chinese explanation only when useful
+      "taxable": true,     // true, false, or null. See the tax-code rules below.
+      "suggestedCategory": "生活",    // A category from the category list, or null
+      "suggestedSubcategory": "衣服"  // A subcategory paired with suggestedCategory, or null
     }
   ]
 }
 
 Rules:
 - Extract ALL purchased items. Return taxAmount and tipAmount separately. Do not duplicate them in lineItems.
+- Per-line tax codes. Read the code of every line carefully:
+  - Many receipts print a short tax code after the price, such as "19.99 H" or "4.00- H".
+  - A legend near the bottom often explains the codes, such as "H - HST G-GST".
+  - Set taxable to true for each line whose code means that a sales tax applies.
+  - When any line has a tax code, set taxable to false for every line without one. Do not use null for these lines.
+  - A discount line has its own code. Copy that code's meaning to the discount line.
+  - Set taxable to null only when no line on the receipt has a tax code. Do not guess from the product type.
+  - Check your work: when the receipt prints a tax rate, the net amount of the taxed lines times that rate is close to taxAmount. If it is not, read the codes again.
 - tipAmount is the tip actually paid. Do not extract a suggested tip table as a payment. Do not assume a service fee is a tip.
 - Classify EACH item independently using these definitions:
   - essential: protect basic living, health, or obligations. Examples: basic groceries, necessary medicine, rent, and required income-tax payments.
@@ -308,7 +323,19 @@ Output format (JSON only, no markdown):
 //   return JSON.parse(content);
 // }
 
-async function analyzeReceiptWithGemini(base64Image: string, mimeType: string) {
+function buildCategoryPrompt(pairs: CategoryPair[]): string {
+  if (!pairs.length) return "";
+  return `
+Item categories:
+- Set suggestedCategory and suggestedSubcategory for each item from the list below. Copy the exact text of one pair.
+- Classify each item by what it is, not by the store. For example, a shirt from a supermarket uses a clothing pair.
+- Set both fields to null when no pair fits, and for tax and tip lines.
+Category list (category/subcategory):
+${pairs.map((pair) => `${pair.category}/${pair.subcategory}`).join("\n")}
+`;
+}
+
+async function analyzeReceiptWithGemini(base64Image: string, mimeType: string, categoryPairs: CategoryPair[]) {
   if (!genAI) {
     throw new Error("Gemini API key not configured");
   }
@@ -316,7 +343,7 @@ async function analyzeReceiptWithGemini(base64Image: string, mimeType: string) {
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const result = await model.generateContent([
-    RECEIPT_ANALYSIS_PROMPT,
+    RECEIPT_ANALYSIS_PROMPT + buildCategoryPrompt(categoryPairs),
     {
       inlineData: {
         data: base64Image,
@@ -598,8 +625,13 @@ export const POST = withAuth(async (request, user) => {
     const buffer = Buffer.from(bytes);
     const base64Image = buffer.toString("base64");
 
+    const categoryPairs = db.select({ category: categories.category, subcategory: categories.subcategory })
+      .from(categories)
+      .where(and(eq(categories.userId, user.userId), inArray(categories.appliesTo, ["expense", "both"])))
+      .all();
+
     // Call Gemini Vision API (primary)
-    const receiptData = await analyzeReceiptWithGemini(base64Image, file.type);
+    const receiptData = await analyzeReceiptWithGemini(base64Image, file.type, categoryPairs);
 
     // Fallback to OpenAI if needed:
     // const receiptData = await analyzeReceiptWithOpenAI(base64Image, file.type);
@@ -685,11 +717,14 @@ export const POST = withAuth(async (request, user) => {
       }
     }
 
+    // Restaurant meals keep one record category, so their items follow the record.
+    const categorized = normalizeReceiptCategories(receiptData.lineItems,
+      receiptData.merchantType === "restaurant" ? [] : categoryPairs, { category, subcategory });
+
     return NextResponse.json({
       success: true,
       ...receiptData,
-      suggestedCategory: category,
-      suggestedSubcategory: subcategory,
+      ...categorized,
     });
   } catch (error) {
     console.error("Failed to analyze receipt:", error);

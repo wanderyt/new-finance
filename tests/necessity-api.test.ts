@@ -49,6 +49,7 @@ test("priority migration, mutation APIs, schedules, and complete reports", async
       assert.equal((fixture.pragma("foreign_key_check") as unknown[]).length, 0);
     });
     execFileSync(process.execPath, ["scripts/migrate-fin-photos.mjs"], { env: process.env });
+    execFileSync(process.execPath, ["scripts/migrate-item-categories.mjs"], { env: process.env });
     const { POST: create } = await import("../app/api/fin/create/route");
     const { PATCH: update } = await import("../app/api/fin/update/route");
     const { GET: detail } = await import("../app/api/fin/[id]/route");

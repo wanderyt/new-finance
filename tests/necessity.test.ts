@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { allocateNecessity, necessityPeriod } from "../app/lib/utils/necessity-allocation";
+import { allocateSpending, necessityPeriod } from "../app/lib/utils/spending-allocation";
 import { effectiveNecessity, validateNecessityRequest } from "../app/lib/utils/necessity";
 import { normalizeReceiptNecessities } from "../app/lib/utils/receipt-necessity";
 
@@ -18,7 +18,7 @@ test("priority inheritance preserves explicit overrides", () => {
 });
 
 test("allocations reconcile mixed priorities, categories, and an unexplained remainder", () => {
-  const rows = allocateNecessity(record, [
+  const rows = allocateSpending(record, [
     { name: "Medicine", originalAmountCents: 5000 },
     { name: "Skincare", originalAmountCents: 2500, necessityLevel: "personal_priority", category: "健康" },
     { name: "Tip", originalAmountCents: 1500, necessityLevel: "flexible" },
@@ -27,20 +27,20 @@ test("allocations reconcile mixed priorities, categories, and an unexplained rem
   assert.deepEqual(rows.map((row) => row.amountCadCents), [5000, 2500, 1500, 1000]);
   assert.equal(rows[1].subcategory, "未分类");
   assert.equal(rows[3].remainder, true);
-  assert.deepEqual(allocateNecessity({ ...record, type: "income" }, []), []);
-  assert.equal(allocateNecessity(record, [])[0].amountCadCents, 10000);
+  assert.deepEqual(allocateSpending({ ...record, type: "income" }, []), []);
+  assert.equal(allocateSpending(record, [])[0].amountCadCents, 10000);
 });
 
 test("FX rounding and legacy over-total estimates preserve the paid total", () => {
   const items = [1, 2, 3].map((itemId) => ({ itemId, lineNo: itemId, name: String(itemId), originalAmountCents: 100,
     necessityLevel: "flexible" as const }));
-  const rows = allocateNecessity({ ...record, originalAmountCents: 300, amountCadCents: 101 }, items.reverse());
+  const rows = allocateSpending({ ...record, originalAmountCents: 300, amountCadCents: 101 }, items.reverse());
   assert.deepEqual(rows.map((row) => row.amountCadCents), [34, 34, 33]);
-  const estimated = allocateNecessity({ ...record, originalAmountCents: 200, amountCadCents: 200 }, items);
+  const estimated = allocateSpending({ ...record, originalAmountCents: 200, amountCadCents: 200 }, items);
   assert.ok(estimated.every((row) => row.estimated));
   assert.equal(estimated.reduce((sum, row) => sum + row.amountCadCents, 0), 200);
   assert.ok(estimated.every((row) => row.necessityLevel === "flexible"));
-  assert.equal(allocateNecessity({ ...record, originalAmountCents: 0, amountCadCents: 0 }, [])[0].amountCadCents, 0);
+  assert.equal(allocateSpending({ ...record, originalAmountCents: 0, amountCadCents: 0 }, [])[0].amountCadCents, 0);
 });
 
 test("receipt normalization applies tax and tip rules without duplicate charges", () => {
@@ -81,7 +81,7 @@ test("unexpected fines and repairs retain their own priority and reconcile with 
   const corrected = normalizeReceiptNecessities({ totalAmount: 1, lineItems: [{ name: "Tax", amount: 1,
     suggestedNecessityLevel: "flexible", necessityReason: "Can skip this expense" }] });
   assert.equal(corrected[0].necessityReason, null);
-  const allocations = allocateNecessity({ ...record, originalAmountCents: 1000, amountCadCents: 1000 },
+  const allocations = allocateSpending({ ...record, originalAmountCents: 1000, amountCadCents: 1000 },
     items.map((item) => ({ name: item.name, originalAmountCents: item.amount, necessityLevel: item.suggestedNecessityLevel })));
   assert.equal(allocations.filter((item) => item.necessityLevel === "unexpected").reduce((sum, item) => sum + item.amountCadCents, 0), 700);
   assert.equal(allocations.reduce((sum, item) => sum + item.amountCadCents, 0), 1000);

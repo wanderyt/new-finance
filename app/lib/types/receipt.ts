@@ -1,4 +1,5 @@
 import type { NecessityLevel } from "./necessity";
+import type { TaxStatus } from "./tax";
 
 export interface AnalyzedLineItem {
   name: string;
@@ -11,6 +12,12 @@ export interface AnalyzedLineItem {
   brandName?: string | null;
   suggestedNecessityLevel?: NecessityLevel | null;
   necessityReason?: string | null;
+  // AI hint from per-line tax codes. Normalization converts it to taxStatus.
+  taxable?: boolean | null;
+  taxStatus?: TaxStatus;
+  // Null means the item follows the record's suggested category.
+  suggestedCategory?: string | null;
+  suggestedSubcategory?: string | null;
 }
 
 export interface ReceiptAnalysisResult {

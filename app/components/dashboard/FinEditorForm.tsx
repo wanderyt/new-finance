@@ -888,6 +888,9 @@ const FinEditorForm = ({
           brandOptions={brandOptions}
           defaultNecessityLevel={necessityLevel}
           showNecessity={type === "expense"}
+          categoryPairs={filteredCategories}
+          recordCategory={analysisResult.suggestedCategory || category}
+          recordSubcategory={analysisResult.suggestedSubcategory || subcategory}
         />
       )}
 
@@ -907,6 +910,9 @@ const FinEditorForm = ({
         brandOptions={brandOptions}
         defaultNecessityLevel={necessityLevel}
         showNecessity={type === "expense"}
+        categoryPairs={filteredCategories}
+        recordCategory={category}
+        recordSubcategory={subcategory}
       />
 
       {/* Historical Data Selection Sheet */}

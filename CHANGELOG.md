@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.0] - 2026-11-25
+
+### Added
+- **Item Categories**: Give each line item its own category and subcategory. An item without a pair follows the record pair.
+- **Tax Status**: Add 计税 and 免税 for goods. An item named 税 is a tax line and shows a 税 badge in place of the dropdown.
+- **Tax Split by Category**: Split the receipt's tax total into one 税 item per category of the taxable goods, in proportion to their amounts. The app does not use tax rates.
+- **Re-split Button**: Add 重新分摊税额 to both item dialogs. It splits the tax total again from the current item categories and 计税 / 免税 choices.
+- **Receipt Suggestions**: Suggest a category pair and a taxable flag for each item. Read per-line tax codes such as `19.99 H`.
+- **Database Migration**: Add `fin_items.tax_status`, mark legacy tax and tip rows, and clear item pairs that copy the record pair. Docker startup runs the migration once.
+
+### Changed
+- **Category Charts**: Add item amounts per category instead of record totals. Load the category view from the server report.
+- **Legacy Tax Lines**: Split a 税 item without a category across the taxable goods when the report is built.
+- **Receipt Tax Lines**: Rename tax lines such as `HST 13%` to 税 and keep the original label in the notes.
+- **API Default**: Give `taxStatus: "tax"` to an item named 税 when an API caller omits the field.
+
+### Fixed
+- **Unmarked Receipt Lines**: Treat lines without a tax code as 免税 when the receipt marks other lines as taxed.
+
+### Removed
+- **Receipt Instructions**: Remove the review instructions text from the receipt analysis dialog.
+
 ## [1.21.1] - 2026-11-07
 
 ### Changed

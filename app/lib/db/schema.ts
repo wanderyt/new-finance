@@ -245,8 +245,10 @@ export const finItems = sqliteTable(
     brandName: text("brand_name"),
     necessityLevel: text("necessity_level", { enum: ["essential", "personal_priority", "flexible", "unexpected"] }),
     necessityReason: text("necessity_reason"),
+    taxStatus: text("tax_status", { enum: ["taxable", "exempt", "tax"] }).notNull().default("taxable"),
   },
   (table) => ({
+    taxStatusCheck: check("item_tax_status_check", sql`${table.taxStatus} IN ('taxable', 'exempt', 'tax')`),
     necessityLevelCheck: check("item_necessity_level_check", sql`${table.necessityLevel} IS NULL OR ${table.necessityLevel} IN ('essential', 'personal_priority', 'flexible', 'unexpected')`),
     finIdx: index("idx_items_fin").on(table.finId),
     personIdx: index("idx_items_person").on(table.personId),
