@@ -75,6 +75,12 @@ The local data had no record where a `税` item without a category had taxable g
 6. Restaurant receipts pass an empty list, so all their items inherit the record pair.
 7. Tax lines become `tax`. Tips and lines with `taxable: false` become `exempt`.
 8. If any line has `taxable: true`, lines with a null value also become `exempt`. Without any marked line, null lines become `taxable`.
+9. The prompt describes the children for the user's child categories: 骐骐 is Robin, a boy born in 2014, and 慢慢 is Luna, a girl born in 2022.
+   The AI calculates their ages from the receipt date. A product made for children, such as children's vitamins, always uses a pair of one child.
+   The AI selects the child whose age and gender fit the product best. If more than one child fits equally, it selects the youngest child.
+   Items that the family shares, such as groceries and household goods, keep the normal pairs.
+10. In receipt review, an item whose final pair is in 骐骐 starts with the person Robin. An item in 慢慢 starts with Luna. Other items start with the default person.
+    The final pair is the item pair, or else the record pair. In the local data, 97.5% of 骐骐 items and 95% of 慢慢 items use these persons.
 
 ## Implementation Details
 
@@ -91,6 +97,7 @@ The local data had no record where a `税` item without a category had taxable g
 | `app/components/dashboard/ResplitTaxButton.tsx` | The 重新分摊税额 button. |
 | `app/api/fin/necessity/route.ts` | Report with level-independent `categories` totals. |
 | `app/lib/utils/receipt-categories.ts` | `normalizeReceiptCategories` for AI suggestions. |
+| `app/lib/utils/children.ts` | The child list, `isChild`, `childPersonId`, and the children prompt. Pocket money also uses `isChild`. |
 | `app/components/dashboard/LineItemEditor.tsx` | Item category, subcategory, and tax status dropdowns. |
 | `app/components/dashboard/charts/CategoryAnalysisView.tsx` | Category charts from the server report. |
 
@@ -123,6 +130,8 @@ Requests with `details=1` do not build `categories`, because the detail list doe
    - Example: the user moves a good to another category. A `税` item without a category stays on the record pair.
 5. The category view sends one request for the summary and one for the selected details. Each request scans the whole period.
 6. The split assumes one tax rate for all taxable items on a receipt. Mixed rates misplace part of the tax between categories. The tax total stays correct.
+7. The child list is fixed in `children.ts`. A new child needs a code change, a category, and a person with the same name.
+8. The person follows the child pair only when receipt review opens. A later category change in the editor does not change the person.
    - Example: in Ontario, diapers and children's clothing pay 5% and most goods pay 13%. In the US, grocery and clothing rates differ by state.
    - A per-item tax rate field was rejected for now. Users cannot fill it without AI. In the local data, at most 8 of 403 taxed receipts contain possible 5% items.
    - Workaround: edit the amounts of the `税` items by hand. Do not press 重新分摊税额 afterward.

@@ -43,6 +43,8 @@ If any line has `taxable: true`, the server treats lines with a null value as ex
 `normalizeReceiptCategories` keeps only pairs from the user's list and chooses the record pair.
 Items that match the record pair inherit it. Restaurant receipts pass an empty list, so all their items inherit.
 Then `normalizeReceiptCategories` splits the tax line into one `税` item per category pair of the taxable goods. The response carries each share's pair in `suggestedCategory` and `suggestedSubcategory`.
+The prompt also describes each child with a category: the name, the gender, and the birth year. A product made for children always uses a pair of the child whose age and gender fit best. The youngest child wins a tie.
+Receipt review sets the person Robin on 骐骐 items and Luna on 慢慢 items.
 See [Item Categories](./item-categories-feature.md) for the complete rules.
 
 
