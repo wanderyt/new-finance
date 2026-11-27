@@ -78,6 +78,7 @@ const LineItemEditor = ({
   defaultNecessityLevel = "essential",
   showNecessity = true,
   categoryPairs = [],
+  recordCategory,
   recordSubcategory,
 }: LineItemEditorProps) => {
   // The `item` prop is the single source of truth for structured fields. Only
@@ -223,12 +224,20 @@ const LineItemEditor = ({
   };
 
   const isTaxLine = item.taxStatus === "tax";
-  const categoryOptions = [
-    { value: "", label: isTaxLine ? "按计税商品分摊" : "跟随账单" },
-    ...[...new Set(categoryPairs.map((pair) => pair.category))].map((value) => ({ value, label: value })),
-  ];
-  const subcategoryOptions = categoryPairs.filter((pair) => pair.category === item.category)
-    .map((pair) => ({ value: pair.subcategory, label: pair.subcategory }));
+  // The dropdowns show the final pair. An item without its own pair shows the record pair.
+  // Selecting the record pair stores null, so the item keeps following later record changes.
+  const category = item.category || recordCategory || "";
+  const subcategory = (item.category ? item.subcategory : recordSubcategory) || "";
+  // The current value joins the options, so a pair that left the user's list still shows as selected.
+  const optionsOf = (values: string[], current: string) =>
+    [...new Set([...values, current].filter(Boolean))].map((value) => ({ value, label: value }));
+  const categoryOptions = optionsOf(categoryPairs.map((pair) => pair.category), category);
+  const subcategoryOptions = optionsOf(categoryPairs.filter((pair) => pair.category === category)
+    .map((pair) => pair.subcategory), subcategory);
+  const setPair = (next: string, nextSubcategory: string | null) => {
+    const follows = next === recordCategory && (nextSubcategory === null || nextSubcategory === recordSubcategory);
+    onChange(index, { ...item, ...(follows ? { category: null, subcategory: null } : { category: next, subcategory: nextSubcategory }) });
+  };
 
   const personOptions = persons.map((p) => ({
     value: p.personId.toString(),
@@ -393,27 +402,25 @@ const LineItemEditor = ({
         <div className="flex items-center gap-2">
           <div className="min-w-0 flex-1" role="group" aria-label="项目分类">
             <Dropdown
-              value={item.category ?? ""}
+              value={category}
               options={categoryOptions}
-              onChange={(value) => {
-                if (value === (item.category ?? "")) return;
-                onChange(index, { ...item, category: value || null, subcategory: null });
-              }}
+              onChange={(value) => value !== category && setPair(value, null)}
+              placeholder="分类"
               className="[&_span]:truncate [&_svg]:shrink-0"
             />
           </div>
           <div className="min-w-0 flex-1" role="group" aria-label="项目子分类">
             <Dropdown
-              value={item.subcategory ?? ""}
+              value={subcategory}
               options={subcategoryOptions}
-              onChange={(value) => handleChange("subcategory", value || null)}
-              placeholder={item.category || isTaxLine ? "子分类" : recordSubcategory || "子分类"}
-              disabled={!item.category}
+              onChange={(value) => value !== subcategory && setPair(category, value)}
+              placeholder="子分类"
+              disabled={!category}
               className="[&_span]:truncate [&_svg]:shrink-0"
             />
           </div>
           {showNecessity && (isTaxLine
-            ? <span role="img" aria-label="税额，按计税商品分摊" title="税额，按计税商品分摊"
+            ? <span role="img" aria-label="税额" title="税额"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-amber-100 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
               {TAX_STATUS_LABELS.tax}
             </span>

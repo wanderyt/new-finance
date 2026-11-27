@@ -87,6 +87,7 @@ const LineItemsDialog = ({
               defaultNecessityLevel={defaultNecessityLevel}
               showNecessity={showNecessity}
               categoryPairs={categoryPairs}
+              recordCategory={recordCategory}
               recordSubcategory={recordSubcategory}
             />
           ))}

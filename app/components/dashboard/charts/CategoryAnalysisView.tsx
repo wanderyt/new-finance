@@ -44,7 +44,7 @@ function CategoryPeriodView({ period, value, onFinClick }: {
 
   return <div className="space-y-2">
     <div className="flex items-center justify-between">
-      <p className="text-xs text-zinc-500">按明细分类统计，税额按计税商品分摊</p>
+      <p className="text-xs text-zinc-500">按明细分类统计</p>
       <div className="flex gap-0.5 rounded bg-zinc-100 p-0.5 dark:bg-zinc-700">
         {(["pie", "bar"] as const).map((type) => <button key={type} type="button" onClick={() => setChartType(type)}
           className={`rounded px-2 py-0.5 text-xs transition-colors ${chartType === type

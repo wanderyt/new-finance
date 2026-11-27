@@ -88,7 +88,7 @@ Use an item's category pair when its category exists. Otherwise, use the record'
 
 Resolve the pair together. Never combine an item category with a record subcategory. Group missing values under Uncategorized.
 
-A tax line without a category splits across the record's taxable items. Each share keeps the tax line's priority.
+A tax line follows the same rule. The editor splits the tax into one `税` item per category before the user saves.
 See [Item Categories](./item-categories-feature.md) for item category pairs and the tax split.
 
 ### Database changes

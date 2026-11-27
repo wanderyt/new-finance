@@ -41,9 +41,9 @@ See [Spending Priority](./spending-priority-feature.md) for details.
 ### Item category and tax status
 
 Each line item has a row with category, subcategory, and tax status dropdowns. The row is above the priority row.
-The empty category option reads "跟随账单". For a tax line it reads "按计税商品分摊".
-The subcategory dropdown is disabled while the item inherits. Its placeholder shows the record subcategory.
-A category change clears the item subcategory. The tax status controls show only for expenses.
+The dropdowns always show the final pair. An item without its own pair, tax lines included, shows the record pair.
+The editor has no "跟随账单" option. Selecting the record pair stores null, so the item keeps following later record changes.
+A category change to another category clears the item subcategory. The tax status controls show only for expenses.
 Goods show a 计税 / 免税 dropdown. An item named `税` is a tax line and shows a `税` badge in place of the dropdown.
 Both item dialogs show a 重新分摊税额 button when the items contain a tax line.
 The button splits the tax total again from the current item categories and 计税 / 免税 choices.

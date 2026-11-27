@@ -18,7 +18,6 @@ export interface AllocationItem extends NecessityFields {
   originalAmountCents: number;
   category?: string | null;
   subcategory?: string | null;
-  taxStatus?: string | null;
 }
 
 const UNCATEGORIZED = "未分类";
@@ -39,8 +38,7 @@ export function splitByWeight(total: number, weights: number[]): number[] {
 
 type Row = { allocation: Omit<NecessityAllocation, "amountCadCents">; weight: number };
 
-// Allocates a record's CAD total to its items. Items without a category follow the record's pair.
-// A tax line without an explicit category splits across the record's taxable items by amount.
+// Allocates a record's CAD total to its items. Items without a category, tax lines included, follow the record's pair.
 export function allocateSpending(record: AllocationRecord, items: AllocationItem[]): NecessityAllocation[] {
   if (record.type !== "expense") return [];
   const source = [...items].filter((item) => item.originalAmountCents > 0)
@@ -48,34 +46,14 @@ export function allocateSpending(record: AllocationRecord, items: AllocationItem
   const itemSum = source.reduce((sum, item) => sum + item.originalAmountCents, 0);
   const estimated = itemSum > record.originalAmountCents;
   const recordPair = { category: record.category || UNCATEGORIZED, subcategory: record.subcategory || UNCATEGORIZED };
-  const pairOf = (item: AllocationItem) => item.category
-    ? { category: item.category, subcategory: item.subcategory || UNCATEGORIZED } : recordPair;
-  const rowOf = (item: AllocationItem): Row => ({ weight: item.originalAmountCents, allocation: { finId: record.finId,
+  const rows: Row[] = source.map((item) => ({ weight: item.originalAmountCents, allocation: { finId: record.finId,
     itemId: item.itemId ?? null, name: item.name, necessityLevel: effectiveNecessity(item, record.necessityLevel),
-    ...pairOf(item), remainder: false, estimated, taxShare: false } });
-  const goods = source.filter((item) => item.taxStatus !== "tax");
-  const taxable = goods.filter((item) => (item.taxStatus ?? "taxable") === "taxable");
-  const rows = goods.map(rowOf);
-  for (const tax of source.filter((item) => item.taxStatus === "tax")) {
-    if (tax.category || !taxable.length) {
-      rows.push(rowOf(tax));
-      continue;
-    }
-    const shares = splitByWeight(tax.originalAmountCents, taxable.map((item) => item.originalAmountCents));
-    const merged = new Map<string, Row>();
-    taxable.forEach((item, index) => {
-      const pair = pairOf(item);
-      const key = JSON.stringify([pair.category, pair.subcategory]);
-      const row = merged.get(key) ?? { weight: 0, allocation: { ...rowOf(tax).allocation, ...pair, taxShare: true } };
-      row.weight += shares[index];
-      merged.set(key, row);
-    });
-    rows.push(...[...merged.values()].filter((row) => row.weight > 0));
-  }
+    ...(item.category ? { category: item.category, subcategory: item.subcategory || UNCATEGORIZED } : recordPair),
+    remainder: false, estimated } }));
   if (!source.length || itemSum < record.originalAmountCents) {
     rows.push({ weight: Math.max(0, record.originalAmountCents - itemSum), allocation: { finId: record.finId, itemId: null,
       name: source.length ? "未分配余额" : "账单总额", necessityLevel: effectiveNecessity({}, record.necessityLevel),
-      ...recordPair, remainder: source.length > 0, estimated: false, taxShare: false } });
+      ...recordPair, remainder: source.length > 0, estimated: false } });
   }
   const cents = splitByWeight(record.amountCadCents, rows.map((row) => row.weight));
   return rows.map((row, index) => ({ ...row.allocation, amountCadCents: cents[index] }));

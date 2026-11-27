@@ -293,7 +293,7 @@ interface CategoryBreadcrumbProps {
 **Features**:
 - Keeps the chart type, drill-down selection, and detail offset in local state. A period change resets them.
 - Header shows the selected category, subcategory, and its total.
-- `AllocationDetails` lists matched records with their item allocations. A tax share reads `税（按计税商品分摊）`.
+- `AllocationDetails` lists matched records with their item allocations.
 - The clear button (✕) closes the details.
 
 ### 6. MonthComparisonLineChart.tsx
@@ -425,7 +425,7 @@ const filtered = fins.filter(fin => {
 
 The server aggregates categories in `app/api/fin/necessity/route.ts`:
 
-1. `allocateSpending` splits each record into item allocations. Tax lines split across taxable items.
+1. `allocateSpending` splits each record into item allocations. A tax line is one allocation, like any other item.
 2. Each allocation adds its CAD amount to its `[category, null]` row and its `[category, subcategory]` row.
 3. Each row counts distinct records. Records arrive one at a time, so the row compares the last fin ID.
 4. The response sorts rows by amount. The client shows the top 15 rows for the current level.

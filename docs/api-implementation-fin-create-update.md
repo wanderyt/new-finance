@@ -29,7 +29,7 @@ Each line item accepts nullable `category`, nullable `subcategory`, and `taxStat
 Allowed tax status values are `taxable`, `exempt`, and `tax`. When `taxStatus` is omitted, an item named `税` gets `tax`. Other items get `taxable`.
 A blank or null category stores a null pair, so the item follows the record. A subcategory without a category returns 400.
 A category longer than 100 characters, a non-text category, or an unknown tax status returns 400.
-The report response adds `categories` totals and a `taxShare` flag on each allocation.
+The report response adds `categories` totals.
 See [Item Categories](./item-categories-feature.md).
 
 
