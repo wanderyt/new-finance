@@ -30,8 +30,6 @@ export interface NecessityAllocation {
   amountCadCents: number;
   remainder: boolean;
   estimated: boolean;
-  // True for the part of a tax line assigned to the category of taxable items.
-  taxShare: boolean;
 }
 
 export interface NecessityBucket {

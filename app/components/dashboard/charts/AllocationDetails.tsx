@@ -22,7 +22,7 @@ export default function AllocationDetails({ report, offset, onOffsetChange, onFi
       <span className="flex justify-between gap-2"><strong className="font-semibold">{detail.record.merchant || "未填写商户"}</strong><span>{formatCad(detail.matchedCadCents)}</span></span>
       <span className="mt-1 block text-xs text-zinc-500">{detail.record.date.slice(0, 10)} · 整笔账单 {formatCad(detail.record.amountCadCents)}</span>
       {detail.allocations.map((allocation, index) => <span key={index} className="mt-1 block text-xs">
-        {allocation.name}{allocation.taxShare ? "（按计税商品分摊）" : ""} · {NECESSITY_LABELS[allocation.necessityLevel]} · {formatCad(allocation.amountCadCents)}{allocation.estimated ? "（估算）" : ""}
+        {allocation.name} · {NECESSITY_LABELS[allocation.necessityLevel]} · {formatCad(allocation.amountCadCents)}{allocation.estimated ? "（估算）" : ""}
       </span>)}
     </button>)}
     <div className="flex justify-between">

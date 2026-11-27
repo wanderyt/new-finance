@@ -68,13 +68,13 @@ test("item category migration, mutation APIs, and category report", async (suite
       const created = await create(request("/api/fin/create", "POST", { ...base, lineItems: [
         { name: "蔬菜", originalAmountCents: 12000, taxStatus: "exempt" },
         { name: "衬衫", originalAmountCents: 3000, category: "生活", subcategory: "衣服" },
-        { name: "税", originalAmountCents: 390, taxStatus: "tax" },
+        { name: "税", originalAmountCents: 390, taxStatus: "tax", category: "生活", subcategory: "衣服" },
       ] }));
       assert.equal(created.status, 201);
       const finId = (await created.json()).data.finId;
       const saved = (await (await detail(request(`/api/fin/${finId}`))).json()).data;
       assert.deepEqual(saved.items.map((item: { category: string | null; taxStatus: string }) => [item.category, item.taxStatus]),
-        [[null, "exempt"], ["生活", "taxable"], [null, "tax"]]);
+        [[null, "exempt"], ["生活", "taxable"], ["生活", "tax"]]);
 
       const month = await (await report(request("/api/fin/necessity?period=month&value=2026-02"))).json();
       const total = (subcategory: string | null) => month.data.categories.find((row: { subcategory: string | null }) =>
@@ -86,8 +86,8 @@ test("item category migration, mutation APIs, and category report", async (suite
 
       const clothes = await (await report(request(
         `/api/fin/necessity?period=month&value=2026-02&category=${encodeURIComponent("生活")}&subcategory=${encodeURIComponent("衣服")}&details=1`))).json();
-      assert.deepEqual(clothes.data.details[0].allocations.map((row: { name: string; taxShare: boolean; amountCadCents: number }) =>
-        [row.name, row.taxShare, row.amountCadCents]), [["衬衫", false, 3000], ["税", true, 390]]);
+      assert.deepEqual(clothes.data.details[0].allocations.map((row: { name: string; amountCadCents: number }) =>
+        [row.name, row.amountCadCents]), [["衬衫", 3000], ["税", 390]]);
 
       const changed = await update(request("/api/fin/update", "PATCH", { finId, category: "生活", subcategory: "衣服" }));
       assert.equal(changed.status, 200);

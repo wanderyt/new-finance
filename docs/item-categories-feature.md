@@ -25,7 +25,7 @@ Each item stores `tax_status`. The allowed values are:
 |---|---|---|
 | `taxable` | 计税 | Default. The item receives a share of the record's tax lines. |
 | `exempt` | 免税 | The item receives no tax share. Tips and zero-rated goods use this value. |
-| `tax` | 税 | The line is a tax amount. Reports split it across taxable items. |
+| `tax` | 税 | The line is a tax amount. The editor splits it across the categories of taxable items. |
 
 The app does not calculate tax. Tax rates differ by goods, province, and country.
 The app takes the tax amount that the receipt states and splits it in proportion to the taxable item amounts.
@@ -44,8 +44,7 @@ The user sees the split before saving and can correct it. An explicit tax line s
 5. The split copies the first tax line's notes, person, brand, and priority to each `税` item.
 
 The app does not split again on its own. After the user edits goods, the user presses 重新分摊税额.
-A report-time split still exists for `税` items without a category, such as legacy records and API callers.
-That split marks each share with `taxShare: true`, and the detail list shows it as `税（按计税商品分摊）`.
+Reports do not split tax. A `税` item without a category follows the record pair, like any other item.
 
 ### Tax lines are identified by name
 
@@ -56,16 +55,15 @@ A tax line always has the name `税`. Users do not select a tax status for it.
 3. Receipt AI renames tax lines such as `HST 13%` to `税`. The original label moves to the notes.
 4. An API caller that omits `taxStatus`, such as an MCP tool, gets `tax` for an item named `税` and `taxable` otherwise.
 
-### Report-time split rules
+### Editor display
 
-These rules apply in `allocateSpending`. They matter only for `税` items without a category.
+1. The category and subcategory dropdowns always show the final pair. There is no "跟随账单" or "按计税商品分摊" option.
+2. An item without its own pair, tax lines included, shows the record pair. A change to the record pair updates the display.
+3. Selecting the record pair stores null. The item then keeps following later record changes.
+4. Selecting another category stores that category without a subcategory. The user then selects the subcategory.
 
-1. A tax line with an explicit category stays whole in that category.
-2. A tax line without a category splits across the record's taxable items by amount.
-3. Shares that fall into the same category pair merge into one allocation.
-4. If a record has no taxable items, the tax line follows the record pair.
-5. A tax share keeps the tax line's priority. Priority totals therefore do not change.
-6. Largest-remainder rounding (`splitByWeight`) keeps the shares equal to the tax amount in integer cents.
+The report-time tax split was removed. It made the editor show a pair that the report did not use.
+The local data had no record where a `税` item without a category had taxable goods in different pairs.
 
 ### Receipt AI
 
@@ -122,6 +120,7 @@ Requests with `details=1` do not build `categories`, because the detail list doe
 3. Legacy records keep a whole-record category until the user edits their items.
 4. A stored split does not follow later edits. If the user changes goods or the record category, the user presses 重新分摊税额.
    - Example: the user changes the record pair in the main form. The `税` items with explicit pairs keep the old pairs.
+   - Example: the user moves a good to another category. A `税` item without a category stays on the record pair.
 5. The category view sends one request for the summary and one for the selected details. Each request scans the whole period.
 6. The split assumes one tax rate for all taxable items on a receipt. Mixed rates misplace part of the tax between categories. The tax total stays correct.
    - Example: in Ontario, diapers and children's clothing pay 5% and most goods pay 13%. In the US, grocery and clothing rates differ by state.

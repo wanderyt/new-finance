@@ -12,60 +12,26 @@ const record = { finId: "walmart", type: "expense", necessityLevel: "essential",
   amountCadCents: 15390, category: "生活", subcategory: "买菜原料" };
 const sumOf = (rows: { amountCadCents: number }[]) => rows.reduce((sum, row) => sum + row.amountCadCents, 0);
 
-test("tax splits only across taxable items and keeps its name", () => {
+test("a tax line without a category follows the record pair and an explicit pair stays whole", () => {
   const rows = allocateSpending(record, [
-    { itemId: 1, lineNo: 1, name: "蔬菜", originalAmountCents: 12000, taxStatus: "exempt" },
+    { itemId: 1, lineNo: 1, name: "蔬菜", originalAmountCents: 12000 },
     { itemId: 2, lineNo: 2, name: "衬衫", originalAmountCents: 3000, category: "生活", subcategory: "衣服" },
-    { itemId: 3, lineNo: 3, name: "税", originalAmountCents: 390, taxStatus: "tax" },
+    { itemId: 3, lineNo: 3, name: "税", originalAmountCents: 290 },
+    { itemId: 4, lineNo: 4, name: "税", originalAmountCents: 100, category: "生活", subcategory: "衣服" },
   ]);
-  assert.equal(sumOf(rows), 15390);
-  const clothes = rows.filter((row) => row.subcategory === "衣服");
-  assert.equal(sumOf(clothes), 3390);
-  assert.equal(sumOf(rows.filter((row) => row.subcategory === "买菜原料")), 12000);
-  const share = clothes.find((row) => row.taxShare)!;
-  assert.equal(share.name, "税");
-  assert.equal(share.itemId, 3);
-  assert.equal(rows.filter((row) => row.taxShare).length, 1);
+  assert.deepEqual(rows.map((row) => [row.name, row.subcategory, row.amountCadCents]),
+    [["蔬菜", "买菜原料", 12000], ["衬衫", "衣服", 3000], ["税", "买菜原料", 290], ["税", "衣服", 100]]);
 });
 
-test("tax splits by amount when every item is taxable and merges shares per category", () => {
-  const rows = allocateSpending({ ...record, originalAmountCents: 1130, amountCadCents: 1130 }, [
-    { name: "A", lineNo: 1, originalAmountCents: 500 },
-    { name: "B", lineNo: 2, originalAmountCents: 250 },
-    { name: "C", lineNo: 3, originalAmountCents: 250, category: "生活", subcategory: "衣服" },
-    { name: "税", lineNo: 4, originalAmountCents: 130, taxStatus: "tax" },
-  ]);
-  const shares = rows.filter((row) => row.taxShare);
-  assert.deepEqual(shares.map((row) => [row.subcategory, row.amountCadCents]), [["买菜原料", 98], ["衣服", 32]]);
-  assert.equal(sumOf(rows), 1130);
-});
-
-test("explicit tax categories, exempt-only records, and missing goods keep the tax line whole", () => {
-  const explicit = allocateSpending({ ...record, originalAmountCents: 1100, amountCadCents: 1100 }, [
-    { name: "A", originalAmountCents: 1000 },
-    { name: "税", originalAmountCents: 100, taxStatus: "tax", category: "税费", subcategory: "销售税" },
-  ]);
-  assert.deepEqual(explicit.map((row) => [row.category, row.taxShare]), [["生活", false], ["税费", false]]);
-  const exempt = allocateSpending({ ...record, originalAmountCents: 1100, amountCadCents: 1100 }, [
-    { name: "A", originalAmountCents: 1000, taxStatus: "exempt", category: "生活", subcategory: "衣服" },
-    { name: "税", originalAmountCents: 100, taxStatus: "tax" },
-  ]);
-  assert.deepEqual(exempt.map((row) => [row.subcategory, row.amountCadCents]), [["衣服", 1000], ["买菜原料", 100]]);
-  const taxOnly = allocateSpending({ ...record, originalAmountCents: 100, amountCadCents: 100 }, [
-    { name: "税", originalAmountCents: 100, taxStatus: "tax" },
-  ]);
-  assert.deepEqual(taxOnly.map((row) => [row.subcategory, row.amountCadCents, row.taxShare]), [["买菜原料", 100, false]]);
-});
-
-test("tax shares keep the tax priority and CAD rounding preserves the paid total", () => {
+test("item priorities stay on their rows and CAD rounding preserves the paid total", () => {
   const rows = allocateSpending({ ...record, originalAmountCents: 1003, amountCadCents: 737 }, [
     { name: "A", originalAmountCents: 301, necessityLevel: "flexible" },
     { name: "B", originalAmountCents: 301, category: "生活", subcategory: "衣服" },
     { name: "C", originalAmountCents: 301, category: "生活", subcategory: "玩具" },
-    { name: "税", originalAmountCents: 100, taxStatus: "tax", necessityLevel: "personal_priority" },
+    { name: "税", originalAmountCents: 100, necessityLevel: "personal_priority" },
   ]);
   assert.equal(sumOf(rows), 737);
-  assert.ok(rows.filter((row) => row.taxShare).every((row) => row.necessityLevel === "personal_priority"));
+  assert.deepEqual(rows.map((row) => row.necessityLevel), ["flexible", "essential", "essential", "personal_priority"]);
   assert.deepEqual(splitByWeight(10, [1, 1, 1]), [4, 3, 3]);
   assert.deepEqual(splitByWeight(5, [0, 0]), [0, 0]);
 });
