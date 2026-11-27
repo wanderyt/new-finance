@@ -1,5 +1,6 @@
 import { normalizeReceiptNecessities } from "../../../lib/utils/receipt-necessity";
 import { normalizeReceiptCategories, type CategoryPair } from "../../../lib/utils/receipt-categories";
+import { buildChildrenPrompt } from "../../../lib/utils/children";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/app/lib/db/drizzle";
 import { categories } from "@/app/lib/db/schema";
@@ -332,7 +333,7 @@ Item categories:
 - Set both fields to null when no pair fits, and for tax and tip lines.
 Category list (category/subcategory):
 ${pairs.map((pair) => `${pair.category}/${pair.subcategory}`).join("\n")}
-`;
+${buildChildrenPrompt(pairs)}`;
 }
 
 async function analyzeReceiptWithGemini(base64Image: string, mimeType: string, categoryPairs: CategoryPair[]) {
@@ -372,7 +373,7 @@ interface StandardizationResult {
 
 /**
  * Determine category and subcategory for clothing items based on item names
- * For children's items, defaults to adult categories - user can manually adjust to 骐骐/慢慢
+ * Returns the adult clothing pairs. The AI gives items for a child their own child pair (see buildChildrenPrompt).
  */
 function determineCategoryFromClothingItems(
   items: { name: string; [key: string]: unknown }[]
@@ -398,8 +399,6 @@ function determineCategoryFromClothingItems(
       item.name.toLowerCase().includes("coat")
   );
 
-  // Default to adult categories
-  // Note: User can manually change to 骐骐/慢慢 if items are for children
   if (hasShoes) {
     return {
       category: "生活",

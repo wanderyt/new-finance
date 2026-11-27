@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.0] - 2026-11-27
+
+### Added
+- **Children in Receipt AI**: Tell the receipt AI that 骐骐 is Robin, a boy born in 2014, and 慢慢 is Luna, a girl born in 2022. A product made for children, such as children's vitamins, always goes to the child whose age and gender fit best. Shared family items keep the normal categories.
+- **Child Persons**: In receipt review, start items with a final category of 骐骐 with the person Robin, and items in 慢慢 with Luna. Other items keep the default person.
+
+### Changed
+- **Pocket Money**: Read the child names from the shared child list.
+
 ## [1.23.0] - 2026-11-26
 
 ### Changed

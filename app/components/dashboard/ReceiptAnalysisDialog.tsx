@@ -7,6 +7,7 @@ import Dialog from "../ui-kit/Dialog";
 import Button from "../ui-kit/Button";
 import LineItemEditor, { type ItemCategoryOptions, type LineItem } from "./LineItemEditor";
 import ResplitTaxButton from "./ResplitTaxButton";
+import { childPersonId } from "../../lib/utils/children";
 
 
 interface ReceiptAnalysisDialogProps extends ItemCategoryOptions {
@@ -36,7 +37,7 @@ const ReceiptAnalysisDialog = ({
   // Find default person
   const defaultPerson = persons.find((p) => p.isDefault);
 
-  // Convert analyzed items to editable line items with default person
+  // Items in a child category go to that child. Other items go to the default person.
   const initialLineItems: LineItem[] =
     result?.lineItems.map((item) => ({
       name: item.name,
@@ -51,7 +52,7 @@ const ReceiptAnalysisDialog = ({
       taxStatus: item.taxStatus,
       category: item.suggestedCategory ?? null,
       subcategory: item.suggestedSubcategory ?? null,
-      personId: defaultPerson?.personId,
+      personId: childPersonId(item.suggestedCategory ?? recordCategory, persons) ?? defaultPerson?.personId,
     })) || [];
 
   const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems);

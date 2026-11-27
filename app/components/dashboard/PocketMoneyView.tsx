@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isChild } from "../../lib/utils/children";
 import { useAppSelector, useAppDispatch } from "@/app/lib/redux/hooks";
 import {
   fetchPocketMoneyAsync,
@@ -46,11 +47,10 @@ export default function PocketMoneyView() {
     dispatch(fetchPersonsAsync());
   }, [dispatch]);
 
-  // Set default person when persons are loaded (Robin or Luna only)
+  // Set default person when persons are loaded (children only)
   useEffect(() => {
     if (persons.length > 0 && selectedPersonId === null) {
-      // Find Robin or Luna as default
-      const childPerson = persons.find((p) => ['Robin', 'Luna'].includes(p.name) && p.isActive);
+      const childPerson = persons.find((p) => isChild(p.name) && p.isActive);
       if (childPerson) {
         setSelectedPersonId(childPerson.personId);
       }
@@ -157,7 +157,7 @@ export default function PocketMoneyView() {
         {persons.length > 0 && (
           <div className="flex gap-2 mb-4">
             {persons
-              .filter((person) => person.isActive && ['Robin', 'Luna'].includes(person.name))
+              .filter((person) => person.isActive && isChild(person.name))
               .map((person) => (
                 <button
                   key={person.personId}
